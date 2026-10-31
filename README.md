@@ -149,7 +149,7 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Run the performance tests
 
-The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and load results (ten thousand files created, modified and deleted, each at once and in sequence) for native watching, for the fallback to polling once native watches run out, and for polling throughout. CI runs the same test on every platform. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
+The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and load results (ten thousand files created, modified and deleted, each at once and in sequence) in three modes: native (every directory watched natively), mixed (native watches run out, so most directories are polled) and polling (every directory polled). CI runs the same test on every platform. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
 
 ```bash
 zig build -Doptimize=ReleaseFast

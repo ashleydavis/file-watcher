@@ -101,4 +101,4 @@ Each recorded entry costs its stamp, its name and its slot in its directory's ha
 - Unit tests run the real code against an in-memory file system and clock, behind the standard `std.Io` interface, and a scripted backend that can report any hint or fail on demand. The inotify backend is also tested against the kernel in a temporary directory.
 - `scripts/coverage.sh run` measures line coverage with kcov and fails below 100%. Coverage counts the code compiled into the test binaries on the machine running it.
 - `scripts/smoke-test.sh` drives the built CLI tool against real directories.
-- `scripts/performance-test.sh` measures startup, memory, idle CPU, latency and load: ten thousand files created, modified and deleted, each at once and in sequence, with native watching, the polling fallback and polling throughout.
+- `scripts/performance-test.sh` measures startup, memory, idle CPU, latency and load: ten thousand files created, modified and deleted, each at once and in sequence, in three modes: native, mixed (some directories native, the rest polled) and polling.

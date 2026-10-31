@@ -32,6 +32,6 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
   - existing files modified at once (one `xargs touch`) and in sequence (appended to one at a time);
   - files deleted at once (one `xargs rm`) and in sequence (one at a time in a Perl loop, because starting `rm` once per file takes minutes on Windows).
 
-The tree is watched as two roots: the generated files and the directory the load tests change. Every measurement runs in three modes: native watching; fallback, where `--max-watches 1` gives the only native watch to the files root, so the load root falls back to polling on every platform, Windows included; and polling throughout.
+The tree is watched as two roots: the generated files and the directory the load tests change. Every measurement runs in three modes: native, where every directory has a native watch; mixed, where `--max-watches 1` gives the only native watch to the files root, so the load root is polled on every platform, Windows included; and polling, where every directory is polled.
 
 The script exits with code 1 when a change goes unreported. It runs on Linux, macOS and Windows (Git Bash) with bash 5 or later. CPU time and memory come from `/proc` on Linux, `ps` on macOS and PowerShell's `Get-Process` on Windows. Linux and Windows report peak memory; macOS reports the memory in use after the load tests, because it keeps no peak for another process.

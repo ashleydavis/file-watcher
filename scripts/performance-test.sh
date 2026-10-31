@@ -3,7 +3,7 @@
 # Measures the built CLI tool on a generated tree and prints the results: time to scan and
 # watch the tree, memory, CPU use while idle, how long a single change takes to be reported, and
 # load: ten thousand files created, modified and deleted, each at once and in sequence. Runs
-# native watching, the fallback to polling and polling side by side, and fails when any change
+# native watching, mixed native and polled watching and polling side by side, and fails when any change
 # goes unreported.
 #
 
@@ -70,9 +70,9 @@ load_count=10000
 load_timeout_seconds=300
 # Single changes timed in the latency test.
 latency_samples=20
-# The cap on native watches in the fallback test: one, taken by the files root, so the load root
-# and its directories fall back to polling on every platform.
-fallback_watches=1
+# The cap on native watches in the mixed mode: one, taken by the files root, so the load root and
+# its directories are polled on every platform.
+mixed_watches=1
 # How long the idle CPU test watches an unchanging tree.
 idle_seconds=5
 
@@ -88,8 +88,8 @@ stop_watcher() {
 trap 'stop_watcher; rm -rf "$work"' EXIT
 tree="$work/tree"
 # The tree is watched as two roots: the generated files, and the directory the load tests change.
-# In the fallback mode the files root takes the only native watch, so the load root always falls
-# back to polling, including on Windows, where one watch covers a whole root.
+# In the mixed mode the files root takes the only native watch, so the load root is always polled,
+# including on Windows, where one watch covers a whole root.
 files_root="$tree/files"
 load_root="$tree/load"
 roots=("$files_root" "$load_root")
@@ -423,16 +423,16 @@ measure() {
 declare -A result_counters result_startup result_memory result_idle result_latency
 declare -A result_load_created result_load_created_sequence result_load_modified
 declare -A result_load_sequence result_load_deleted result_load_deleted_sequence
-# Native watching up to the quota; the fallback to polling once a cap on native watches is
-# reached, so most directories are polled while the rest stay native; and polling throughout.
+# Native watching up to the quota; mixed, where a cap on native watches is reached, so most
+# directories are polled while the rest stay native; and polling throughout.
 measure native
-measure fallback --max-watches "$fallback_watches" -i 1000
+measure mixed --max-watches "$mixed_watches" -i 1000
 measure polling --poll -i 1000
 
 # Writes one row of the summary table: the measure's name, then its result for each mode.
 summary_row() {
     local -n results="$2"
-    echo "| $1 | ${results[native]} | ${results[fallback]} | ${results[polling]} |"
+    echo "| $1 | ${results[native]} | ${results[mixed]} | ${results[polling]} |"
 }
 
 # Writes the results as a markdown table, such as a GitHub Actions job summary.
@@ -445,9 +445,9 @@ write_summary() {
     fi
     echo "A tree of $file_count files in $directory_count directories, measured $where."
     echo
-    echo "The tree is watched as two roots, the files and the load test directory. The fallback mode allows $fallback_watches native watch, so the load tests run in directories that fell back to polling."
+    echo "The tree is watched as two roots, the files and the load test directory. The mixed mode allows $mixed_watches native watch, so the load tests run in polled directories while the files root stays native."
     echo
-    echo "| Measure | Native | Fallback ($fallback_watches native watches, rest polled) | Polling (1 s interval) |"
+    echo "| Measure | Native | Mixed ($mixed_watches native watch, rest polled) | Polling (1 s interval) |"
     echo "| --- | --- | --- | --- |"
     summary_row "Startup (scan and watch)" result_startup
     summary_row "$memory_label" result_memory
