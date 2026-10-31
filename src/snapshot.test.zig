@@ -376,6 +376,73 @@ test "faults are reported as problems" {
 }
 
 //
+// Goal: cancellation is passed to the caller instead of being reported as a problem.
+// Method: make opening, reading and reading metadata fail as cancelled.
+//
+test "cancellation is passed on" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    try fixture.snapshot.add_root("/root", &fixture.list);
+
+    try fixture.mock.set_faults("/root/sub", .{
+        .open = true,
+        .is_canceled = true,
+    });
+    try testing.expectError(error.Canceled, fixture.snapshot.rescan_directory("/root/sub", &fixture.list));
+    try fixture.mock.set_faults("/root/sub", .{
+        .read = true,
+        .is_canceled = true,
+    });
+    try testing.expectError(error.Canceled, fixture.snapshot.rescan_directory("/root/sub", &fixture.list));
+    try fixture.mock.set_faults("/root/sub/b.txt", .{
+        .stat = true,
+        .is_canceled = true,
+    });
+    try fixture.mock.set_faults("/root/sub", .{});
+    try testing.expectError(error.Canceled, fixture.snapshot.rescan_directory("/root/sub", &fixture.list));
+}
+
+//
+// Goal: a file whose time changes while its size stays the same counts as modified.
+// Method: change only the modification time and rescan.
+//
+test "rescan_directory detects a time-only change" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    try fixture.snapshot.add_root("/root", &fixture.list);
+
+    fixture.mock.clock_ns = 77;
+    fixture.mock.write_file("/root/a.txt", 1);
+    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    try expect_events(&fixture.list, &.{
+        .{ .kind = .modified, .path = "/root/a.txt", .is_directory = false },
+    });
+}
+
+//
+// Goal: deleting one of several roots removes only that root.
+// Method: add two roots, delete the second and check the first is still watched.
+//
+test "deleting one root keeps the others" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    try fixture.mock.add_directory("/other");
+    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root("/other", &fixture.list);
+
+    fixture.mock.remove("/other");
+    try fixture.snapshot.check_entry("/other", &fixture.list);
+    try expect_events(&fixture.list, &.{
+        .{ .kind = .deleted, .path = "/other", .is_directory = true },
+    });
+    try testing.expect(fixture.snapshot.is_root("/root"));
+    try testing.expect(!fixture.snapshot.is_root("/other"));
+}
+
+//
 // Goal: symbolic links and other special entries are reported like files.
 // Method: add a symbolic link and a pipe and rescan.
 //

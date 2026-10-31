@@ -37,18 +37,20 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // The static library is the artifact for platforms that embed the watcher in an app, such as
-    // Android and iOS. Every target builds it.
-    const static_library = b.addLibrary(.{
-        .name = "file_watcher",
-        .linkage = .static,
-        .root_module = library,
+    // Analysing the CLI tool without emitting a binary checks that the library compiles for a
+    // target. It is the only way to check iOS, where the linker needs Apple's SDK.
+    const check_step = b.step("check", "Compile the library and CLI tool without linking");
+    const check = b.addExecutable(.{
+        .name = "file-watcher",
+        .root_module = cli,
     });
-    b.installArtifact(static_library);
+    check_step.dependOn(&check.step);
 
-    // The CLI tool targets desktops. iOS apps cannot run command line tools, so it is skipped
-    // there.
-    if (os != .ios) {
+    // The CLI tool targets desktops and Android. iOS apps cannot run command line tools, so on
+    // iOS the install step checks that the library compiles instead.
+    if (os == .ios) {
+        b.getInstallStep().dependOn(&check.step);
+    } else {
         const exe = b.addExecutable(.{
             .name = "file-watcher",
             .root_module = cli,
@@ -149,6 +151,9 @@ pub fn build(b: *std.Build) void {
         kcov.addArg("--exclude-pattern=.test.zig");
         const report = kcov.addOutputDirectoryArg(tests.name);
         kcov.addArtifactArg(tests);
+        // The test runner's progress goes to a file, so a passing run prints nothing; a failing
+        // run still fails the step through kcov's exit code.
+        _ = kcov.captureStdErr(.{});
         merge.addDirectoryArg(report);
     }
     const install_coverage = b.addInstallDirectory(.{

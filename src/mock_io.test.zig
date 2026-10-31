@@ -61,6 +61,11 @@ pub const Faults = struct {
     // Reading the entry's metadata fails with access denied.
     //
     stat: bool = false,
+
+    //
+    // Every call fails as cancelled instead of with access denied.
+    //
+    is_canceled: bool = false,
 };
 
 //
@@ -289,8 +294,9 @@ fn dir_open_dir(
     if (node.kind != .directory) {
         return error.NotDir;
     }
-    if (self.faults_of(path).open) {
-        return error.AccessDenied;
+    const faults = self.faults_of(path);
+    if (faults.open) {
+        return if (faults.is_canceled) error.Canceled else error.AccessDenied;
     }
     const path_copy = self.gpa.dupe(u8, path) catch return error.SystemResources;
     self.handles.append(self.gpa, path_copy) catch {
@@ -314,8 +320,9 @@ fn dir_stat_file(
     var buffer: [std.fs.max_path_bytes]u8 = undefined;
     const path = self.resolve(dir, sub_path, &buffer);
     const node = self.nodes.get(path) orelse return error.FileNotFound;
-    if (self.faults_of(path).stat) {
-        return error.AccessDenied;
+    const faults = self.faults_of(path);
+    if (faults.stat) {
+        return if (faults.is_canceled) error.Canceled else error.AccessDenied;
     }
     return .{
         .inode = node.inode,
@@ -347,8 +354,9 @@ fn dir_read(userdata: ?*anyopaque, reader: *Dir.Reader, entries: []Dir.Entry) Di
     const self = mock_from(userdata);
     const index: usize = @intCast(reader.dir.handle - handle_base);
     const path = self.handles.items[index].?;
-    if (self.faults_of(path).read) {
-        return error.AccessDenied;
+    const faults = self.faults_of(path);
+    if (faults.read) {
+        return if (faults.is_canceled) error.Canceled else error.AccessDenied;
     }
     if (reader.state == .reset) {
         reader.index = 0;

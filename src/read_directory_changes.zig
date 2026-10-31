@@ -360,7 +360,8 @@ pub fn decode_changes(
     const records_max = @divFloor(buffer.len, header_size);
     var offset: usize = 0;
     var records: usize = 0;
-    while (records < records_max) : (records += 1) {
+    while (true) : (records += 1) {
+        assert(records < records_max);
         assert(offset + header_size <= buffer.len);
         const header: *const FileNotifyInformation = @ptrCast(@alignCast(buffer[offset..].ptr));
         const name_start = offset + header_size;
@@ -375,7 +376,6 @@ pub fn decode_changes(
         assert(header.NextEntryOffset >= header_size);
         offset += header.NextEntryOffset;
     }
-    unreachable;
 }
 
 //

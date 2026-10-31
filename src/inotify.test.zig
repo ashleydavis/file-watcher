@@ -134,3 +134,68 @@ test "Inotify watches a real directory" {
     try testing.expectError(error.FileNotFound, inotify.watch(sub, true));
     try testing.expectError(error.NotDir, inotify.watch(file, true));
 }
+
+//
+// Goal: every error number from the kernel maps to an error that says what went wrong, with
+// running out of watches mapped to the limit error the watcher acts on.
+// Method: map each documented error number and an undocumented one.
+//
+test "init_error and watch_error map kernel errors" {
+    try testing.expectEqual(error.ProcessFdQuotaExceeded, inotify_module.init_error(.MFILE));
+    try testing.expectEqual(error.SystemFdQuotaExceeded, inotify_module.init_error(.NFILE));
+    try testing.expectEqual(error.SystemResources, inotify_module.init_error(.NOMEM));
+    try testing.expectEqual(error.Unexpected, inotify_module.init_error(.PERM));
+    try testing.expectEqual(error.LimitReached, inotify_module.watch_error(.NOSPC));
+    try testing.expectEqual(error.AccessDenied, inotify_module.watch_error(.ACCES));
+    try testing.expectEqual(error.FileNotFound, inotify_module.watch_error(.NOENT));
+    try testing.expectEqual(error.NotDir, inotify_module.watch_error(.NOTDIR));
+    try testing.expectEqual(error.SymLinkLoop, inotify_module.watch_error(.LOOP));
+    try testing.expectEqual(error.NameTooLong, inotify_module.watch_error(.NAMETOOLONG));
+    try testing.expectEqual(error.SystemResources, inotify_module.watch_error(.NOMEM));
+    try testing.expectEqual(error.Unexpected, inotify_module.watch_error(.PERM));
+}
+
+fn watch_twice(gpa: std.mem.Allocator, path: []const u8) !void {
+    const inotify = try gpa.create(Inotify);
+    defer gpa.destroy(inotify);
+    try inotify.init(gpa);
+    defer inotify.deinit();
+    _ = try inotify.watch(path, true);
+    _ = try inotify.watch(path, true);
+}
+
+//
+// Goal: an allocation failure while adding a watch is reported and leaks neither memory nor the
+// kernel watch.
+// Method: watch a real directory twice under checkAllAllocationFailures.
+//
+test "Inotify survives allocation failure" {
+    if (builtin.os.tag != .linux) {
+        return error.SkipZigTest;
+    }
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root = try temp_path(&root_buffer, &tmp, "");
+    try testing.checkAllAllocationFailures(testing.allocator, watch_twice, .{root});
+}
+
+//
+// Goal: an instance that cannot be created reports why.
+// Method: lower the open file limit to zero so no descriptor can be opened, try to create an
+// instance and restore the limit.
+//
+test "Inotify init reports a full descriptor table" {
+    if (builtin.os.tag != .linux) {
+        return error.SkipZigTest;
+    }
+    const saved = try std.posix.getrlimit(.NOFILE);
+    try std.posix.setrlimit(.NOFILE, .{
+        .cur = 0,
+        .max = saved.max,
+    });
+    defer std.posix.setrlimit(.NOFILE, saved) catch unreachable;
+
+    var inotify: Inotify = undefined;
+    try testing.expectError(error.ProcessFdQuotaExceeded, inotify.init(testing.allocator));
+}

@@ -37,6 +37,10 @@ pub const EntryKind = enum {
     other,
 };
 
+comptime {
+    assert(@sizeOf(Stamp) <= 32);
+}
+
 //
 // The facts recorded for one entry. A change to any of them is a modification.
 //
@@ -52,9 +56,11 @@ pub const Stamp = struct {
     size: u64,
 
     //
-    // The last modification time in nanoseconds since 1970.
+    // The last modification time in nanoseconds since 1970, kept to 64 bits so a stamp packs into
+    // 32 bytes. It is only compared for equality, and times that differ by less than 584 years
+    // stay distinct.
     //
-    mtime_ns: i96,
+    mtime_ns: i64,
 
     //
     // The file system's number for the entry. It changes when an editor saves by writing a new
@@ -75,11 +81,11 @@ pub fn stamp_from_stat(stat: *const Io.File.Stat) Stamp {
     const stamp: Stamp = .{
         .kind = kind,
         .size = stat.size,
-        .mtime_ns = stat.mtime.nanoseconds,
+        .mtime_ns = @truncate(stat.mtime.nanoseconds),
         .inode = stat.inode,
     };
     assert(stamp.kind == .directory or stat.kind != .directory);
-    assert(stamp.mtime_ns == stat.mtime.nanoseconds);
+    assert(stamp.size == stat.size);
     return stamp;
 }
 
@@ -134,6 +140,12 @@ pub const Snapshot = struct {
     scratch: std.heap.ArenaAllocator,
 
     //
+    // Holds the listing of one directory, released when the next directory is listed, so a scan
+    // of a large tree holds one listing at a time.
+    //
+    listing_arena: std.heap.ArenaAllocator,
+
+    //
     // Directories found during a call that still need their first scan. Paths are owned by the
     // snapshot and move into `directories` when scanned.
     //
@@ -151,6 +163,7 @@ pub const Snapshot = struct {
             .roots = .empty,
             .directories = .empty,
             .scratch = .init(gpa),
+            .listing_arena = .init(gpa),
             .pending = .empty,
         };
     }
@@ -173,6 +186,7 @@ pub const Snapshot = struct {
         self.roots.deinit(self.gpa);
         self.pending.deinit(self.gpa);
         self.scratch.deinit();
+        self.listing_arena.deinit();
         self.* = undefined;
     }
 
@@ -333,7 +347,8 @@ pub const Snapshot = struct {
     //
     fn list_directory(self: *Snapshot, path: []const u8, report: bool, out: *EventList) !void {
         assert(self.directories.contains(path));
-        const scratch = self.scratch.allocator();
+        _ = self.listing_arena.reset(.retain_capacity);
+        const scratch = self.listing_arena.allocator();
         var listing: std.StringArrayHashMapUnmanaged(Stamp) = .empty;
         const listed = try self.read_listing(path, &listing, out);
         if (!listed) {
@@ -371,7 +386,7 @@ pub const Snapshot = struct {
         out: *EventList,
     ) !bool {
         assert(listing.count() == 0);
-        const scratch = self.scratch.allocator();
+        const scratch = self.listing_arena.allocator();
         var dir = Dir.cwd().openDir(self.io, path, .{
             .access_sub_paths = true,
             .iterate = true,
@@ -509,25 +524,29 @@ pub const Snapshot = struct {
         const directory = self.directories.getPtr(parent).?;
         assert(!directory.children.contains(name));
         const is_directory = stamp.kind == .directory;
-        const path = try std.fs.path.join(self.scratch.allocator(), &.{ parent, name });
 
         try directory.children.ensureUnusedCapacity(self.gpa, 1);
         if (is_directory) {
             try self.pending.ensureUnusedCapacity(self.gpa, 1);
         }
         const name_copy = try self.gpa.dupe(u8, name);
+        var pending_path: ?[]const u8 = null;
         if (is_directory) {
-            const pending_path = self.gpa.dupe(u8, path) catch |err| {
+            pending_path = std.fs.path.join(self.gpa, &.{ parent, name }) catch |err| {
                 self.gpa.free(name_copy);
                 return err;
             };
-            self.pending.appendAssumeCapacity(pending_path);
+            self.pending.appendAssumeCapacity(pending_path.?);
         }
         directory.children.putAssumeCapacityNoClobber(name_copy, stamp);
+        assert(directory.children.contains(name));
         if (report) {
+            // The path is joined only when reported, because the first scan of a tree reports
+            // nothing and would otherwise join a path for every entry.
+            const path = pending_path orelse
+                try std.fs.path.join(self.scratch.allocator(), &.{ parent, name });
             try out.append_event(.created, path, is_directory);
         }
-        assert(directory.children.contains(name));
     }
 
     //

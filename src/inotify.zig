@@ -83,12 +83,9 @@ pub const Inotify = struct {
     //
     pub fn init(self: *Inotify, gpa: Allocator) !void {
         const rc = linux.inotify_init1(IN.NONBLOCK | IN.CLOEXEC);
-        switch (linux.errno(rc)) {
-            .SUCCESS => {},
-            .MFILE => return error.ProcessFdQuotaExceeded,
-            .NFILE => return error.SystemFdQuotaExceeded,
-            .NOMEM => return error.SystemResources,
-            else => |err| return std.posix.unexpectedErrno(err),
+        const result = linux.errno(rc);
+        if (result != .SUCCESS) {
+            return init_error(result);
         }
         self.gpa = gpa;
         self.fd = @intCast(rc);
@@ -124,19 +121,14 @@ pub const Inotify = struct {
         try self.descriptors.ensureUnusedCapacity(self.gpa, 1);
         const path_z = try std.posix.toPosixPath(path);
         const rc = linux.inotify_add_watch(self.fd, &path_z, watch_mask);
-        switch (linux.errno(rc)) {
-            .SUCCESS => {},
-            .NOSPC => return error.LimitReached,
-            .ACCES => return error.AccessDenied,
-            .NOENT => return error.FileNotFound,
-            .NOTDIR => return error.NotDir,
-            .LOOP => return error.SymLinkLoop,
-            .NAMETOOLONG => return error.NameTooLong,
-            .NOMEM => return error.SystemResources,
-            else => |err| return std.posix.unexpectedErrno(err),
+        const result = linux.errno(rc);
+        if (result != .SUCCESS) {
+            return watch_error(result);
         }
         const descriptor: i32 = @intCast(rc);
         const owned = self.gpa.dupe(u8, path) catch |err| {
+            // Drop the watch the kernel just added, unless it belongs to another path. Its result
+            // is not needed: the watch is dropped either way when the instance closes.
             if (!self.paths.contains(descriptor)) {
                 _ = linux.inotify_rm_watch(self.fd, descriptor);
             }
@@ -161,12 +153,10 @@ pub const Inotify = struct {
         assert(path.len > 0);
         const entry = self.descriptors.fetchRemove(path) orelse return false;
         const removed = self.paths.fetchRemove(entry.value).?;
-        const rc = linux.inotify_rm_watch(self.fd, entry.value);
-        switch (linux.errno(rc)) {
-            // The kernel already dropped the watch because the directory was deleted.
-            .SUCCESS, .INVAL => {},
-            else => unreachable,
-        }
+        // The kernel reports an invalid watch when it already dropped the watch because the
+        // directory was deleted.
+        const result = linux.errno(linux.inotify_rm_watch(self.fd, entry.value));
+        if (result != .SUCCESS) assert(result == .INVAL);
         self.gpa.free(removed.value);
         assert(self.paths.count() == self.descriptors.count());
         return true;
@@ -197,6 +187,37 @@ pub const Inotify = struct {
         }
     }
 };
+
+//
+// Turns the error number of a failed `inotify_init1` into an error.
+//
+pub fn init_error(result: linux.E) anyerror {
+    assert(result != .SUCCESS);
+    return switch (result) {
+        .MFILE => error.ProcessFdQuotaExceeded,
+        .NFILE => error.SystemFdQuotaExceeded,
+        .NOMEM => error.SystemResources,
+        else => error.Unexpected,
+    };
+}
+
+//
+// Turns the error number of a failed `inotify_add_watch` into an error. Running out of watches
+// is `LimitReached`, which tells the watcher to poll from then on.
+//
+pub fn watch_error(result: linux.E) anyerror {
+    assert(result != .SUCCESS);
+    return switch (result) {
+        .NOSPC => error.LimitReached,
+        .ACCES => error.AccessDenied,
+        .NOENT => error.FileNotFound,
+        .NOTDIR => error.NotDir,
+        .LOOP => error.SymLinkLoop,
+        .NAMETOOLONG => error.NameTooLong,
+        .NOMEM => error.SystemResources,
+        else => error.Unexpected,
+    };
+}
 
 //
 // Turns a buffer of raw inotify events into hints. Pure, so it is tested with built buffers.
