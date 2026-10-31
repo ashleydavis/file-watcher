@@ -2,8 +2,9 @@
 #
 # Measures the built CLI tool on a generated tree and prints the results: time to scan and
 # watch the tree, memory, CPU use while idle, how long a single change takes to be reported, and
-# load: ten thousand files created at once, modified at once and modified one after another.
-# Runs native watching and polling side by side, and fails when any change goes unreported.
+# load: ten thousand files created, modified and deleted, each at once and in sequence. Runs
+# native watching, the fallback to polling and polling side by side, and fails when any change
+# goes unreported.
 #
 
 set -euo pipefail
@@ -69,6 +70,9 @@ load_count=10000
 load_timeout_seconds=300
 # Single changes timed in the latency test.
 latency_samples=20
+# The cap on native watches in the fallback test: far fewer than the tree's directories, so most
+# fall back to polling.
+fallback_watches=10
 # How long the idle CPU test watches an unchanging tree.
 idle_seconds=5
 
@@ -228,10 +232,26 @@ make_files() {
     done
 }
 
-# Load actions. Each makes $load_count changes under the given directory.
+# Load actions. Each makes $load_count changes under the given directory. "At once" actions hand
+# every change to one command; "in sequence" actions make the changes one at a time in a loop.
 create_at_once() {
     mkdir -p "$1"
     (cd "$1" && seq -f "n%g.txt" 1 "$load_count" | xargs touch)
+}
+create_in_sequence() {
+    mkdir -p "$1"
+    local index
+    for index in $(seq 1 "$load_count"); do
+        : > "$1/s$index.txt"
+    done
+}
+delete_at_once() {
+    find "$1" -type f -print0 | xargs -0 rm -f
+}
+# Bash has no built-in delete and starting rm once per file takes minutes on Windows, so the
+# loop runs in Perl, which Linux, macOS and Git Bash all ship with.
+delete_in_sequence() {
+    find "$1" -type f -print0 | perl -0 -ne 'chomp; unlink($_) or die "Cannot delete $_: $!\n"'
 }
 modify_at_once() {
     find "$1" -type f -print0 | xargs -0 touch
@@ -257,7 +277,7 @@ count_reported() {
 # both counted from the first change, so they include the time the system took to make them.
 load_case() {
     local label="$1" kind="$2" out="$3" marker="$4" action="$5" target="$6"
-    if [ "$action" = create_at_once ]; then
+    if [ "$action" = create_at_once ] || [ "$action" = create_in_sequence ]; then
         # The new directory is made first and given time to be watched, so the test measures
         # the files inside it.
         mkdir -p "$target"
@@ -319,18 +339,25 @@ measure() {
     sleep "$idle_seconds"
     local idle_cpu=$(( $(cpu_ms "$pid") - idle_start_cpu ))
 
-    # Load: ten thousand files created at once, ten thousand existing files modified at once
-    # and the same files modified one after another.
-    load_case "$label" created "$out" "load-new-$label" create_at_once "$tree/load-new-$label"
+    # Load: ten thousand files created, modified and deleted, each at once and in sequence.
+    local new_dir="$tree/load-new-$label"
+    local sequence_dir="$tree/load-sequence-$label"
+    load_case "$label" created "$out" "load-new-$label" create_at_once "$new_dir"
     result_load_created[$label]="$load_result"
+    load_case "$label" created "$out" "load-sequence-$label" create_in_sequence "$sequence_dir"
+    result_load_created_sequence[$label]="$load_result"
     load_case "$label" modified "$out" "load-files-$label" modify_at_once "$load_dir"
     result_load_modified[$label]="$load_result"
     load_case "$label" modified "$out" "load-files-$label" modify_in_sequence "$load_dir"
     result_load_sequence[$label]="$load_result"
+    load_case "$label" deleted "$out" "load-new-$label" delete_at_once "$new_dir"
+    result_load_deleted[$label]="$load_result"
+    load_case "$label" deleted "$out" "load-sequence-$label" delete_in_sequence "$sequence_dir"
+    result_load_deleted_sequence[$label]="$load_result"
     local peak
     peak=$(memory_kib "$pid")
     stop_watcher
-    rm -rf "$tree/load-new-$label" "$load_dir"
+    rm -rf "$new_dir" "$sequence_dir" "$load_dir"
 
     # Latency: a second watcher prints through a pipe, so the script wakes the moment an event
     # is printed. The clock is read with bash's own variable, so no process is started.
@@ -367,7 +394,7 @@ measure() {
     # Results are kept per method for the markdown summary.
     result_counters[$label]="${stats#stats: }"
     result_startup[$label]="${startup_ms} ms"
-    local entries=$(( file_count + directory_count + load_count * 2 ))
+    local entries=$(( file_count + directory_count + load_count * 3 ))
     result_memory[$label]="$(( peak / 1024 )) MiB ($(( peak * 1024 / entries )) bytes per entry)"
     result_idle[$label]="${idle_cpu} ms"
     result_latency[$label]="median ${median_us} us, max ${max_us} us"
@@ -379,15 +406,28 @@ measure() {
     echo "  idle CPU over ${idle_seconds} s:      ${idle_cpu} ms"
     echo "  single change latency:   median ${median_us} us, max ${max_us} us (${#latencies[@]} samples)"
     echo "  $load_count created at once:          ${result_load_created[$label]}"
+    echo "  $load_count created in sequence:      ${result_load_created_sequence[$label]}"
     echo "  $load_count modified at once:         ${result_load_modified[$label]}"
-    echo "  $load_count modified one by one:      ${result_load_sequence[$label]}"
+    echo "  $load_count modified in sequence:     ${result_load_sequence[$label]}"
+    echo "  $load_count deleted at once:          ${result_load_deleted[$label]}"
+    echo "  $load_count deleted in sequence:      ${result_load_deleted_sequence[$label]}"
     echo
 }
 
 declare -A result_counters result_startup result_memory result_idle result_latency
-declare -A result_load_created result_load_modified result_load_sequence
+declare -A result_load_created result_load_created_sequence result_load_modified
+declare -A result_load_sequence result_load_deleted result_load_deleted_sequence
+# Native watching up to the quota; the fallback to polling once a cap on native watches is
+# reached, so most directories are polled while the rest stay native; and polling throughout.
 measure native
+measure fallback --max-watches "$fallback_watches" -i 1000
 measure polling --poll -i 1000
+
+# Writes one row of the summary table: the measure's name, then its result for each mode.
+summary_row() {
+    local -n results="$2"
+    echo "| $1 | ${results[native]} | ${results[fallback]} | ${results[polling]} |"
+}
 
 # Writes the results as a markdown table, such as a GitHub Actions job summary.
 write_summary() {
@@ -398,17 +438,24 @@ write_summary() {
         where="$where through '${launcher[*]}'"
     fi
     echo "A tree of $file_count files in $directory_count directories, measured $where."
+    if [ "$platform" = windows ]; then
+        echo
+        echo "On Windows one watch covers the whole tree, so the fallback mode stays native."
+    fi
     echo
-    echo "| Measure | Native | Polling (1 s interval) |"
-    echo "| --- | --- | --- |"
-    echo "| Startup (scan and watch) | ${result_startup[native]} | ${result_startup[polling]} |"
-    echo "| $memory_label | ${result_memory[native]} | ${result_memory[polling]} |"
-    echo "| Idle CPU over ${idle_seconds} s | ${result_idle[native]} | ${result_idle[polling]} |"
-    echo "| Single change latency ($latency_samples samples) | ${result_latency[native]} | ${result_latency[polling]} |"
-    echo "| $load_count files created at once | ${result_load_created[native]} | ${result_load_created[polling]} |"
-    echo "| $load_count files modified at once | ${result_load_modified[native]} | ${result_load_modified[polling]} |"
-    echo "| $load_count files modified one after another | ${result_load_sequence[native]} | ${result_load_sequence[polling]} |"
-    echo "| Watch counters | ${result_counters[native]} | ${result_counters[polling]} |"
+    echo "| Measure | Native | Fallback ($fallback_watches native watches, rest polled) | Polling (1 s interval) |"
+    echo "| --- | --- | --- | --- |"
+    summary_row "Startup (scan and watch)" result_startup
+    summary_row "$memory_label" result_memory
+    summary_row "Idle CPU over ${idle_seconds} s" result_idle
+    summary_row "Single change latency ($latency_samples samples)" result_latency
+    summary_row "$load_count files created at once" result_load_created
+    summary_row "$load_count files created in sequence" result_load_created_sequence
+    summary_row "$load_count files modified at once" result_load_modified
+    summary_row "$load_count files modified in sequence" result_load_sequence
+    summary_row "$load_count files deleted at once" result_load_deleted
+    summary_row "$load_count files deleted in sequence" result_load_deleted_sequence
+    summary_row "Watch counters" result_counters
     echo
     if [ "$failed" -ne 0 ]; then
         echo "**Some changes were not reported.**"

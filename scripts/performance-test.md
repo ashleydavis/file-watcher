@@ -27,9 +27,11 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
 - Memory: the tool's memory after the load tests, also given per watched entry: the peak on Linux and Windows, the memory in use on macOS. Entries include the load test files.
 - Idle CPU: CPU time used while watching the unchanged tree for a few seconds.
 - Single change latency: the time from appending to a file until its event is printed, as the median and maximum of a series of samples. A second watcher prints through a pipe, so the script wakes the moment the event arrives, and the clock is read with bash's `EPOCHREALTIME`, so timing starts no process. Each sample still includes the time bash takes to write the file and read the line.
-- Load: three tests of ten thousand changes each, timed from the first change until every changed file is reported, with the time taken to make the changes shown beside it. The script counts distinct reported files, so a test fails unless every one is reported:
-  - created at once: ten thousand new files in a new directory, made with one `xargs touch`;
-  - modified at once: ten thousand existing files touched with one `xargs touch`;
-  - modified one after another: the same files appended to one at a time in a loop.
+- Load: six tests of ten thousand changes each, timed from the first change until every changed file is reported, with the time taken to make the changes shown beside it. The script counts distinct reported files, so a test fails unless every one is reported:
+  - files created at once (one `xargs touch`) and created in sequence (one at a time in a loop);
+  - existing files modified at once (one `xargs touch`) and in sequence (appended to one at a time);
+  - files deleted at once (one `xargs rm`) and in sequence (one at a time in a Perl loop, because starting `rm` once per file takes minutes on Windows).
+
+Every measurement runs in three modes: native watching; fallback, where `--max-watches 10` lets ten directories be watched natively and the rest fall back to polling; and polling throughout. On Windows one watch covers the whole tree, so the fallback mode stays native there.
 
 The script exits with code 1 when a change goes unreported. It runs on Linux, macOS and Windows (Git Bash) with bash 5 or later. CPU time and memory come from `/proc` on Linux, `ps` on macOS and PowerShell's `Get-Process` on Windows. Linux and Windows report peak memory; macOS reports the memory in use after the load tests, because it keeps no peak for another process.

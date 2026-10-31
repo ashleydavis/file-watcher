@@ -31,6 +31,7 @@ The tool runs until Ctrl+C, a termination request (SIGTERM) or the end of the du
 | `--no-default-excludes` | Watch the directories left out by default. |
 | `-e`, `--exclude-ext <ext>` | Leave out files with this extension, written as `.log` or `log`. Repeat it for more extensions. |
 | `-q`, `--quota <percent>` | The share of the platform's native watch limit to use, from 0 to 100. Default 50. With 0, every directory is polled. |
+| `-m`, `--max-watches <count>` | The most native watches to use, whatever the quota allows. Directories past it are polled. |
 | `-i`, `--poll-interval <ms>` | How often polled directories are rescanned, in milliseconds. Default 1000. |
 | `--poll` | Poll every directory instead of using native watches. Use it on network file systems, where native events are unreliable. |
 | `-d`, `--duration <ms>` | Exit after this many milliseconds. |

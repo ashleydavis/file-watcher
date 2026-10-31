@@ -41,6 +41,7 @@ test "parse reads every option" {
         "--exclude-dir", "dist",
         "-e",            "log",
         "--exclude-ext", ".tmp",
+        "-m",            "7",
         "-q",            "25",
         "-i",            "200",
         "-d",            "1500",
@@ -59,6 +60,7 @@ test "parse reads every option" {
     try testing.expectEqualStrings(".log", config.options.excluded_extensions[0]);
     try testing.expectEqualStrings(".tmp", config.options.excluded_extensions[1]);
     try testing.expectEqual(@as(u8, 25), config.options.quota_percent);
+    try testing.expectEqual(@as(?u32, 7), config.options.native_watches_max);
     try testing.expectEqual(@as(u32, 200), config.options.poll_interval_ms);
     try testing.expectEqual(@as(?u32, 1500), config.duration_ms);
     try testing.expect(config.is_stats_shown);
@@ -102,6 +104,7 @@ test "parse explains bad command lines" {
     try expect_failure(&.{ "-q", "101", "dir" }, "Quota 101");
     try expect_failure(&.{ "-q", "x", "dir" }, "Quota x");
     try expect_failure(&.{ "-i", "0", "dir" }, "Poll interval 0");
+    try expect_failure(&.{ "-m", "many", "dir" }, "Max watches many");
     try expect_failure(&.{ "-i", "soon", "dir" }, "Poll interval soon");
     try expect_failure(&.{ "-d", "-5", "dir" }, "Duration -5");
 }

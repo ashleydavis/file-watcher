@@ -125,6 +125,7 @@ The timeout only limits how long `next` waits when nothing changes. A change is 
 | `excluded_directories` | `default_excluded_directories` | Directory names to leave out, matched exactly against each directory's own name. Everything inside is left out too. |
 | `excluded_extensions` | empty | File extensions to leave out, including the dot (`".log"`), matched against the text after the last dot of each file name. |
 | `quota_percent` | `50` | The share of the platform's native watch limit to use, from 0 to 100. With 0, every directory is polled. |
+| `native_watches_max` | `null` | The most native watches to use, whatever the quota allows. Directories past it are polled. `null` means the quota alone sets the limit. |
 | `poll_interval_ms` | `1000` | How often polled directories are rescanned. Must be above 0. |
 | `method` | `.native` | `.native` uses native watches up to the quota. `.polling` polls every directory, which suits network file systems. |
 

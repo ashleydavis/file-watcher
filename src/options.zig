@@ -78,6 +78,13 @@ pub const Options = struct {
     quota_percent: u8 = 50,
 
     //
+    // The most native watches to use, whatever the quota allows, or null for no cap beyond the
+    // quota. A cap keeps a watcher's use of the platform limit small and predictable, and lets
+    // tests send most of a tree to the polling fallback.
+    //
+    native_watches_max: ?u32 = null,
+
+    //
     // How often polled directories are rescanned. One second by default, which notices changes
     // quickly enough for build tools while keeping the cost of each rescan small.
     //

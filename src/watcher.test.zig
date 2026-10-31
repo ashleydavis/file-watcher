@@ -435,6 +435,32 @@ test "quota overflow falls back to polling" {
 }
 
 //
+// Goal: a cap on native watches lowers the budget below the quota, so directories past the cap
+// fall back to polling.
+// Method: cap native watches at one, add a tree of two directories and check the counters.
+//
+test "native_watches_max caps the budget" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
+    var watcher: Watcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .native_watches_max = 1,
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+
+    const stats = watcher.stats();
+    try testing.expectEqual(@as(u32, 1), stats.watch_budget);
+    try testing.expectEqual(@as(u32, 1), stats.native_watches);
+    try testing.expectEqual(@as(u32, 1), stats.polled_directories);
+}
+
+//
 // Goal: refused watches are reported and polled, and a platform limit hit before the quota
 // lowers the budget.
 // Method: make the fake refuse one path with access denied, then another with the limit error.

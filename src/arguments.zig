@@ -102,6 +102,8 @@ pub const usage =
     \\                               Repeatable.
     \\  -q, --quota <percent>        Share of the platform's native watch limit to use,
     \\                               from 0 to 100. Default: 50.
+    \\  -m, --max-watches <count>    The most native watches to use, whatever the quota
+    \\                               allows. Directories beyond it are polled.
     \\  -i, --poll-interval <ms>     How often polled directories are rescanned.
     \\                               Default: 1000.
     \\      --poll                   Poll every directory instead of using native watches.
@@ -194,6 +196,10 @@ pub fn parse(arena: Allocator, argv: []const []const u8) Allocator.Error!Command
                 return failure(arena, "Quota {s} is not a whole number from 0 to 100.", .{value});
             };
             config.options.quota_percent = @intCast(quota);
+        } else if (is_flag(argument, "-m", "--max-watches")) {
+            config.options.native_watches_max = parse_number(value, std.math.maxInt(u32)) orelse {
+                return failure(arena, "Max watches {s} is not a whole number.", .{value});
+            };
         } else if (is_flag(argument, "-i", "--poll-interval")) {
             const interval = parse_number(value, std.math.maxInt(u32)) orelse 0;
             if (interval == 0) {
@@ -265,6 +271,7 @@ fn is_value_flag(argument: []const u8) bool {
         .{ "-x", "--exclude-dir" },
         .{ "-e", "--exclude-ext" },
         .{ "-q", "--quota" },
+        .{ "-m", "--max-watches" },
         .{ "-i", "--poll-interval" },
         .{ "-d", "--duration" },
     };

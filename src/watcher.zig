@@ -363,6 +363,9 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 return;
             };
             self.watch_budget = limit.watch_budget(self.native_limit, self.options.quota_percent);
+            if (self.options.native_watches_max) |watches_max| {
+                self.watch_budget = @min(self.watch_budget, watches_max);
+            }
             if (self.watch_budget == 0) {
                 return;
             }
