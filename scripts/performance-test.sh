@@ -70,9 +70,9 @@ load_count=10000
 load_timeout_seconds=300
 # Single changes timed in the latency test.
 latency_samples=20
-# The cap on native watches in the fallback test: far fewer than the tree's directories, so most
-# fall back to polling.
-fallback_watches=10
+# The cap on native watches in the fallback test: one, taken by the files root, so the load root
+# and its directories fall back to polling on every platform.
+fallback_watches=1
 # How long the idle CPU test watches an unchanging tree.
 idle_seconds=5
 
@@ -87,6 +87,12 @@ stop_watcher() {
 }
 trap 'stop_watcher; rm -rf "$work"' EXIT
 tree="$work/tree"
+# The tree is watched as two roots: the generated files, and the directory the load tests change.
+# In the fallback mode the files root takes the only native watch, so the load root always falls
+# back to polling, including on Windows, where one watch covers a whole root.
+files_root="$tree/files"
+load_root="$tree/load"
+roots=("$files_root" "$load_root")
 failed=0
 
 # Prints the current time in microseconds, from bash's own clock.
@@ -202,11 +208,11 @@ tool_pid() {
 }
 
 echo "Generating $file_count files in $(( (file_count + files_per_directory - 1) / files_per_directory )) directories..."
-mkdir -p "$tree"
+mkdir -p "$files_root" "$load_root"
 directory_index=0
 remaining=$file_count
 while [ "$remaining" -gt 0 ]; do
-    directory="$tree/d$((directory_index / 100))/d$directory_index"
+    directory="$files_root/d$((directory_index / 100))/d$directory_index"
     mkdir -p "$directory"
     batch=$(( remaining < files_per_directory ? remaining : files_per_directory ))
     (cd "$directory" && seq -f "f%g.txt" 1 "$batch" | xargs touch)
@@ -316,17 +322,17 @@ measure() {
     # Startup: scan the tree and set up every watch, then exit.
     local start
     start=$(now_us)
-    run_tool "$@" -s -d 0 "$tree" > /dev/null 2> "$work/startup-$label.txt"
+    run_tool "$@" -s -d 0 "${roots[@]}" > /dev/null 2> "$work/startup-$label.txt"
     local startup_ms=$(( ($(now_us) - start) / 1000 ))
 
     # The files the modify tests change, in directories of 100 like the rest of the tree, made
     # before the watcher starts so they are part of its first scan.
-    local load_dir="$tree/load-files-$label"
+    local load_dir="$load_root/load-files-$label"
     make_files "$load_dir" "$load_count"
 
     # Idle and load: the watcher writes events to a file.
     local out="$work/out-$label.txt"
-    exec_tool -s "$@" "$tree" > "$out" 2> "$work/err-$label.txt" &
+    exec_tool -s "$@" "${roots[@]}" > "$out" 2> "$work/err-$label.txt" &
     watcher_pid=$!
     wait_ready "$work/err-$label.txt"
     local pid
@@ -340,8 +346,8 @@ measure() {
     local idle_cpu=$(( $(cpu_ms "$pid") - idle_start_cpu ))
 
     # Load: ten thousand files created, modified and deleted, each at once and in sequence.
-    local new_dir="$tree/load-new-$label"
-    local sequence_dir="$tree/load-sequence-$label"
+    local new_dir="$load_root/load-new-$label"
+    local sequence_dir="$load_root/load-sequence-$label"
     load_case "$label" created "$out" "load-new-$label" create_at_once "$new_dir"
     result_load_created[$label]="$load_result"
     load_case "$label" created "$out" "load-sequence-$label" create_in_sequence "$sequence_dir"
@@ -362,7 +368,7 @@ measure() {
     # Latency: a second watcher prints through a pipe, so the script wakes the moment an event
     # is printed. The clock is read with bash's own variable, so no process is started.
     local watch_fd
-    exec {watch_fd}< <(exec_tool -s "$@" "$tree" 2> "$work/latency-err-$label.txt")
+    exec {watch_fd}< <(exec_tool -s "$@" "${roots[@]}" 2> "$work/latency-err-$label.txt")
     watcher_pid=$!
     wait_ready "$work/latency-err-$label.txt"
     sleep 1
@@ -370,7 +376,7 @@ measure() {
     local sample line end
     for sample in $(seq 1 "$latency_samples"); do
         start=${EPOCHREALTIME/./}
-        echo "$sample" >> "$tree/d0/d0/f1.txt"
+        echo "$sample" >> "$files_root/d0/d0/f1.txt"
         if ! read -r -t 10 -u "$watch_fd" line; then
             echo "FAIL $label: change $sample was not reported within 10 s"
             failed=1
@@ -438,10 +444,8 @@ write_summary() {
         where="$where through '${launcher[*]}'"
     fi
     echo "A tree of $file_count files in $directory_count directories, measured $where."
-    if [ "$platform" = windows ]; then
-        echo
-        echo "On Windows one watch covers the whole tree, so the fallback mode stays native."
-    fi
+    echo
+    echo "The tree is watched as two roots, the files and the load test directory. The fallback mode allows $fallback_watches native watch, so the load tests run in directories that fell back to polling."
     echo
     echo "| Measure | Native | Fallback ($fallback_watches native watches, rest polled) | Polling (1 s interval) |"
     echo "| --- | --- | --- | --- |"
