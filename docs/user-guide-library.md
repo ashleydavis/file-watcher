@@ -113,6 +113,8 @@ The watcher for the platform being built for.
 - `next(self: *Watcher, timeout_ms: u32) !Batch`: blocks the calling thread until a change arrives or `timeout_ms` passes, then returns the batch: at least one event or problem, or an empty batch when the time runs out. With native watching it waits in the operating system (`poll`, `kevent` or `WaitForMultipleObjects`), so a waiting thread uses no CPU and wakes as soon as a change arrives. A timeout of 0 never blocks: it returns the changes already queued. The batch stays valid until the next call to `next` or `add`.
 - `stats(self: *const Watcher) Stats`: counters that show how the watcher spends its quota.
 
+The timeout only limits how long `next` waits when nothing changes. A change is reported as soon as it arrives, whatever the timeout, so a long timeout costs nothing in speed. Choose it by how often your loop needs to do something other than wait, such as checking a flag to stop: an idle loop wakes once per timeout and gets an empty batch. Use 0 from a timer or event loop that must never block. The largest timeout, `std.math.maxInt(u32)`, is about 49.7 days. In polling mode `next` also wakes for each poll interval, whatever the timeout.
+
 `next` and `add` return errors only for failures the watcher cannot work around, such as running out of memory. After such an error, call `deinit`. Paths that cannot be read or watched natively are problems in the batch instead, and the watcher carries on.
 
 ### `Options`
