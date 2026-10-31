@@ -51,6 +51,9 @@ test "add_child joins parent and name" {
     try testing.expectEqual(@as(usize, 2), set.paths.count());
 }
 
+//
+// Adds hints of each kind, for the allocation failure test.
+//
 fn add_paths(gpa: std.mem.Allocator) !void {
     var set = HintSet.init(gpa);
     defer set.deinit();

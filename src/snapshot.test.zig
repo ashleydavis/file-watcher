@@ -19,11 +19,48 @@ const Snapshot = snapshot_module.Snapshot;
 // One event a test expects.
 //
 const Expected = struct {
+    //
+    // What happened.
+    //
     kind: EventKind,
     path: []const u8,
     is_directory: bool,
 };
 
+//
+// Builds the expected event for each kind of change, so expectations read as one call each.
+//
+fn created_file(path: []const u8) Expected {
+    return expected_event(.created, path, false);
+}
+
+fn created_directory(path: []const u8) Expected {
+    return expected_event(.created, path, true);
+}
+
+fn modified_file(path: []const u8) Expected {
+    return expected_event(.modified, path, false);
+}
+
+fn deleted_file(path: []const u8) Expected {
+    return expected_event(.deleted, path, false);
+}
+
+fn deleted_directory(path: []const u8) Expected {
+    return expected_event(.deleted, path, true);
+}
+
+fn expected_event(kind: EventKind, path: []const u8, is_directory: bool) Expected {
+    return .{
+        .kind = kind,
+        .path = path,
+        .is_directory = is_directory,
+    };
+}
+
+//
+// Orders expected events by path, then kind, so two lists can be compared in any order.
+//
 fn is_expected_less(context: void, left: Expected, right: Expected) bool {
     _ = context;
     const order = std.mem.order(u8, left.path, right.path);
@@ -69,11 +106,29 @@ fn expect_events(list: *const EventList, expected: []const Expected) !void {
 // A mock file system, options, snapshot and event list wired together for one test.
 //
 const Fixture = struct {
+    //
+    // The in-memory file system.
+    //
     mock: MockIo,
+
+    //
+    // The settings, which leave out `.log` files.
+    //
     options: options_module.Options,
+
+    //
+    // The snapshot under test.
+    //
     snapshot: Snapshot,
+
+    //
+    // The events and problems found.
+    //
     list: EventList,
 
+    //
+    // Builds the fixture in place, with a small tree holding an excluded directory and file.
+    //
     fn init(self: *Fixture) !void {
         self.mock.init(testing.allocator);
         self.options = .{
@@ -90,6 +145,9 @@ const Fixture = struct {
         try self.mock.add_file("/root/skip.log", 4);
     }
 
+    //
+    // Frees the fixture.
+    //
     fn deinit(self: *Fixture) void {
         self.list.deinit();
         self.snapshot.deinit();
@@ -124,11 +182,20 @@ test "add_root rejects bad roots" {
     try fixture.init();
     defer fixture.deinit();
 
-    try testing.expectError(error.FileNotFound, fixture.snapshot.add_root("/missing", &fixture.list));
+    try testing.expectError(
+        error.FileNotFound,
+        fixture.snapshot.add_root("/missing", &fixture.list),
+    );
     try testing.expectError(error.NotDir, fixture.snapshot.add_root("/root/a.txt", &fixture.list));
     try fixture.snapshot.add_root("/root/sub", &fixture.list);
-    try testing.expectError(error.OverlappingRoot, fixture.snapshot.add_root("/root", &fixture.list));
-    try testing.expectError(error.OverlappingRoot, fixture.snapshot.add_root("/root/sub", &fixture.list));
+    try testing.expectError(
+        error.OverlappingRoot,
+        fixture.snapshot.add_root("/root", &fixture.list),
+    );
+    try testing.expectError(
+        error.OverlappingRoot,
+        fixture.snapshot.add_root("/root/sub", &fixture.list),
+    );
 }
 
 //
@@ -152,12 +219,12 @@ test "rescan_directory reports every kind of change" {
     try fixture.snapshot.rescan_directory("/root", &fixture.list);
 
     try expect_events(&fixture.list, &.{
-        .{ .kind = .modified, .path = "/root/a.txt", .is_directory = false },
-        .{ .kind = .deleted, .path = "/root/sub", .is_directory = true },
-        .{ .kind = .deleted, .path = "/root/sub/b.txt", .is_directory = false },
-        .{ .kind = .created, .path = "/root/new", .is_directory = true },
-        .{ .kind = .created, .path = "/root/new/deeper", .is_directory = true },
-        .{ .kind = .created, .path = "/root/new/deeper/d.txt", .is_directory = false },
+        modified_file("/root/a.txt"),
+        deleted_directory("/root/sub"),
+        deleted_file("/root/sub/b.txt"),
+        created_directory("/root/new"),
+        created_directory("/root/new/deeper"),
+        created_file("/root/new/deeper/d.txt"),
     });
     try testing.expect(fixture.snapshot.contains_directory("/root/new/deeper"));
     try testing.expect(!fixture.snapshot.contains_directory("/root/sub"));
@@ -184,7 +251,7 @@ test "rescan_directory detects replaced files and ignores directory times" {
     fixture.mock.nodes.getPtr("/root/sub").?.mtime_ns = 9;
     try fixture.snapshot.rescan_directory("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .modified, .path = "/root/a.txt", .is_directory = false },
+        modified_file("/root/a.txt"),
     });
 }
 
@@ -205,11 +272,11 @@ test "rescan_directory reports kind changes and replaced directories" {
     try fixture.mock.add_file("/root/sub", 1);
     try fixture.snapshot.rescan_directory("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .deleted, .path = "/root/a.txt", .is_directory = false },
-        .{ .kind = .created, .path = "/root/a.txt", .is_directory = true },
-        .{ .kind = .deleted, .path = "/root/sub", .is_directory = true },
-        .{ .kind = .deleted, .path = "/root/sub/b.txt", .is_directory = false },
-        .{ .kind = .created, .path = "/root/sub", .is_directory = false },
+        deleted_file("/root/a.txt"),
+        created_directory("/root/a.txt"),
+        deleted_directory("/root/sub"),
+        deleted_file("/root/sub/b.txt"),
+        created_file("/root/sub"),
     });
 
     fixture.list.clear();
@@ -218,9 +285,9 @@ test "rescan_directory reports kind changes and replaced directories" {
     try fixture.mock.add_file("/root/a.txt/inner", 1);
     try fixture.snapshot.rescan_directory("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .deleted, .path = "/root/a.txt", .is_directory = true },
-        .{ .kind = .created, .path = "/root/a.txt", .is_directory = true },
-        .{ .kind = .created, .path = "/root/a.txt/inner", .is_directory = false },
+        deleted_directory("/root/a.txt"),
+        created_directory("/root/a.txt"),
+        created_file("/root/a.txt/inner"),
     });
 }
 
@@ -252,10 +319,10 @@ test "check_entry reports one path" {
     try fixture.snapshot.check_entry("/root/node_modules/inner", &fixture.list);
 
     try expect_events(&fixture.list, &.{
-        .{ .kind = .created, .path = "/root/sub/new.txt", .is_directory = false },
-        .{ .kind = .modified, .path = "/root/a.txt", .is_directory = false },
-        .{ .kind = .deleted, .path = "/root/sub/b.txt", .is_directory = false },
-        .{ .kind = .created, .path = "/root/node_modules2", .is_directory = true },
+        created_file("/root/sub/new.txt"),
+        modified_file("/root/a.txt"),
+        deleted_file("/root/sub/b.txt"),
+        created_directory("/root/node_modules2"),
     });
 }
 
@@ -272,10 +339,10 @@ test "check_entry on a deleted root removes it" {
     fixture.mock.remove("/root");
     try fixture.snapshot.check_entry("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .deleted, .path = "/root", .is_directory = true },
-        .{ .kind = .deleted, .path = "/root/a.txt", .is_directory = false },
-        .{ .kind = .deleted, .path = "/root/sub", .is_directory = true },
-        .{ .kind = .deleted, .path = "/root/sub/b.txt", .is_directory = false },
+        deleted_directory("/root"),
+        deleted_file("/root/a.txt"),
+        deleted_directory("/root/sub"),
+        deleted_file("/root/sub/b.txt"),
     });
     try testing.expectEqual(@as(u32, 0), fixture.snapshot.directory_count());
 
@@ -298,7 +365,7 @@ test "check_entry on a live root rescans it" {
     try fixture.mock.add_file("/root/f.txt", 1);
     try fixture.snapshot.check_entry("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .created, .path = "/root/f.txt", .is_directory = false },
+        created_file("/root/f.txt"),
     });
 }
 
@@ -315,8 +382,8 @@ test "rescan_directory of a vanished subdirectory reports it deleted" {
     fixture.mock.remove("/root/sub");
     try fixture.snapshot.rescan_directory("/root/sub", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .deleted, .path = "/root/sub", .is_directory = true },
-        .{ .kind = .deleted, .path = "/root/sub/b.txt", .is_directory = false },
+        deleted_directory("/root/sub"),
+        deleted_file("/root/sub/b.txt"),
     });
 }
 
@@ -334,8 +401,8 @@ test "rescan_tree rescans every directory under a path" {
     try fixture.mock.add_file("/root/sub/deep.txt", 1);
     try fixture.snapshot.rescan_tree("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .created, .path = "/root/top.txt", .is_directory = false },
-        .{ .kind = .created, .path = "/root/sub/deep.txt", .is_directory = false },
+        created_file("/root/top.txt"),
+        created_file("/root/sub/deep.txt"),
     });
 }
 
@@ -389,18 +456,27 @@ test "cancellation is passed on" {
         .open = true,
         .is_canceled = true,
     });
-    try testing.expectError(error.Canceled, fixture.snapshot.rescan_directory("/root/sub", &fixture.list));
+    try testing.expectError(
+        error.Canceled,
+        fixture.snapshot.rescan_directory("/root/sub", &fixture.list),
+    );
     try fixture.mock.set_faults("/root/sub", .{
         .read = true,
         .is_canceled = true,
     });
-    try testing.expectError(error.Canceled, fixture.snapshot.rescan_directory("/root/sub", &fixture.list));
+    try testing.expectError(
+        error.Canceled,
+        fixture.snapshot.rescan_directory("/root/sub", &fixture.list),
+    );
     try fixture.mock.set_faults("/root/sub/b.txt", .{
         .stat = true,
         .is_canceled = true,
     });
     try fixture.mock.set_faults("/root/sub", .{});
-    try testing.expectError(error.Canceled, fixture.snapshot.rescan_directory("/root/sub", &fixture.list));
+    try testing.expectError(
+        error.Canceled,
+        fixture.snapshot.rescan_directory("/root/sub", &fixture.list),
+    );
 }
 
 //
@@ -417,7 +493,7 @@ test "rescan_directory detects a time-only change" {
     fixture.mock.write_file("/root/a.txt", 1);
     try fixture.snapshot.rescan_directory("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .modified, .path = "/root/a.txt", .is_directory = false },
+        modified_file("/root/a.txt"),
     });
 }
 
@@ -436,7 +512,7 @@ test "deleting one root keeps the others" {
     fixture.mock.remove("/other");
     try fixture.snapshot.check_entry("/other", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .deleted, .path = "/other", .is_directory = true },
+        deleted_directory("/other"),
     });
     try testing.expect(fixture.snapshot.is_root("/root"));
     try testing.expect(!fixture.snapshot.is_root("/other"));
@@ -455,7 +531,7 @@ test "special entries are reported as files" {
     try fixture.mock.put("/root/link", .sym_link, 0);
     try fixture.snapshot.rescan_directory("/root", &fixture.list);
     try expect_events(&fixture.list, &.{
-        .{ .kind = .created, .path = "/root/link", .is_directory = false },
+        created_file("/root/link"),
     });
 }
 
@@ -471,6 +547,23 @@ test "trim_root keeps meaningful separators" {
 }
 
 //
+// Goal: root_of finds the root holding a path, and none for a path outside every root.
+// Method: add two roots and look up paths inside and outside them.
+//
+test "root_of finds the root of a path" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    try fixture.mock.add_directory("/other");
+    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root("/other", &fixture.list);
+
+    try testing.expectEqualStrings("/root", fixture.snapshot.root_of("/root/sub/b.txt").?);
+    try testing.expectEqualStrings("/other", fixture.snapshot.root_of("/other").?);
+    try testing.expectEqual(@as(?[]const u8, null), fixture.snapshot.root_of("/elsewhere"));
+}
+
+//
 // Goal: is_within matches a path inside a root only at separator boundaries.
 // Method: compare paths that share a prefix with and without a separator.
 //
@@ -482,6 +575,9 @@ test "is_within respects separators" {
     try testing.expect(!snapshot_module.is_within("/ro", "/root"));
 }
 
+//
+// Adds a root, rescans and checks entries, for the allocation failure test.
+//
 fn run_full_cycle(gpa: std.mem.Allocator) !void {
     var mock: MockIo = undefined;
     mock.init(testing.allocator);

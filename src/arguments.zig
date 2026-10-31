@@ -133,7 +133,8 @@ pub fn parse(arena: Allocator, argv: []const []const u8) Allocator.Error!Command
     var is_options_ended = false;
     while (index < argv.len) : (index += 1) {
         const argument = argv[index];
-        if (is_options_ended or argument.len == 0 or argument[0] != '-') {
+        const is_path = if (is_options_ended) true else !is_option(argument);
+        if (is_path) {
             try paths.append(arena, argument);
             continue;
         }
@@ -162,9 +163,17 @@ pub fn parse(arena: Allocator, argv: []const []const u8) Allocator.Error!Command
 
         if (index + 1 == argv.len) {
             if (is_value_flag(argument)) {
-                return failure(arena, "Option {s} needs a value. Put the value after it.", .{argument});
+                return failure(
+                    arena,
+                    "Option {s} needs a value. Put the value after it.",
+                    .{argument},
+                );
             }
-            return failure(arena, "Unknown option {s}. Run with --help to list the options.", .{argument});
+            return failure(
+                arena,
+                "Unknown option {s}. Run with --help to list the options.",
+                .{argument},
+            );
         }
         index += 1;
         const value = argv[index];
@@ -188,15 +197,27 @@ pub fn parse(arena: Allocator, argv: []const []const u8) Allocator.Error!Command
         } else if (is_flag(argument, "-i", "--poll-interval")) {
             const interval = parse_number(value, std.math.maxInt(u32)) orelse 0;
             if (interval == 0) {
-                return failure(arena, "Poll interval {s} is not a whole number of milliseconds above 0.", .{value});
+                return failure(
+                    arena,
+                    "Poll interval {s} is not a whole number of milliseconds above 0.",
+                    .{value},
+                );
             }
             config.options.poll_interval_ms = interval;
         } else if (is_flag(argument, "-d", "--duration")) {
             config.duration_ms = parse_number(value, std.math.maxInt(u32)) orelse {
-                return failure(arena, "Duration {s} is not a whole number of milliseconds.", .{value});
+                return failure(
+                    arena,
+                    "Duration {s} is not a whole number of milliseconds.",
+                    .{value},
+                );
             };
         } else {
-            return failure(arena, "Unknown option {s}. Run with --help to list the options.", .{argument});
+            return failure(
+                arena,
+                "Unknown option {s}. Run with --help to list the options.",
+                .{argument},
+            );
         }
     }
 
@@ -223,6 +244,16 @@ fn is_flag(argument: []const u8, short: []const u8, long: []const u8) bool {
     assert(short.len == 2);
     assert(long.len > 2);
     return std.mem.eql(u8, argument, short) or std.mem.eql(u8, argument, long);
+}
+
+//
+// Whether `argument` looks like an option rather than a path. A lone "-" is a path.
+//
+fn is_option(argument: []const u8) bool {
+    if (argument.len < 2) {
+        return false;
+    }
+    return argument[0] == '-';
 }
 
 //
@@ -259,7 +290,11 @@ fn parse_number(text: []const u8, maximum: u32) ?u32 {
 //
 // Builds a failure with a formatted message.
 //
-fn failure(arena: Allocator, comptime format: []const u8, arguments: anytype) Allocator.Error!Command {
+fn failure(
+    arena: Allocator,
+    comptime format: []const u8,
+    arguments: anytype,
+) Allocator.Error!Command {
     return .{
         .failure = try std.fmt.allocPrint(arena, format, arguments),
     };

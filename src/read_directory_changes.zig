@@ -13,6 +13,9 @@ const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 const HintSet = hints_module.HintSet;
 
+//
+// The Win32 types used by the declarations below, spelled as Win32 spells them.
+//
 const BOOL = c_int;
 const DWORD = u32;
 const HANDLE = *anyopaque;
@@ -38,6 +41,9 @@ pub const FileNotifyInformation = extern struct {
     FileNameLength: DWORD,
 };
 
+//
+// Win32 constants, with the values from the Windows SDK headers.
+//
 const FILE_LIST_DIRECTORY: DWORD = 0x0001;
 const FILE_SHARE_ALL: DWORD = 0x0001 | 0x0002 | 0x0004;
 const OPEN_EXISTING: DWORD = 3;
@@ -63,6 +69,9 @@ const notify_filter: DWORD = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0010 | 0x0040
 //
 const change_buffer_size: u32 = 64 * 1024;
 
+//
+// The Win32 functions this backend calls, declared only when building for Windows.
+//
 const windows_api = if (builtin.os.tag == .windows) struct {
     extern "kernel32" fn CreateFileW(
         lpFileName: [*:0]const u16,
@@ -101,7 +110,10 @@ const windows_api = if (builtin.os.tag == .windows) struct {
         lpNumberOfBytesTransferred: *DWORD,
         bWait: BOOL,
     ) callconv(.winapi) BOOL;
-    extern "kernel32" fn CancelIoEx(hFile: HANDLE, lpOverlapped: ?*OVERLAPPED) callconv(.winapi) BOOL;
+    extern "kernel32" fn CancelIoEx(
+        hFile: HANDLE,
+        lpOverlapped: ?*OVERLAPPED,
+    ) callconv(.winapi) BOOL;
     extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(.winapi) BOOL;
     extern "kernel32" fn GetLastError() callconv(.winapi) DWORD;
 } else struct {};
@@ -350,11 +362,7 @@ fn read_changes(root: *Root, hints: *HintSet) !void {
 // Turns a buffer of change records into hints for paths under `root_path`. Pure, so it is
 // tested on every platform.
 //
-pub fn decode_changes(
-    buffer: []align(@alignOf(DWORD)) const u8,
-    root_path: []const u8,
-    hints: *HintSet,
-) !void {
+pub fn decode_changes(buffer: []const u8, root_path: []const u8, hints: *HintSet) !void {
     const header_size = @sizeOf(FileNotifyInformation);
     const arena = hints.arena.allocator();
     const records_max = @divFloor(buffer.len, header_size);
@@ -363,10 +371,14 @@ pub fn decode_changes(
     while (true) : (records += 1) {
         assert(records < records_max);
         assert(offset + header_size <= buffer.len);
-        const header: *const FileNotifyInformation = @ptrCast(@alignCast(buffer[offset..].ptr));
+        // Records are copied out of the buffer because Wine packs them without the alignment
+        // Windows gives them.
+        const header_bytes = buffer[offset..][0..header_size];
+        const header = std.mem.bytesToValue(FileNotifyInformation, header_bytes);
         const name_start = offset + header_size;
         const name_bytes = buffer[name_start..][0..header.FileNameLength];
-        const name_wide: []const u16 = @alignCast(std.mem.bytesAsSlice(u16, name_bytes));
+        const name_wide = try arena.alloc(u16, @divExact(name_bytes.len, 2));
+        @memcpy(std.mem.sliceAsBytes(name_wide), name_bytes);
         const name = try std.unicode.wtf16LeToWtf8Alloc(arena, name_wide);
         const path = try std.fmt.allocPrint(arena, "{s}\\{s}", .{ root_path, name });
         try hints.add(path, .entry);

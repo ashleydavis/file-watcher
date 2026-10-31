@@ -23,7 +23,10 @@ pub fn write_event(writer: *Writer, format: Format, event: *const Event) Writer.
     switch (format) {
         .text => try writer.print("{s} {s} {s}\n", .{ kind, entry_type, event.path }),
         .json => {
-            try writer.print("{{\"kind\":\"{s}\",\"type\":\"{s}\",\"path\":", .{ kind, entry_type });
+            try writer.print(
+                "{{\"kind\":\"{s}\",\"type\":\"{s}\",\"path\":",
+                .{ kind, entry_type },
+            );
             try write_quoted(writer, event.path);
             try writer.writeAll("}\n");
         },
@@ -58,8 +61,12 @@ pub fn write_quoted(writer: *Writer, text: []const u8) Writer.Error!void {
             index += 1;
             continue;
         }
-        const length = std.unicode.utf8ByteSequenceLength(byte) catch 0;
-        if (length == 0 or index + length > text.len) {
+        const length = std.unicode.utf8ByteSequenceLength(byte) catch {
+            try writer.writeAll("\\ufffd");
+            index += 1;
+            continue;
+        };
+        if (index + length > text.len) {
             try writer.writeAll("\\ufffd");
             index += 1;
             continue;
@@ -89,10 +96,17 @@ pub fn write_problem(writer: *Writer, problem: *const Problem) Writer.Error!void
         .polled => "It is watched by polling instead.",
     };
     if (problem.path.len == 0) {
-        try writer.print("warning: Native watching stopped: {s}. Every directory is watched by polling instead.\n", .{describe_error(problem.reason)});
+        try writer.print(
+            "warning: Native watching stopped: {s}. " ++
+                "Every directory is watched by polling instead.\n",
+            .{describe_error(problem.reason)},
+        );
         return;
     }
-    try writer.print("warning: {s}: {s}. {s}\n", .{ problem.path, describe_error(problem.reason), action });
+    try writer.print(
+        "warning: {s}: {s}. {s}\n",
+        .{ problem.path, describe_error(problem.reason), action },
+    );
 }
 
 //
@@ -120,7 +134,8 @@ pub fn describe_error(err: anyerror) []const u8 {
 pub fn write_stats(writer: *Writer, stats: *const Stats) Writer.Error!void {
     assert(stats.native_watches <= stats.watch_budget);
     try writer.print(
-        "stats: directories={d} native_watches={d} polled_directories={d} watch_budget={d} native_limit={d} native_active={}\n",
+        "stats: directories={d} native_watches={d} polled_directories={d} " ++
+            "watch_budget={d} native_limit={d} native_active={}\n",
         .{
             stats.directories,
             stats.native_watches,

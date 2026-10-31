@@ -18,11 +18,23 @@ const Inotify = inotify_module.Inotify;
 // Builds a buffer of raw inotify events the way the kernel lays them out.
 //
 const EventBuffer = struct {
+    //
+    // The raw event bytes.
+    //
     bytes: [4096]u8 align(@alignOf(linux.inotify_event)) = undefined,
+
+    //
+    // The number of bytes written so far.
+    //
     len: usize = 0,
 
+    //
+    // Appends one event, padding the name with zeros to a multiple of 16 bytes like the kernel.
+    //
     fn add(self: *EventBuffer, wd: i32, mask: u32, name: []const u8) void {
-        const padded: u32 = if (name.len == 0) 0 else @intCast(std.mem.alignForward(usize, name.len + 1, 16));
+        const padded: u32 = if (name.len == 0) 0 else @intCast(
+            std.mem.alignForward(usize, name.len + 1, 16),
+        );
         const header: linux.inotify_event = .{
             .wd = wd,
             .mask = mask,
@@ -155,6 +167,9 @@ test "init_error and watch_error map kernel errors" {
     try testing.expectEqual(error.Unexpected, inotify_module.watch_error(.PERM));
 }
 
+//
+// Watches the same directory twice, for the allocation failure test.
+//
 fn watch_twice(gpa: std.mem.Allocator, path: []const u8) !void {
     const inotify = try gpa.create(Inotify);
     defer gpa.destroy(inotify);

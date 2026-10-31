@@ -5,24 +5,27 @@
 const std = @import("std");
 const manifest = @import("build.zig.zon");
 
-pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+//
+// Defines the build steps: install, run, check, test and coverage.
+//
+pub fn build(builder: *std.Build) void {
+    const target = builder.standardTargetOptions(.{});
+    const optimize = builder.standardOptimizeOption(.{});
     const os = target.result.os.tag;
 
     // kqueue is reached through the C library on Apple platforms.
-    const library = b.addModule("file_watcher", .{
-        .root_source_file = b.path("src/root.zig"),
+    const library = builder.addModule("file_watcher", .{
+        .root_source_file = builder.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = if (os.isDarwin()) true else null,
     });
 
-    const build_options = b.addOptions();
+    const build_options = builder.addOptions();
     build_options.addOption([]const u8, "version", manifest.version);
 
-    const cli = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
+    const cli = builder.createModule(.{
+        .root_source_file = builder.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -39,8 +42,8 @@ pub fn build(b: *std.Build) void {
 
     // Analysing the CLI tool without emitting a binary checks that the library compiles for a
     // target. It is the only way to check iOS, where the linker needs Apple's SDK.
-    const check_step = b.step("check", "Compile the library and CLI tool without linking");
-    const check = b.addExecutable(.{
+    const check_step = builder.step("check", "Compile the library and CLI tool without linking");
+    const check = builder.addExecutable(.{
         .name = "file-watcher",
         .root_module = cli,
     });
@@ -49,18 +52,18 @@ pub fn build(b: *std.Build) void {
     // The CLI tool targets desktops and Android. iOS apps cannot run command line tools, so on
     // iOS the install step checks that the library compiles instead.
     if (os == .ios) {
-        b.getInstallStep().dependOn(&check.step);
+        builder.getInstallStep().dependOn(&check.step);
     } else {
-        const exe = b.addExecutable(.{
+        const exe = builder.addExecutable(.{
             .name = "file-watcher",
             .root_module = cli,
         });
-        b.installArtifact(exe);
+        builder.installArtifact(exe);
 
-        const run_step = b.step("run", "Run the CLI tool");
-        const run = b.addRunArtifact(exe);
-        run.step.dependOn(b.getInstallStep());
-        if (b.args) |args| {
+        const run_step = builder.step("run", "Run the CLI tool");
+        const run = builder.addRunArtifact(exe);
+        run.step.dependOn(builder.getInstallStep());
+        if (builder.args) |args| {
             run.addArgs(args);
         }
         run_step.dependOn(&run.step);
@@ -69,13 +72,13 @@ pub fn build(b: *std.Build) void {
     // The test helpers are modules of their own, imported by name, because Zig allows a file in
     // one module only and both the library tests and the CLI tests use them. The library
     // module consumers import has no such imports.
-    const mock_io = b.createModule(.{
-        .root_source_file = b.path("src/mock_io.test.zig"),
+    const mock_io = builder.createModule(.{
+        .root_source_file = builder.path("src/mock_io.test.zig"),
         .target = target,
         .optimize = optimize,
     });
-    const fake_backend = b.createModule(.{
-        .root_source_file = b.path("src/fake_backend.test.zig"),
+    const fake_backend = builder.createModule(.{
+        .root_source_file = builder.path("src/fake_backend.test.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -85,8 +88,8 @@ pub fn build(b: *std.Build) void {
             },
         },
     });
-    const library_test_module = b.createModule(.{
-        .root_source_file = b.path("src/root.zig"),
+    const library_test_module = builder.createModule(.{
+        .root_source_file = builder.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = if (os.isDarwin()) true else null,
@@ -101,8 +104,8 @@ pub fn build(b: *std.Build) void {
             },
         },
     });
-    const cli_test_module = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
+    const cli_test_module = builder.createModule(.{
+        .root_source_file = builder.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -121,33 +124,33 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const library_tests = b.addTest(.{
+    const library_tests = builder.addTest(.{
         .root_module = library_test_module,
     });
-    const cli_tests = b.addTest(.{
+    const cli_tests = builder.addTest(.{
         .root_module = cli_test_module,
     });
-    const test_step = b.step("test", "Run the unit tests");
-    test_step.dependOn(&b.addRunArtifact(library_tests).step);
-    test_step.dependOn(&b.addRunArtifact(cli_tests).step);
+    const test_step = builder.step("test", "Run the unit tests");
+    test_step.dependOn(&builder.addRunArtifact(library_tests).step);
+    test_step.dependOn(&builder.addRunArtifact(cli_tests).step);
 
     // kcov reads the debug information of LLVM builds, so coverage builds use LLVM.
-    const coverage_step = b.step("coverage", "Measure unit test coverage with kcov");
-    const coverage_library_tests = b.addTest(.{
+    const coverage_step = builder.step("coverage", "Measure unit test coverage with kcov");
+    const coverage_library_tests = builder.addTest(.{
         .name = "library-tests",
         .root_module = library_test_module,
         .use_llvm = true,
     });
-    const coverage_cli_tests = b.addTest(.{
+    const coverage_cli_tests = builder.addTest(.{
         .name = "cli-tests",
         .root_module = cli_test_module,
         .use_llvm = true,
     });
-    const merge = b.addSystemCommand(&.{ "kcov", "--merge" });
+    const merge = builder.addSystemCommand(&.{ "kcov", "--merge" });
     const merged_directory = merge.addOutputDirectoryArg("merged");
     for ([_]*std.Build.Step.Compile{ coverage_library_tests, coverage_cli_tests }) |tests| {
-        const kcov = b.addSystemCommand(&.{"kcov"});
-        kcov.addPrefixedDirectoryArg("--include-path=", b.path("src"));
+        const kcov = builder.addSystemCommand(&.{"kcov"});
+        kcov.addPrefixedDirectoryArg("--include-path=", builder.path("src"));
         kcov.addArg("--exclude-pattern=.test.zig");
         const report = kcov.addOutputDirectoryArg(tests.name);
         kcov.addArtifactArg(tests);
@@ -156,7 +159,7 @@ pub fn build(b: *std.Build) void {
         _ = kcov.captureStdErr(.{});
         merge.addDirectoryArg(report);
     }
-    const install_coverage = b.addInstallDirectory(.{
+    const install_coverage = builder.addInstallDirectory(.{
         .source_dir = merged_directory,
         .install_dir = .prefix,
         .install_subdir = "coverage",

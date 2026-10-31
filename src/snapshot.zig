@@ -84,7 +84,7 @@ pub fn stamp_from_stat(stat: *const Io.File.Stat) Stamp {
         .mtime_ns = @truncate(stat.mtime.nanoseconds),
         .inode = stat.inode,
     };
-    assert(stamp.kind == .directory or stat.kind != .directory);
+    if (stat.kind == .directory) assert(stamp.kind == .directory);
     assert(stamp.size == stat.size);
     return stamp;
 }
@@ -305,6 +305,19 @@ pub const Snapshot = struct {
             }
         }
         return false;
+    }
+
+    //
+    // The root that `path` is in, or null when it is in none of them.
+    //
+    pub fn root_of(self: *const Snapshot, path: []const u8) ?[]const u8 {
+        assert(path.len > 0);
+        for (self.roots.items) |root| {
+            if (is_within(path, root)) {
+                return root;
+            }
+        }
+        return null;
     }
 
     //
@@ -651,8 +664,13 @@ pub fn is_within(path: []const u8, root: []const u8) bool {
 pub fn trim_root(path: []const u8) []const u8 {
     assert(path.len > 0);
     var end = path.len;
-    while (end > 1 and std.fs.path.isSep(path[end - 1]) and path[end - 2] != ':') {
-        end -= 1;
+    while (end > 1) : (end -= 1) {
+        if (!std.fs.path.isSep(path[end - 1])) {
+            break;
+        }
+        if (path[end - 2] == ':') {
+            break;
+        }
     }
     assert(end > 0);
     return path[0..end];

@@ -70,7 +70,7 @@ pub fn checks_for(fflags: u32, is_directory: bool) Checks {
         }
     }
     assert(!checks.tree);
-    assert(!checks.directory or is_directory);
+    if (checks.directory) assert(is_directory);
     return checks;
 }
 

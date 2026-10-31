@@ -49,6 +49,9 @@ test "clear starts a new batch" {
     try testing.expectEqualStrings("/root/new", list.events.items[0].path);
 }
 
+//
+// Appends one event and one problem, for the allocation failure test.
+//
 fn append_both(gpa: std.mem.Allocator) !void {
     var list = EventList.init(gpa);
     defer list.deinit();

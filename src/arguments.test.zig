@@ -36,16 +36,16 @@ test "parse reads every option" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const command = try parse(&arena, &.{
-        "-f",           "json",
-        "-x",           "build",
+        "-f",            "json",
+        "-x",            "build",
         "--exclude-dir", "dist",
-        "-e",           "log",
+        "-e",            "log",
         "--exclude-ext", ".tmp",
-        "-q",           "25",
-        "-i",           "200",
-        "-d",           "1500",
-        "--poll",       "-s",
-        "src",          "--",
+        "-q",            "25",
+        "-i",            "200",
+        "-d",            "1500",
+        "--poll",        "-s",
+        "src",           "--",
         "-odd",
     });
     const config = command.watch;
@@ -63,7 +63,13 @@ test "parse reads every option" {
     try testing.expectEqual(@as(?u32, 1500), config.duration_ms);
     try testing.expect(config.is_stats_shown);
 
-    const defaults = (try parse(&arena, &.{ "--format", "yaml", "--no-default-excludes", "." })).watch;
+    const defaults_command = try parse(&arena, &.{
+        "--format",
+        "yaml",
+        "--no-default-excludes",
+        ".",
+    });
+    const defaults = defaults_command.watch;
     try testing.expectEqual(arguments.Format.yaml, defaults.format);
     try testing.expectEqual(@as(usize, 0), defaults.options.excluded_directories.len);
     try testing.expectEqual(@as(?u32, null), defaults.duration_ms);
@@ -100,6 +106,9 @@ test "parse explains bad command lines" {
     try expect_failure(&.{ "-d", "-5", "dir" }, "Duration -5");
 }
 
+//
+// Parses a valid and an invalid command line, for the allocation failure test.
+//
 fn parse_with(gpa: std.mem.Allocator) !void {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();

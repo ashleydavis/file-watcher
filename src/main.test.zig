@@ -14,16 +14,33 @@ const MockIo = mock_io_module.MockIo;
 // The captured result of one run.
 //
 const Result = struct {
+    //
+    // The exit code.
+    //
     code: u8,
+
+    //
+    // Everything written to standard output.
+    //
     stdout: std.Io.Writer.Allocating,
+
+    //
+    // Everything written to standard error.
+    //
     stderr: std.Io.Writer.Allocating,
 
+    //
+    // Frees the captured output.
+    //
     fn deinit(self: *Result) void {
         self.stdout.deinit();
         self.stderr.deinit();
     }
 };
 
+//
+// Runs the tool on the mock file system and captures its output.
+//
 fn run(mock: *MockIo, argv: []const []const u8) !Result {
     var result: Result = .{
         .code = 0,
@@ -31,7 +48,13 @@ fn run(mock: *MockIo, argv: []const []const u8) !Result {
         .stderr = .init(testing.allocator),
     };
     errdefer result.deinit();
-    result.code = try main.run(testing.allocator, mock.io(), argv, &result.stdout.writer, &result.stderr.writer);
+    result.code = try main.run(
+        testing.allocator,
+        mock.io(),
+        argv,
+        &result.stdout.writer,
+        &result.stderr.writer,
+    );
     return result;
 }
 
@@ -81,7 +104,10 @@ test "run prints changes until the duration ends" {
     try mock.add_directory("/root");
     mock.sleep_callback = add_file_on_sleep;
 
-    var result = try run(&mock, &.{ "--poll", "-i", "100", "-d", "2500", "-s", "-f", "json", "/root" });
+    var result = try run(
+        &mock,
+        &.{ "--poll", "-i", "100", "-d", "2500", "-s", "-f", "json", "/root" },
+    );
     defer result.deinit();
     try testing.expectEqual(@as(u8, 0), result.code);
     try testing.expectEqualStrings(
@@ -110,7 +136,8 @@ test "run prints problems as warnings" {
     defer result.deinit();
     try testing.expectEqual(@as(u8, 0), result.code);
     try testing.expectEqualStrings(
-        "warning: /root/locked: permission denied. It is left out of the watch. Check that it is readable.\n",
+        "warning: /root/locked: permission denied. " ++
+            "It is left out of the watch. Check that it is readable.\n",
         result.stderr.written(),
     );
 }
@@ -128,17 +155,27 @@ test "run refuses a missing directory" {
     defer result.deinit();
     try testing.expectEqual(@as(u8, 1), result.code);
     try testing.expectEqualStrings(
-        "error: Cannot watch /missing: it does not exist. Name an existing directory that does not overlap another one.\n",
+        "error: Cannot watch /missing: it does not exist. " ++
+            "Name an existing directory that does not overlap another one.\n",
         result.stderr.written(),
     );
 }
 
+//
+// Runs a watch and a failing watch, for the allocation failure test.
+//
 fn run_with(gpa: std.mem.Allocator, mock: *MockIo) !void {
     var stdout: std.Io.Writer.Allocating = .init(testing.allocator);
     defer stdout.deinit();
     var stderr: std.Io.Writer.Allocating = .init(testing.allocator);
     defer stderr.deinit();
-    _ = try main.run(gpa, mock.io(), &.{ "--poll", "-d", "300", "-i", "100", "/root" }, &stdout.writer, &stderr.writer);
+    _ = try main.run(
+        gpa,
+        mock.io(),
+        &.{ "--poll", "-d", "300", "-i", "100", "/root" },
+        &stdout.writer,
+        &stderr.writer,
+    );
     _ = try main.run(gpa, mock.io(), &.{ "--poll", "/missing" }, &stdout.writer, &stderr.writer);
 }
 

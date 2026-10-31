@@ -26,6 +26,10 @@ const exit_success: u8 = 0;
 const exit_failure: u8 = 1;
 const exit_usage: u8 = 2;
 
+//
+// The process entry point. It hands the arguments, standard output and standard error to
+// `run` and exits with the code `run` returns.
+//
 pub fn main(init: std.process.Init) !u8 {
     const argv = try init.minimal.args.toSlice(init.arena.allocator());
     var stdout_buffer: [64 * 1024]u8 = undefined;
@@ -73,7 +77,13 @@ pub fn run(
 //
 // Watches the configured directories until the duration ends, printing every change.
 //
-fn watch(gpa: Allocator, io: Io, config: *const arguments.Config, stdout: *Writer, stderr: *Writer) !u8 {
+fn watch(
+    gpa: Allocator,
+    io: Io,
+    config: *const arguments.Config,
+    stdout: *Writer,
+    stderr: *Writer,
+) !u8 {
     assert(config.paths.len > 0);
     const watcher = try gpa.create(Watcher);
     defer gpa.destroy(watcher);
@@ -85,7 +95,11 @@ fn watch(gpa: Allocator, io: Io, config: *const arguments.Config, stdout: *Write
             if (err == error.OutOfMemory) {
                 return error.OutOfMemory;
             }
-            try stderr.print("error: Cannot watch {s}: {s}. Name an existing directory that does not overlap another one.\n", .{ path, output.describe_error(err) });
+            try stderr.print(
+                "error: Cannot watch {s}: {s}. " ++
+                    "Name an existing directory that does not overlap another one.\n",
+                .{ path, output.describe_error(err) },
+            );
             try stderr.flush();
             return exit_failure;
         };
@@ -100,6 +114,7 @@ fn watch(gpa: Allocator, io: Io, config: *const arguments.Config, stdout: *Write
         @as(i96, duration_ms) * std.time.ns_per_ms
     else
         null;
+    // Without a duration the loop runs until the process is stopped, which is the tool's job.
     while (true) {
         var wait_ms = batch_wait_ms_max;
         if (duration_ns) |duration| {
@@ -107,7 +122,12 @@ fn watch(gpa: Allocator, io: Io, config: *const arguments.Config, stdout: *Write
             if (elapsed_ns >= duration) {
                 break;
             }
-            const remaining_ms = std.math.divCeil(i96, duration - elapsed_ns, std.time.ns_per_ms) catch unreachable;
+            const remaining_ns = duration - elapsed_ns;
+            const remaining_ms = std.math.divCeil(
+                i96,
+                remaining_ns,
+                std.time.ns_per_ms,
+            ) catch unreachable;
             wait_ms = @intCast(@min(remaining_ms, batch_wait_ms_max));
         }
         const batch = try watcher.next(wait_ms);

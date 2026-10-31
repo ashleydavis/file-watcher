@@ -237,10 +237,6 @@ pub fn GenericWatcher(comptime Backend: type) type {
             try self.snapshot.add_root(path, &self.list);
             const root = snapshot_module.trim_root(path);
             assert(self.snapshot.contains_directory(root));
-            if (Backend.is_recursive) {
-                try self.watch_path(root, true);
-                return;
-            }
             var directories = self.snapshot.directories.iterator();
             while (directories.next()) |entry| {
                 const directory_path = entry.key_ptr.*;
@@ -262,11 +258,13 @@ pub fn GenericWatcher(comptime Backend: type) type {
             self.clear_returned_batch();
             const deadline_ns = self.now_ns() + @as(i96, timeout_ms) * std.time.ns_per_ms;
             var rounds: u32 = 0;
-            while (self.list.events.items.len == 0 and self.list.problems.items.len == 0) {
+            while (true) : (rounds += 1) {
                 assert(rounds < std.math.maxInt(u32));
-                rounds += 1;
+                if (self.has_batch()) {
+                    break;
+                }
                 try self.poll_if_due();
-                if (self.list.events.items.len > 0) {
+                if (self.has_batch()) {
                     break;
                 }
                 const current_ns = self.now_ns();
@@ -285,6 +283,13 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 .events = self.list.events.items,
                 .problems = self.list.problems.items,
             };
+        }
+
+        //
+        // Whether the current batch holds anything to hand to the caller.
+        //
+        fn has_batch(self: *const Self) bool {
+            return self.list.events.items.len + self.list.problems.items.len > 0;
         }
 
         //
@@ -371,7 +376,16 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 return;
             }
             if (Backend.is_recursive) {
-                if (!self.snapshot.is_root(path)) {
+                // A directory below a root is covered by the root's tree watch, unless the root
+                // is polled, in which case every directory under it is polled.
+                // A path whose root was deleted earlier in the batch needs no watch.
+                const root = self.snapshot.root_of(path) orelse return;
+                if (!std.mem.eql(u8, root, path)) {
+                    if (is_directory) {
+                        if (self.polled.contains(root)) {
+                            try self.poll_directory(path);
+                        }
+                    }
                     return;
                 }
             }
@@ -380,11 +394,10 @@ pub fn GenericWatcher(comptime Backend: type) type {
                     return;
                 }
             }
-            const directory = if (is_directory) path else std.fs.path.dirname(path).?;
             if (self.watch_count < self.watch_budget) {
                 const is_new = self.backend.watch(path, is_directory) catch |err| {
                     try self.record_watch_failure(path, err);
-                    try self.poll_directory(directory);
+                    try self.poll_instead(path, is_directory);
                     return;
                 };
                 if (is_new) {
@@ -392,9 +405,32 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 }
             } else {
                 try self.record_quota_reached(path);
-                try self.poll_directory(directory);
+                try self.poll_instead(path, is_directory);
             }
             assert(self.watch_count <= self.watch_budget);
+        }
+
+        //
+        // Polls what a refused native watch would have covered: the directory itself, the
+        // directory holding a file, or every directory under a root for a tree backend.
+        //
+        fn poll_instead(self: *Self, path: []const u8, is_directory: bool) !void {
+            if (!is_directory) {
+                try self.poll_directory(std.fs.path.dirname(path).?);
+                return;
+            }
+            if (!Backend.is_recursive) {
+                try self.poll_directory(path);
+                return;
+            }
+            assert(self.snapshot.is_root(path));
+            var directories = self.snapshot.directories.keyIterator();
+            while (directories.next()) |directory_path| {
+                if (snapshot_module.is_within(directory_path.*, path)) {
+                    try self.poll_directory(directory_path.*);
+                }
+            }
+            assert(self.polled.contains(path));
         }
 
         //
@@ -430,8 +466,9 @@ pub fn GenericWatcher(comptime Backend: type) type {
         //
         fn unwatch_path(self: *Self, path: []const u8, is_directory: bool) void {
             assert(path.len > 0);
+            const has_own_watch = if (is_directory) true else Backend.watches_files;
             if (self.is_native_active) {
-                if (is_directory or Backend.watches_files) {
+                if (has_own_watch) {
                     if (self.backend.unwatch(path)) {
                         assert(self.watch_count > 0);
                         self.watch_count -= 1;
@@ -511,18 +548,20 @@ pub fn GenericWatcher(comptime Backend: type) type {
         //
         fn wait_for_changes(self: *Self, wait_ns: i96) !void {
             assert(wait_ns > 0);
-            if (self.is_native_active and self.watch_count > 0) {
-                const wait_ms: u32 = @intCast(@min(
-                    std.math.divCeil(i96, wait_ns, std.time.ns_per_ms) catch unreachable,
-                    std.math.maxInt(u32),
-                ));
-                self.backend.wait(wait_ms, &self.hints) catch |err| {
-                    if (err == error.OutOfMemory) {
-                        return error.OutOfMemory;
-                    }
-                    try self.fall_back_to_polling(err);
-                };
-                return;
+            if (self.is_native_active) {
+                if (self.watch_count > 0) {
+                    const wait_ms: u32 = @intCast(@min(
+                        std.math.divCeil(i96, wait_ns, std.time.ns_per_ms) catch unreachable,
+                        std.math.maxInt(u32),
+                    ));
+                    self.backend.wait(wait_ms, &self.hints) catch |err| {
+                        if (err == error.OutOfMemory) {
+                            return error.OutOfMemory;
+                        }
+                        try self.fall_back_to_polling(err);
+                    };
+                    return;
+                }
             }
             try self.io.sleep(.fromNanoseconds(wait_ns), .awake);
         }

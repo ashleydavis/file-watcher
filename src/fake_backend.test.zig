@@ -45,9 +45,19 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
             scope: Scope,
         };
 
+        //
+        // Whether one watch covers a whole tree, from the configuration.
+        //
         pub const is_recursive = config.is_recursive;
+
+        //
+        // Whether files need their own watch, from the configuration.
+        //
         pub const watches_files = config.watches_files;
 
+        //
+        // Allocates the watched paths and the queued steps.
+        //
         gpa: Allocator,
 
         //
@@ -80,6 +90,9 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         //
         wait_error: ?anyerror,
 
+        //
+        // Starts the fake, or fails with the configured error.
+        //
         pub fn init(self: *Self, gpa: Allocator) !void {
             if (config.init_error) |err| {
                 return err;
@@ -95,6 +108,9 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
             };
         }
 
+        //
+        // Frees the watched paths and the queue.
+        //
         pub fn deinit(self: *Self) void {
             for (self.watched.keys()) |path| {
                 self.gpa.free(path);
@@ -104,6 +120,9 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
             self.* = undefined;
         }
 
+        //
+        // Records a watch, or fails for the failing path. Returns false for a path watched already.
+        //
         pub fn watch(self: *Self, path: []const u8, is_directory: bool) !bool {
             _ = is_directory;
             if (self.failing_path) |failing| {
@@ -122,12 +141,19 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
             return true;
         }
 
+        //
+        // Drops a watch. Returns false for a path that was not watched.
+        //
         pub fn unwatch(self: *Self, path: []const u8) bool {
             const removed = self.watched.fetchSwapRemove(path) orelse return false;
             self.gpa.free(removed.key);
             return true;
         }
 
+        //
+        // Reports the queued hints, or fails with the queued error, or lets the timeout pass on the
+        // mock clock when nothing is queued.
+        //
         pub fn wait(self: *Self, timeout_ms: u32, hints: *HintSet) !void {
             if (self.wait_error) |err| {
                 self.wait_error = null;

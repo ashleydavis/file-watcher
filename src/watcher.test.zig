@@ -30,8 +30,10 @@ fn FakeBackend(comptime config: fake_backend.Config) type {
 //
 fn has_event(batch: Batch, kind: EventKind, path: []const u8) bool {
     for (batch.events) |item| {
-        if (item.kind == kind and std.mem.eql(u8, item.path, path)) {
-            return true;
+        if (item.kind == kind) {
+            if (std.mem.eql(u8, item.path, path)) {
+                return true;
+            }
         }
     }
     return false;
@@ -211,6 +213,55 @@ test "recursive and file-watching backends" {
     const deleted = try files.next(1000);
     try testing.expect(has_event(deleted, .deleted, "/root/a.txt"));
     try testing.expect(!files.backend.watched.contains("/root/a.txt"));
+}
+
+//
+// Goal: with a tree backend, every directory under a root is polled when the root cannot be
+// watched natively or the watcher polls, including directories created later.
+// Method: refuse the root's watch, add a tree and create a directory; then repeat in polling
+// mode.
+//
+test "tree backends poll every directory of a refused root" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    const Recursive = watcher_module.GenericWatcher(FakeBackend(.{
+        .is_recursive = true,
+    }));
+    var refused: Recursive = undefined;
+    try refused.init(testing.allocator, mock.io(), &.{
+        .poll_interval_ms = 10,
+    });
+    defer refused.deinit();
+    refused.backend.mock = &mock;
+    refused.backend.failing_path = "/root";
+    refused.backend.watch_error = error.AccessDenied;
+    try refused.add("/root");
+    try testing.expectEqual(@as(u32, 2), refused.stats().polled_directories);
+    try testing.expectEqual(@as(u32, 0), refused.stats().native_watches);
+
+    try mock.add_directory("/root/sub/later");
+    try mock.add_file("/root/sub/later/file.txt", 1);
+    var found = false;
+    var attempts: u32 = 0;
+    while (attempts < 3) : (attempts += 1) {
+        const batch = try refused.next(100);
+        if (has_event(batch, .created, "/root/sub/later/file.txt")) {
+            found = true;
+        }
+    }
+    try testing.expect(found);
+    try testing.expectEqual(@as(u32, 3), refused.stats().polled_directories);
+
+    var polling: Recursive = undefined;
+    try polling.init(testing.allocator, mock.io(), &.{
+        .method = .polling,
+    });
+    defer polling.deinit();
+    try polling.add("/root");
+    try testing.expectEqual(@as(u32, 3), polling.stats().polled_directories);
 }
 
 //

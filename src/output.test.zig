@@ -48,11 +48,25 @@ test "write_event writes every format" {
 test "write_quoted escapes for JSON and YAML" {
     var buffer: std.Io.Writer.Allocating = .init(testing.allocator);
     defer buffer.deinit();
-    try output.write_quoted(&buffer.writer, "a\\b\n\t\x01\x7f\u{85}caf\u{e9}\u{1f600}\xff\xe2\x82\xc3\x28");
+    try output.write_quoted(
+        &buffer.writer,
+        "a\\b\n\t\x01\x7f\u{85}caf\u{e9}\u{1f600}\xff\xe2\x82\xc3\x28",
+    );
     try testing.expectEqualStrings(
         "\"a\\\\b\\n\\t\\u0001\\u007f\\u0085caf\u{e9}\u{1f600}\\ufffd\\ufffd\\ufffd\\ufffd(\"",
         buffer.written(),
     );
+}
+
+//
+// Goal: a multibyte sequence cut short by the end of the text becomes U+FFFD.
+// Method: quote text ending in the first byte of a three-byte sequence.
+//
+test "write_quoted replaces a truncated sequence" {
+    var buffer: std.Io.Writer.Allocating = .init(testing.allocator);
+    defer buffer.deinit();
+    try output.write_quoted(&buffer.writer, "a\xe2");
+    try testing.expectEqualStrings("\"a\\ufffd\"", buffer.written());
 }
 
 //
@@ -78,9 +92,12 @@ test "write_problem explains each problem" {
         .action = .polled,
     });
     try testing.expectEqualStrings(
-        "warning: /root/locked: permission denied. It is left out of the watch. Check that it is readable.\n" ++
-            "warning: /root/big: the native watch quota is used up. It is watched by polling instead.\n" ++
-            "warning: Native watching stopped: this platform has no native watch method. Every directory is watched by polling instead.\n",
+        "warning: /root/locked: permission denied. " ++
+            "It is left out of the watch. Check that it is readable.\n" ++
+            "warning: /root/big: the native watch quota is used up. " ++
+            "It is watched by polling instead.\n" ++
+            "warning: Native watching stopped: this platform has no native watch method. " ++
+            "Every directory is watched by polling instead.\n",
         buffer.written(),
     );
 }
@@ -126,7 +143,8 @@ test "write_stats writes the counters" {
         .is_native_active = true,
     });
     try testing.expectEqualStrings(
-        "stats: directories=4 native_watches=3 polled_directories=1 watch_budget=50 native_limit=100 native_active=true\n",
+        "stats: directories=4 native_watches=3 polled_directories=1 " ++
+            "watch_budget=50 native_limit=100 native_active=true\n",
         buffer.written(),
     );
 }

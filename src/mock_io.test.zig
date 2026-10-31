@@ -246,6 +246,9 @@ pub const MockIo = struct {
         return count;
     }
 
+    //
+    // The faults injected for `path`, or none.
+    //
     fn faults_of(self: *MockIo, path: []const u8) Faults {
         return self.faults.get(path) orelse .{};
     }
@@ -266,10 +269,16 @@ pub const MockIo = struct {
     }
 };
 
+//
+// The mock behind an `Io`.
+//
 fn mock_from(userdata: ?*anyopaque) *MockIo {
     return @ptrCast(@alignCast(userdata.?));
 }
 
+//
+// Whether `path` is `root` or inside it.
+//
 fn is_within(path: []const u8, root: []const u8) bool {
     if (!std.mem.startsWith(u8, path, root)) {
         return false;
@@ -280,6 +289,9 @@ fn is_within(path: []const u8, root: []const u8) bool {
     return path[root.len] == '/';
 }
 
+//
+// Opens a directory and hands out a handle that maps back to its path.
+//
 fn dir_open_dir(
     userdata: ?*anyopaque,
     dir: Dir,
@@ -309,6 +321,9 @@ fn dir_open_dir(
     };
 }
 
+//
+// Returns the metadata of an entry.
+//
 fn dir_stat_file(
     userdata: ?*anyopaque,
     dir: Dir,
@@ -341,6 +356,9 @@ fn dir_stat_file(
     };
 }
 
+//
+// Closes directory handles.
+//
 fn dir_close(userdata: ?*anyopaque, dirs: []const Dir) void {
     const self = mock_from(userdata);
     for (dirs) |dir| {
@@ -350,7 +368,14 @@ fn dir_close(userdata: ?*anyopaque, dirs: []const Dir) void {
     }
 }
 
-fn dir_read(userdata: ?*anyopaque, reader: *Dir.Reader, entries: []Dir.Entry) Dir.Reader.Error!usize {
+//
+// Lists the children of a directory in insertion order, resuming from `reader.index`.
+//
+fn dir_read(
+    userdata: ?*anyopaque,
+    reader: *Dir.Reader,
+    entries: []Dir.Entry,
+) Dir.Reader.Error!usize {
     const self = mock_from(userdata);
     const index: usize = @intCast(reader.dir.handle - handle_base);
     const path = self.handles.items[index].?;
@@ -372,13 +397,15 @@ fn dir_read(userdata: ?*anyopaque, reader: *Dir.Reader, entries: []Dir.Entry) Di
         if (!std.mem.eql(u8, parent, path)) {
             continue;
         }
-        if (position >= reader.index and filled < entries.len) {
-            entries[filled] = .{
-                .name = std.fs.path.basename(key),
-                .kind = node.kind,
-                .inode = node.inode,
-            };
-            filled += 1;
+        if (position >= reader.index) {
+            if (filled < entries.len) {
+                entries[filled] = .{
+                    .name = std.fs.path.basename(key),
+                    .kind = node.kind,
+                    .inode = node.inode,
+                };
+                filled += 1;
+            }
         }
         position += 1;
     }
@@ -389,6 +416,9 @@ fn dir_read(userdata: ?*anyopaque, reader: *Dir.Reader, entries: []Dir.Entry) Di
     return filled;
 }
 
+//
+// The mock clock, the same for every clock kind.
+//
 fn now(userdata: ?*anyopaque, clock: Io.Clock) Io.Timestamp {
     _ = clock;
     const self = mock_from(userdata);
@@ -397,6 +427,9 @@ fn now(userdata: ?*anyopaque, clock: Io.Clock) Io.Timestamp {
     };
 }
 
+//
+// Moves the mock clock forward instead of waiting, then runs the sleep callback.
+//
 fn sleep(userdata: ?*anyopaque, timeout: Io.Timeout) Io.Cancelable!void {
     const self = mock_from(userdata);
     switch (timeout) {
