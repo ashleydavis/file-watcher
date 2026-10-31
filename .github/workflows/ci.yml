@@ -1,7 +1,8 @@
 # Builds and tests the file watcher on every platform it supports, without a matrix. Each
 # platform has one build job that saves its output to a cache keyed by the commit SHA, and test
 # jobs that restore that build instead of building again. Each platform and kind of test has
-# its own job, so the run overview shows exactly which one failed.
+# its own job, so the run overview shows exactly which one failed. The performance jobs write
+# their results to the job summary.
 
 name: CI
 
@@ -95,7 +96,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Performance tests
-        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000
+        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "Linux performance"
 
   windows-build:
     name: Windows build
@@ -117,6 +118,9 @@ jobs:
 
       - name: Build the CLI tool
         run: zig build
+
+      - name: Build the CLI tool for performance tests
+        run: zig build -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -168,6 +172,27 @@ jobs:
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher.exe
 
+  windows-performance:
+    name: Windows performance tests
+    runs-on: windows-2025
+    needs: windows-build
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: windows-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Performance tests
+        run: scripts/performance-test.sh zig-out/release/bin/file-watcher.exe 20000 "$GITHUB_STEP_SUMMARY" "Windows performance"
+
   macos-build:
     name: macOS build
     runs-on: macos-15
@@ -185,6 +210,9 @@ jobs:
 
       - name: Build the CLI tool
         run: zig build
+
+      - name: Build the CLI tool for performance tests
+        run: zig build -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -230,6 +258,24 @@ jobs:
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
 
+  macos-performance:
+    name: macOS performance tests
+    runs-on: macos-15
+    needs: macos-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: macos-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Performance tests
+        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "macOS performance"
+
   android-build:
     name: Android build
     runs-on: ubuntu-24.04
@@ -247,6 +293,9 @@ jobs:
 
       - name: Build the x86_64 CLI tool
         run: zig build -Dtarget=x86_64-linux-android
+
+      - name: Build the x86_64 CLI tool for performance tests
+        run: zig build -Dtarget=x86_64-linux-android -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Build for the other Android ABIs
         run: |
@@ -297,6 +346,24 @@ jobs:
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
 
+  android-performance:
+    name: Android performance tests
+    runs-on: ubuntu-24.04
+    needs: android-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: android-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Performance tests
+        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "Android performance"
+
   ios-build:
     name: iOS build
     runs-on: macos-15
@@ -314,6 +381,12 @@ jobs:
 
       - name: Build the unit tests for the simulator
         run: zig build install-tests -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
+      - name: Build the CLI tool for the simulator
+        run: zig build -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
+      - name: Build the CLI tool for performance tests in the simulator
+        run: zig build -Dtarget=aarch64-ios-simulator -Doptimize=ReleaseFast --prefix zig-out/release --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -336,7 +409,7 @@ jobs:
           key: ios-build-${{ github.sha }}
           fail-on-cache-miss: true
 
-      - name: Unit tests in the simulator
+      - name: Boot an iPhone simulator
         run: |
           device=$(xcrun simctl list devices available --json | python3 -c '
           import json, sys
@@ -350,6 +423,75 @@ jobs:
           sys.exit("No iPhone simulator is available on this runner.")
           ')
           xcrun simctl boot "$device"
+
+      - name: Unit tests in the simulator
+        run: |
           cd "$RUNNER_TEMP"
-          xcrun simctl spawn "$device" "$GITHUB_WORKSPACE/zig-out/tests/library-tests"
-          xcrun simctl spawn "$device" "$GITHUB_WORKSPACE/zig-out/tests/cli-tests"
+          xcrun simctl spawn booted "$GITHUB_WORKSPACE/zig-out/tests/library-tests"
+          xcrun simctl spawn booted "$GITHUB_WORKSPACE/zig-out/tests/cli-tests"
+
+  ios-smoke:
+    name: iOS smoke tests
+    runs-on: macos-15
+    needs: ios-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: ios-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Boot an iPhone simulator
+        run: |
+          device=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime, entries in devices.items():
+              if "iOS" in runtime:
+                  for entry in entries:
+                      if entry["name"].startswith("iPhone"):
+                          print(entry["udid"])
+                          sys.exit(0)
+          sys.exit("No iPhone simulator is available on this runner.")
+          ')
+          xcrun simctl boot "$device"
+
+      - name: Smoke tests in the simulator
+        run: scripts/smoke-test.sh zig-out/bin/file-watcher xcrun simctl spawn booted
+
+  ios-performance:
+    name: iOS performance tests
+    runs-on: macos-15
+    needs: ios-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: ios-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Boot an iPhone simulator
+        run: |
+          device=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime, entries in devices.items():
+              if "iOS" in runtime:
+                  for entry in entries:
+                      if entry["name"].startswith("iPhone"):
+                          print(entry["udid"])
+                          sys.exit(0)
+          sys.exit("No iPhone simulator is available on this runner.")
+          ')
+          xcrun simctl boot "$device"
+
+      - name: Performance tests in the simulator
+        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "iOS simulator performance" xcrun simctl spawn booted

@@ -8,10 +8,13 @@
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <path-to-file-watcher>"
+    echo "Usage: $0 <path-to-file-watcher> [launcher...]"
     echo
     echo "Runs smoke tests against the given file-watcher binary, for example:"
     echo "  $0 zig-out/bin/file-watcher"
+    echo
+    echo "A launcher, when given, is a command that runs the binary, such as"
+    echo "'xcrun simctl spawn booted' for a binary built for the iOS simulator."
     exit 2
 fi
 
@@ -20,6 +23,19 @@ if [ ! -x "$binary" ]; then
     echo "error: $1 is not an executable file. Build it with 'zig build' first."
     exit 2
 fi
+shift
+# The count is kept apart from the array because bash 3.2 rejects an empty array under set -u.
+launcher_count=$#
+launcher=("$@")
+
+# Runs the tool with the given arguments, through the launcher when there is one.
+run_tool() {
+    if [ "$launcher_count" -eq 0 ]; then
+        "$binary" "$@"
+    else
+        "${launcher[@]}" "$binary" "$@"
+    fi
+}
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -65,7 +81,7 @@ lacks_text() {
 start_watcher() {
     local case_dir="$1"
     shift
-    "$binary" "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
+    run_tool "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
     watcher_pid=$!
     watcher_case_dir="$case_dir"
     sleep 0.5
@@ -97,18 +113,18 @@ new_case() {
 echo "Smoke testing $binary"
 
 # Help, version and usage errors.
-"$binary" --help > "$work/help.txt"
+run_tool --help > "$work/help.txt"
 check "help prints usage" grep -q "^Usage: file-watcher" "$work/help.txt"
-"$binary" --version > "$work/version.txt"
+run_tool --version > "$work/version.txt"
 check "version prints the version" grep -qE "^file-watcher [0-9]+\.[0-9]+\.[0-9]+$" "$work/version.txt"
 set +e
-"$binary" > /dev/null 2> "$work/usage.txt"
+run_tool > /dev/null 2> "$work/usage.txt"
 usage_code=$?
-"$binary" --format xml "$work" > /dev/null 2> "$work/format.txt"
+run_tool --format xml "$work" > /dev/null 2> "$work/format.txt"
 format_code=$?
-"$binary" "$work/missing" > /dev/null 2> "$work/missing.txt"
+run_tool "$work/missing" > /dev/null 2> "$work/missing.txt"
 missing_code=$?
-"$binary" "$work" "$work/help.txt" > /dev/null 2> "$work/file.txt"
+run_tool "$work" "$work/help.txt" > /dev/null 2> "$work/file.txt"
 file_code=$?
 set -e
 check "no directory exits with code 2" test "$usage_code" -eq 2
@@ -243,7 +259,7 @@ check "quota: zero quota uses no native watches" grep -q "native_watches=0 .* wa
 # Directories beyond the quota are polled, and the quota being used up is reported.
 case_dir="$(new_case overflow)"
 tree="$case_dir/tree"
-"$binary" -q 1 -s -d 0 "$tree" 2> "$case_dir/budget.txt"
+run_tool -q 1 -s -d 0 "$tree" 2> "$case_dir/budget.txt"
 budget=$(sed -n 's/.*watch_budget=\([0-9]*\).*/\1/p' "$case_dir/budget.txt")
 if [ -n "$budget" ] && [ "$budget" -gt 0 ] && [ "$budget" -lt 20000 ]; then
     for index in $(seq 1 $((budget + 5))); do
@@ -281,7 +297,7 @@ wait_watcher
 check "roots: first root watched" has_line "$case_dir/out.txt" "created file $case_dir/tree/one.txt"
 check "roots: second root watched, trailing separator removed" has_line "$case_dir/out.txt" "created file $case_dir/second/two.txt"
 set +e
-"$binary" -d 100 "$case_dir" "$case_dir/tree" > /dev/null 2> "$case_dir/overlap.txt"
+run_tool -d 100 "$case_dir" "$case_dir/tree" > /dev/null 2> "$case_dir/overlap.txt"
 overlap_code=$?
 set -e
 check "roots: overlapping roots refused" test "$overlap_code" -eq 1
@@ -289,7 +305,7 @@ check "roots: overlap explained" grep -q "overlaps another watched directory" "$
 
 # The duration ends the run on time.
 SECONDS=0
-"$binary" -d 300 "$work" > /dev/null
+run_tool -d 300 "$work" > /dev/null
 check "duration: exits after the duration" test "$SECONDS" -lt 3
 
 echo

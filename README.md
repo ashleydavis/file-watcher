@@ -80,7 +80,7 @@ Android builds a static CLI tool that runs from `adb shell`, and checks the libr
 zig build -Dtarget=aarch64-linux-android -Doptimize=ReleaseFast
 ```
 
-On iOS the library is embedded in apps, and linking needs Apple's SDK, so the iOS build compiles the library and CLI code and stops before linking. An iOS app links the library through its own Zig build, as the [library guide](docs/user-guide-library.md) shows.
+On iOS the library is embedded in apps, and linking needs Apple's SDK. Without the SDK the iOS build compiles the library and CLI code and stops before linking; with `--sysroot` pointing at the SDK it links, which CI uses to run the tests in the iOS simulator. An iOS app links the library through its own Zig build, as the [library guide](docs/user-guide-library.md) shows.
 
 ```bash
 zig build -Dtarget=aarch64-ios
@@ -129,22 +129,27 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 | Linux build | Ubuntu | The unit test binaries, the CLI tool and a ReleaseFast CLI tool |
 | Linux unit tests | Ubuntu | The unit test binaries |
 | Linux smoke tests | Ubuntu | `scripts/smoke-test.sh` |
-| Linux performance tests | Ubuntu | `scripts/performance-test.sh` on 20000 files, with the ReleaseFast build |
-| Windows build | Windows | The unit test binaries and the CLI tool |
+| Linux performance tests | Ubuntu | `scripts/performance-test.sh`, with results in the job summary |
+| Windows build | Windows | The unit test binaries, the CLI tool and a ReleaseFast CLI tool |
 | Windows unit tests | Windows | The unit test binaries |
 | Windows smoke tests | Windows | `scripts/smoke-test.sh` under Git Bash |
-| macOS build | macOS | The unit test binaries and the CLI tool |
+| Windows performance tests | Windows | `scripts/performance-test.sh` under Git Bash, with results in the job summary |
+| macOS build | macOS | The unit test binaries, the CLI tool and a ReleaseFast CLI tool |
 | macOS unit tests | macOS | The unit test binaries |
 | macOS smoke tests | macOS | `scripts/smoke-test.sh` |
-| Android build | Ubuntu | The x86_64 unit test binaries and CLI tool, and builds for the other Android ABIs |
+| macOS performance tests | macOS | `scripts/performance-test.sh`, with results in the job summary |
+| Android build | Ubuntu | The x86_64 unit test binaries and CLI tools, and builds for the other Android ABIs |
 | Android unit tests | Ubuntu | The x86_64 Android unit test binaries, which run on the Linux kernel |
 | Android smoke tests | Ubuntu | `scripts/smoke-test.sh` against the x86_64 Android build |
-| iOS build | macOS | A device build and the unit test binaries for the simulator |
+| Android performance tests | Ubuntu | `scripts/performance-test.sh` against the x86_64 Android build, with results in the job summary |
+| iOS build | macOS | A device build, and the unit test binaries and CLI tools for the simulator |
 | iOS unit tests | macOS | The unit test binaries in the iOS simulator |
+| iOS smoke tests | macOS | `scripts/smoke-test.sh` with the CLI tool running in the iOS simulator |
+| iOS performance tests | macOS | `scripts/performance-test.sh` with the CLI tool running in the iOS simulator, with results in the job summary |
 
 ## Run the performance tests
 
-The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and burst throughput for native watching and for polling. They read `/proc`, so they run on Linux.
+The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and burst throughput for native watching and for polling. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
 
 ```bash
 zig build -Doptimize=ReleaseFast

@@ -15,6 +15,7 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 ## Arguments
 
 - `<path-to-file-watcher>`: the CLI tool to test.
+- `[launcher...]`: a command that runs the tool, such as `xcrun simctl spawn booted` for a build for the iOS simulator.
 
 ## Output
 

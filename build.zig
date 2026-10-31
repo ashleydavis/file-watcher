@@ -52,9 +52,18 @@ pub fn build(builder: *std.Build) void {
     });
     check_step.dependOn(&check.step);
 
-    // The CLI tool targets desktops and Android. iOS apps cannot run command line tools, so on
-    // iOS the install step checks that the library compiles instead.
+    // Linking for iOS needs Apple's SDK, given with `--sysroot`. Zig looks in the SDK's `/usr/lib`
+    // only when told to, and prefixes the path with the sysroot itself. Without an SDK the iOS
+    // install step checks that the code compiles instead.
+    const can_link = if (os == .ios) builder.sysroot != null else true;
     if (os == .ios) {
+        if (builder.sysroot != null) {
+            cli.addLibraryPath(.{
+                .cwd_relative = "/usr/lib",
+            });
+        }
+    }
+    if (!can_link) {
         builder.getInstallStep().dependOn(&check.step);
     } else {
         const exe = builder.addExecutable(.{
@@ -127,8 +136,7 @@ pub fn build(builder: *std.Build) void {
         },
     });
 
-    // Linking iOS tests needs the C library stubs from the SDK given with `--sysroot`. Zig looks
-    // in the SDK's `/usr/lib` only when told to, and prefixes the path with the sysroot itself.
+    // The iOS tests link against the SDK the same way as the CLI tool.
     if (os == .ios) {
         if (builder.sysroot != null) {
             for ([_]*std.Build.Module{ library_test_module, cli_test_module }) |module| {
@@ -136,6 +144,14 @@ pub fn build(builder: *std.Build) void {
                     .cwd_relative = "/usr/lib",
                 });
             }
+        }
+    }
+
+    // Zig's stack traces on Apple platforms call a dyld function that the iOS SDK leaves out,
+    // so iOS builds strip debug information, which turns stack tracing off.
+    if (os == .ios) {
+        for ([_]*std.Build.Module{ library, cli, library_test_module, cli_test_module }) |module| {
+            module.strip = true;
         }
     }
 
