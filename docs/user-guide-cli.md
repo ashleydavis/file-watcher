@@ -40,6 +40,22 @@ The tool runs until it is stopped with Ctrl+C, or until the duration ends. Event
 
 `--` ends the options, so a directory whose name starts with `-` can follow it.
 
+## Exclude directories and file types
+
+Leave out more directories, on top of the defaults below, and files by extension:
+
+```bash
+file-watcher -x build -x dist -e log -e .tmp src
+```
+
+Watch only with your own exclusions, dropping the defaults:
+
+```bash
+file-watcher --no-default-excludes -x build src
+```
+
+Directory names match exactly and anywhere in the tree, so `-x generated` leaves out every directory named `generated`, with everything inside it.
+
 ## Directories left out by default
 
 Directory names match exactly. The defaults are dependency, cache, build output and version control directories that tools rewrite in bulk:

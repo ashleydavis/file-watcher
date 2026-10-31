@@ -74,6 +74,31 @@ pub fn main(init: std.process.Init) !void {
 }
 ```
 
+## Exclude directories and file types
+
+`excluded_directories` leaves out every directory with one of the given names, together with everything inside it. Names match exactly and anywhere in the tree: `"generated"` leaves out `src/generated` and `tests/generated` alike. `excluded_extensions` leaves out files by the text after their last dot.
+
+Setting `excluded_directories` replaces the default list. To keep the defaults (`node_modules`, `.git` and the other heavy tool directories) and add your own, join the two lists:
+
+```zig
+const excluded = file_watcher.default_excluded_directories ++ [_][]const u8{ "build", "dist" };
+
+try watcher.init(gpa, init.io, &.{
+    .excluded_directories = &excluded,
+    .excluded_extensions = &.{ ".log", ".tmp" },
+});
+```
+
+To use only your own list, pass it on its own:
+
+```zig
+try watcher.init(gpa, init.io, &.{
+    .excluded_directories = &.{ "build", "dist", "generated" },
+});
+```
+
+The lists are borrowed, so they must outlive the watcher. A `const` declared in the same scope as the watcher, or at the top level, does.
+
 ## API
 
 ### `Watcher`
