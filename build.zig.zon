@@ -1,0 +1,16 @@
+//
+// Package manifest. Other projects fetch the library from Git by commit SHA or version tag.
+//
+.{
+    .name = .file_watcher,
+    .version = "1.0.0",
+    .fingerprint = 0xe9e95f9770066f76,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+}
