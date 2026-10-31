@@ -23,7 +23,7 @@ Facts an AI agent needs to work in this repository.
 | Install test binaries for another runner | `zig build install-tests -Dtarget=<target>` |
 | Windows unit tests under Wine (Linux) | `zig build test -Dtarget=x86_64-windows -fwine` |
 
-CI (`.github/workflows/ci.yml`) has one job per platform and kind of test, written out in full rather than as a matrix.
+CI (`.github/workflows/ci.yml`) has one job per platform and kind of test, written out in full rather than as a matrix. Each platform's build job installs the CLI tool and the test binaries into `zig-out` and saves it to a cache keyed by the commit SHA; that platform's test jobs restore it and run the binaries without building. CI does not measure coverage; run `scripts/coverage.sh run` locally.
 
 Check that these targets compile after any change to a backend or the watcher: `x86_64-windows`, `aarch64-macos`, `aarch64-linux-android` and `aarch64-ios`.
 
@@ -47,5 +47,5 @@ Check that these targets compile after any change to a backend or the watcher: `
 
 - A `Watcher` keeps a pointer into itself. Create it in place (`init(self: *Watcher, ...)`) and keep it at that address.
 - Zig 0.16 resolves every `@import` path eagerly, including in `test` blocks, so a test file must exist before the code that imports it compiles.
-- kcov reads LLVM debug information only, so the coverage step builds the tests with `use_llvm = true`.
+- kcov reads LLVM debug information only, so `scripts/coverage.sh` builds the tests with `-Dllvm=true`.
 - The Windows and kqueue system calls are compiled only for their platforms. Their decoding functions are pure and tested on every platform.

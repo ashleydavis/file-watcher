@@ -1,17 +1,20 @@
 //
-// Builds the file watcher library and CLI tool, runs the unit tests and measures their coverage.
+// Builds the file watcher library and CLI tool and its unit tests.
 //
 
 const std = @import("std");
 const manifest = @import("build.zig.zon");
 
 //
-// Defines the build steps: install, run, check, test and coverage.
+// Defines the build steps: install, run, check, test and install-tests.
 //
 pub fn build(builder: *std.Build) void {
     const target = builder.standardTargetOptions(.{});
     const optimize = builder.standardOptimizeOption(.{});
     const os = target.result.os.tag;
+
+    // kcov reads only LLVM's debug information, so coverage runs build the tests with LLVM.
+    const use_llvm = builder.option(bool, "llvm", "Build with the LLVM backend, for kcov");
 
     // kqueue is reached through the C library on Apple platforms.
     const library = builder.addModule("file_watcher", .{
@@ -137,62 +140,30 @@ pub fn build(builder: *std.Build) void {
     }
 
     const library_tests = builder.addTest(.{
+        .name = "library-tests",
         .root_module = library_test_module,
+        .use_llvm = use_llvm,
     });
     const cli_tests = builder.addTest(.{
+        .name = "cli-tests",
         .root_module = cli_test_module,
+        .use_llvm = use_llvm,
     });
     const test_step = builder.step("test", "Run the unit tests");
     test_step.dependOn(&builder.addRunArtifact(library_tests).step);
     test_step.dependOn(&builder.addRunArtifact(cli_tests).step);
 
-    // Installing the test binaries lets them run where the build cannot run them, such as the
-    // iOS simulator.
+    // Installing the test binaries lets them run without Zig: in CI jobs that reuse one build,
+    // under kcov and in the iOS simulator.
     const install_tests_step = builder.step("install-tests", "Install the unit test binaries");
-    for ([_]*std.Build.Step.Compile{ library_tests, cli_tests }, [_][]const u8{
-        "library-tests",
-        "cli-tests",
-    }) |tests, name| {
+    for ([_]*std.Build.Step.Compile{ library_tests, cli_tests }) |tests| {
         const install = builder.addInstallArtifact(tests, .{
             .dest_dir = .{
                 .override = .{
                     .custom = "tests",
                 },
             },
-            .dest_sub_path = name,
         });
         install_tests_step.dependOn(&install.step);
     }
-
-    // kcov reads the debug information of LLVM builds, so coverage builds use LLVM.
-    const coverage_step = builder.step("coverage", "Measure unit test coverage with kcov");
-    const coverage_library_tests = builder.addTest(.{
-        .name = "library-tests",
-        .root_module = library_test_module,
-        .use_llvm = true,
-    });
-    const coverage_cli_tests = builder.addTest(.{
-        .name = "cli-tests",
-        .root_module = cli_test_module,
-        .use_llvm = true,
-    });
-    const merge = builder.addSystemCommand(&.{ "kcov", "--merge" });
-    const merged_directory = merge.addOutputDirectoryArg("merged");
-    for ([_]*std.Build.Step.Compile{ coverage_library_tests, coverage_cli_tests }) |tests| {
-        const kcov = builder.addSystemCommand(&.{"kcov"});
-        kcov.addPrefixedDirectoryArg("--include-path=", builder.path("src"));
-        kcov.addArg("--exclude-pattern=.test.zig");
-        const report = kcov.addOutputDirectoryArg(tests.name);
-        kcov.addArtifactArg(tests);
-        // The test runner's progress goes to a file, so a passing run prints nothing; a failing
-        // run still fails the step through kcov's exit code.
-        _ = kcov.captureStdErr(.{});
-        merge.addDirectoryArg(report);
-    }
-    const install_coverage = builder.addInstallDirectory(.{
-        .source_dir = merged_directory,
-        .install_dir = .prefix,
-        .install_subdir = "coverage",
-    });
-    coverage_step.dependOn(&install_coverage.step);
 }

@@ -14,8 +14,8 @@ scripts/coverage.sh run
 
 ## What it does
 
-- Runs `zig build coverage`, which builds both unit test binaries with the LLVM backend (kcov reads LLVM's debug information) and runs each under kcov.
-- Merges the reports into `zig-out/coverage`, with the HTML report at `zig-out/coverage/index.html`.
+- Runs `zig build install-tests -Dllvm=true`, which builds both unit test binaries with the LLVM backend (kcov reads LLVM's debug information) into `zig-out/coverage-build/tests`.
+- Runs each binary under kcov and merges the reports into `zig-out/coverage`, with the HTML report at `zig-out/coverage/index.html`.
 - Prints the covered and total lines and exits with code 1 when they differ.
 
 Test files (`*.test.zig`) are left out of the report. Coverage counts the code compiled into the test binaries on the machine running the script, so on Linux it counts the inotify backend and the platform-independent parts of the kqueue and Windows backends.

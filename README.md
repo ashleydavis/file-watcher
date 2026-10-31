@@ -122,24 +122,25 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and pull request. Each platform and kind of test has its own job, so the run overview shows exactly what failed:
+`.github/workflows/ci.yml` runs on every push and pull request. Each platform has a build job that builds the CLI tool and the unit test binaries once and saves them to a cache keyed by the commit SHA. That platform's test jobs restore the build and run it, so the code is built once per platform per commit. Each platform and kind of test has its own job, so the run overview shows exactly what failed:
 
 | Job | Runner | What it runs |
 | --- | --- | --- |
-| Linux unit tests | Ubuntu | `zig build test` |
-| Linux coverage | Ubuntu | kcov, failing below 100% line coverage |
+| Linux build | Ubuntu | The unit test binaries, the CLI tool and a ReleaseFast CLI tool |
+| Linux unit tests | Ubuntu | The unit test binaries |
 | Linux smoke tests | Ubuntu | `scripts/smoke-test.sh` |
-| Linux performance tests | Ubuntu | `scripts/performance-test.sh` on 20000 files |
-| Windows unit tests | Windows | `zig build test` |
+| Linux performance tests | Ubuntu | `scripts/performance-test.sh` on 20000 files, with the ReleaseFast build |
+| Windows build | Windows | The unit test binaries and the CLI tool |
+| Windows unit tests | Windows | The unit test binaries |
 | Windows smoke tests | Windows | `scripts/smoke-test.sh` under Git Bash |
-| macOS unit tests | macOS | `zig build test` |
+| macOS build | macOS | The unit test binaries and the CLI tool |
+| macOS unit tests | macOS | The unit test binaries |
 | macOS smoke tests | macOS | `scripts/smoke-test.sh` |
-| Android unit tests | Ubuntu | The x86_64 Android tests, which run on the Linux kernel |
-| Android build | Ubuntu | A build for every Android ABI |
+| Android build | Ubuntu | The x86_64 unit test binaries and CLI tool, and builds for the other Android ABIs |
+| Android unit tests | Ubuntu | The x86_64 Android unit test binaries, which run on the Linux kernel |
 | Android smoke tests | Ubuntu | `scripts/smoke-test.sh` against the x86_64 Android build |
-| iOS build | macOS | A device build |
-| iOS unit tests | macOS | The unit tests in the iOS simulator |
-| Cross compile | Ubuntu | A release build for every supported target |
+| iOS build | macOS | A device build and the unit test binaries for the simulator |
+| iOS unit tests | macOS | The unit test binaries in the iOS simulator |
 
 ## Run the performance tests
 

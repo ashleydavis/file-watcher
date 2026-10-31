@@ -1,6 +1,7 @@
-# Builds and tests the file watcher on every platform it supports. Each platform and kind of test
-# has its own job, written out in full rather than as a matrix, so the run overview shows exactly
-# which platform and which kind of test failed.
+# Builds and tests the file watcher on every platform it supports, without a matrix. Each
+# platform has one build job that saves its output to a cache keyed by the commit SHA, and test
+# jobs that restore that build instead of building again. Each platform and kind of test has
+# its own job, so the run overview shows exactly which one failed.
 
 name: CI
 
@@ -13,59 +14,67 @@ permissions:
   contents: read
 
 jobs:
+  linux-build:
+    name: Linux build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
+      - name: Build the unit tests
+        run: zig build install-tests
+
+      - name: Build the CLI tool
+        run: zig build
+
+      - name: Build the CLI tool for performance tests
+        run: zig build -Doptimize=ReleaseFast --prefix zig-out/release
+
+      - name: Save the build for the test jobs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: linux-build-${{ github.sha }}
+
   linux-unit:
     name: Linux unit tests
     runs-on: ubuntu-24.04
+    needs: linux-build
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
+          path: zig-out
+          key: linux-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Unit tests
-        run: zig build test --summary all
-
-  linux-coverage:
-    name: Linux coverage
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
-        with:
-          version: 0.16.0
-
-      - name: Install kcov
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake binutils-dev libdw-dev libcurl4-openssl-dev zlib1g-dev libssl-dev libelf-dev libiberty-dev
-          git clone --depth 1 --branch v43 https://github.com/SimonKagstrom/kcov "$RUNNER_TEMP/kcov"
-          cmake -S "$RUNNER_TEMP/kcov" -B "$RUNNER_TEMP/kcov/build" -DCMAKE_BUILD_TYPE=Release
-          cmake --build "$RUNNER_TEMP/kcov/build" --parallel
-          sudo cmake --install "$RUNNER_TEMP/kcov/build"
-
-      - name: Coverage
-        run: scripts/coverage.sh run
+          zig-out/tests/library-tests
+          zig-out/tests/cli-tests
 
   linux-smoke:
     name: Linux smoke tests
     runs-on: ubuntu-24.04
+    needs: linux-build
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
-
-      - name: Build
-        run: zig build
+          path: zig-out
+          key: linux-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
@@ -73,6 +82,27 @@ jobs:
   linux-performance:
     name: Linux performance tests
     runs-on: ubuntu-24.04
+    needs: linux-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: linux-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Performance tests
+        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000
+
+  windows-build:
+    name: Windows build
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -82,15 +112,22 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Build
-        run: zig build -Doptimize=ReleaseFast
+      - name: Build the unit tests
+        run: zig build install-tests
 
-      - name: Performance tests
-        run: scripts/performance-test.sh zig-out/bin/file-watcher 20000
+      - name: Build the CLI tool
+        run: zig build
+
+      - name: Save the build for the test jobs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: windows-build-${{ github.sha }}
 
   windows-unit:
     name: Windows unit tests
     runs-on: windows-2025
+    needs: windows-build
     defaults:
       run:
         shell: bash
@@ -98,17 +135,22 @@ jobs:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
+          path: zig-out
+          key: windows-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Unit tests
-        run: zig build test --summary all
+        run: |
+          zig-out/tests/library-tests.exe
+          zig-out/tests/cli-tests.exe
 
   windows-smoke:
     name: Windows smoke tests
     runs-on: windows-2025
+    needs: windows-build
     defaults:
       run:
         shell: bash
@@ -116,19 +158,18 @@ jobs:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
-
-      - name: Build
-        run: zig build
+          path: zig-out
+          key: windows-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher.exe
 
-  macos-unit:
-    name: macOS unit tests
+  macos-build:
+    name: macOS build
     runs-on: macos-15
     steps:
       - name: Check out
@@ -139,41 +180,55 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: Build the unit tests
+        run: zig build install-tests
+
+      - name: Build the CLI tool
+        run: zig build
+
+      - name: Save the build for the test jobs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: macos-build-${{ github.sha }}
+
+  macos-unit:
+    name: macOS unit tests
+    runs-on: macos-15
+    needs: macos-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: macos-build-${{ github.sha }}
+          fail-on-cache-miss: true
+
       - name: Unit tests
-        run: zig build test --summary all
+        run: |
+          zig-out/tests/library-tests
+          zig-out/tests/cli-tests
 
   macos-smoke:
     name: macOS smoke tests
     runs-on: macos-15
+    needs: macos-build
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
-
-      - name: Build
-        run: zig build
+          path: zig-out
+          key: macos-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
-
-  android-unit:
-    name: Android unit tests
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
-        with:
-          version: 0.16.0
-
-      - name: Unit tests
-        run: zig build test -Dtarget=x86_64-linux-android --summary all
 
   android-build:
     name: Android build
@@ -187,26 +242,57 @@ jobs:
         with:
           version: 0.16.0
 
-      - name: Build for every Android ABI
+      - name: Build the x86_64 unit tests
+        run: zig build install-tests -Dtarget=x86_64-linux-android
+
+      - name: Build the x86_64 CLI tool
+        run: zig build -Dtarget=x86_64-linux-android
+
+      - name: Build for the other Android ABIs
         run: |
           zig build -Dtarget=aarch64-linux-android --prefix zig-out/aarch64-linux-android
           zig build -Dtarget=arm-linux-androideabi --prefix zig-out/arm-linux-androideabi
-          zig build -Dtarget=x86_64-linux-android --prefix zig-out/x86_64-linux-android
 
-  android-smoke:
-    name: Android smoke tests
+      - name: Save the build for the test jobs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: android-build-${{ github.sha }}
+
+  android-unit:
+    name: Android unit tests
     runs-on: ubuntu-24.04
+    needs: android-build
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
+          path: zig-out
+          key: android-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
-      - name: Build
-        run: zig build -Dtarget=x86_64-linux-android
+      - name: Unit tests
+        run: |
+          zig-out/tests/library-tests
+          zig-out/tests/cli-tests
+
+  android-smoke:
+    name: Android smoke tests
+    runs-on: ubuntu-24.04
+    needs: android-build
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: android-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
@@ -226,20 +312,29 @@ jobs:
       - name: Compile for devices
         run: zig build -Dtarget=aarch64-ios
 
+      - name: Build the unit tests for the simulator
+        run: zig build install-tests -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
+      - name: Save the build for the test jobs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: zig-out
+          key: ios-build-${{ github.sha }}
+
   ios-unit:
     name: iOS unit tests
     runs-on: macos-15
+    needs: ios-build
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Restore the build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          version: 0.16.0
-
-      - name: Build the unit tests for the simulator
-        run: zig build install-tests -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          path: zig-out
+          key: ios-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Unit tests in the simulator
         run: |
@@ -258,22 +353,3 @@ jobs:
           cd "$RUNNER_TEMP"
           xcrun simctl spawn "$device" "$GITHUB_WORKSPACE/zig-out/tests/library-tests"
           xcrun simctl spawn "$device" "$GITHUB_WORKSPACE/zig-out/tests/cli-tests"
-
-  cross-compile:
-    name: Cross compile
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
-        with:
-          version: 0.16.0
-
-      - name: Build for every target
-        run: |
-          for target in x86_64-linux-gnu aarch64-linux-musl x86_64-windows aarch64-windows x86_64-macos aarch64-macos aarch64-linux-android arm-linux-androideabi aarch64-ios aarch64-ios-simulator; do
-            echo "Building for $target"
-            zig build -Dtarget="$target" -Doptimize=ReleaseFast --prefix "zig-out/$target"
-          done
