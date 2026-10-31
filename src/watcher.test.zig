@@ -164,6 +164,50 @@ test "native watching turns hints into events" {
 }
 
 //
+// Goal: a zero timeout collects native events already queued without waiting, so a caller can
+// check for changes from a timer or an event loop.
+// Method: queue a hint, call next with a zero timeout and check the event arrives and the clock
+// did not move.
+//
+test "next with a zero timeout collects queued events" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
+    var watcher: Watcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{});
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+
+    const empty = try watcher.next(0);
+    try testing.expectEqual(@as(usize, 0), empty.events.len);
+
+    try mock.add_file(native_path("/root/queued.txt"), 1);
+    try watcher.backend.queue(&.{
+        .{
+            .path = native_path("/root/queued.txt"),
+            .scope = .entry,
+        },
+    });
+    const batch = try watcher.next(0);
+    try testing.expect(has_event(batch, .created, native_path("/root/queued.txt")));
+    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+
+    var polling: Watcher = undefined;
+    try polling.init(testing.allocator, mock.io(), &.{
+        .method = .polling,
+    });
+    defer polling.deinit();
+    try polling.add(native_path("/root"));
+    const quiet = try polling.next(0);
+    try testing.expectEqual(@as(usize, 0), quiet.events.len);
+    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+}
+
+//
 // Goal: a recursive backend watches only roots, and a file-watching backend watches files and
 // drops their watches when they are deleted.
 // Method: add a tree to each kind of fake backend and check what is watched.

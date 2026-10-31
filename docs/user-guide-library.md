@@ -63,6 +63,8 @@ pub fn main(init: std.process.Init) !void {
     try watcher.add("src");
 
     while (true) {
+        // Blocks this thread until a change arrives or a second passes. While it waits, the
+        // thread sleeps in the operating system and uses no CPU.
         const batch = try watcher.next(1000);
         for (batch.problems) |problem| {
             std.log.warn("{s}: {t} ({t})", .{ problem.path, problem.reason, problem.action });
@@ -108,7 +110,7 @@ The watcher for the platform being built for.
 - `init(self: *Watcher, gpa: Allocator, io: std.Io, options: *const Options) !void`: creates a watcher in place. The watcher keeps a pointer into itself, so it stays at the address given to `init`. Problems found here, such as the native method being unavailable, come back in the first batch.
 - `deinit(self: *Watcher) void`: stops every watch and frees every record.
 - `add(self: *Watcher, path: []const u8) !void`: starts watching the tree at `path`. The current contents are recorded without events. Fails with `error.FileNotFound` when the path is missing, `error.NotDir` when it is a file and `error.OverlappingRoot` when it is inside, or contains, a path added before. Trailing separators are removed.
-- `next(self: *Watcher, timeout_ms: u32) !Batch`: waits up to `timeout_ms` for changes. Returns as soon as there is at least one event or problem, or an empty batch when the time runs out. The batch stays valid until the next call to `next` or `add`.
+- `next(self: *Watcher, timeout_ms: u32) !Batch`: blocks the calling thread until a change arrives or `timeout_ms` passes, then returns the batch: at least one event or problem, or an empty batch when the time runs out. With native watching it waits in the operating system (`poll`, `kevent` or `WaitForMultipleObjects`), so a waiting thread uses no CPU and wakes as soon as a change arrives. A timeout of 0 never blocks: it returns the changes already queued. The batch stays valid until the next call to `next` or `add`.
 - `stats(self: *const Watcher) Stats`: counters that show how the watcher spends its quota.
 
 `next` and `add` return errors only for failures the watcher cannot work around, such as running out of memory. After such an error, call `deinit`. Paths that cannot be read or watched natively are problems in the batch instead, and the watcher carries on.
@@ -165,6 +167,93 @@ On iOS the library uses kqueue, like macOS, with the open file limit as the watc
 
 Build your app's Zig code for the device target, for example `-Dtarget=aarch64-linux-android` or `-Dtarget=aarch64-ios`, and import the module as shown above. Pass the app's own directories to `add`, because apps can only read inside their sandbox.
 
-## Threads
+## Blocking, threads and GUI apps
 
-A watcher is used from one thread at a time. Run it on its own thread and pass batches to the rest of the program, or call `next` with a short timeout from an existing loop.
+`next` blocks the thread that calls it, so a GUI app keeps it off the UI thread, or calls it with a timeout of 0. A watcher is used from one thread at a time.
+
+### A watcher thread
+
+Run the watcher on its own thread and hand the changes to the UI thread. Copy each path out of the batch, because the batch is reused by the next call to `next`. Use your GUI toolkit's way of running code on the UI thread, or a locked list the UI thread empties on a timer, as here:
+
+```zig
+const std = @import("std");
+const file_watcher = @import("file_watcher");
+
+// Changed paths found by the watcher thread, waiting for the UI thread to take them.
+const Inbox = struct {
+    mutex: std.Io.Mutex = .init,
+    paths: std.ArrayList([]u8) = .empty,
+};
+
+// Runs on its own thread until `stop` is set.
+fn watch(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    watcher: *file_watcher.Watcher,
+    inbox: *Inbox,
+    stop: *std.atomic.Value(bool),
+) void {
+    while (!stop.load(.acquire)) {
+        // Blocks until a change arrives or 250 ms pass, so `stop` is seen within 250 ms.
+        const batch = watcher.next(250) catch |err| {
+            std.log.err("The file watcher stopped: {t}.", .{err});
+            return;
+        };
+        inbox.mutex.lockUncancelable(io);
+        defer inbox.mutex.unlock(io);
+        for (batch.events) |event| {
+            // Copy each path, because the batch is reused by the next call to `next`.
+            const path = gpa.dupe(u8, event.path) catch |err| {
+                std.log.err("The file watcher stopped: {t}.", .{err});
+                return;
+            };
+            inbox.paths.append(gpa, path) catch |err| {
+                gpa.free(path);
+                std.log.err("The file watcher stopped: {t}.", .{err});
+                return;
+            };
+        }
+    }
+}
+
+// Called by the UI thread, for example from a timer: takes every path waiting in the inbox.
+// The caller frees the paths and the list.
+fn take_changes(io: std.Io, inbox: *Inbox) std.ArrayList([]u8) {
+    inbox.mutex.lockUncancelable(io);
+    defer inbox.mutex.unlock(io);
+    const paths = inbox.paths;
+    inbox.paths = .empty;
+    return paths;
+}
+```
+
+Start the thread after adding the directories, and stop it before `deinit`:
+
+```zig
+var inbox: Inbox = .{};
+var stop: std.atomic.Value(bool) = .init(false);
+const thread = try std.Thread.spawn(.{}, watch, .{ gpa, io, watcher, &inbox, &stop });
+
+// ... the app runs ...
+
+stop.store(true, .release);
+thread.join();
+```
+
+The timeout passed to `next` sets how quickly the thread sees `stop`. It costs nothing while the tree is quiet beyond one wake-up per timeout.
+
+### A UI timer
+
+If the app already has a timer or an idle callback on the UI thread, call `next(0)` from it. A zero timeout returns at once with the changes already queued, so the UI never blocks:
+
+```zig
+// On each timer tick, on the UI thread.
+const batch = try watcher.next(0);
+for (batch.events) |event| {
+    // Update the UI.
+}
+```
+
+Changes then reach the UI on the next tick, so a 50 to 100 ms timer shows them without a visible delay.
+
+Both patterns were compiled and run against the library with real file changes.

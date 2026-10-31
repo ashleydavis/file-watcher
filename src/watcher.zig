@@ -267,16 +267,21 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 if (self.has_batch()) {
                     break;
                 }
+                // The backend is asked for events even when the time is up, so a zero timeout
+                // still collects the events already queued instead of skipping them.
                 const current_ns = self.now_ns();
-                if (current_ns >= deadline_ns) {
-                    break;
-                }
-                var wait_ns = deadline_ns - current_ns;
+                var wait_ns = @max(deadline_ns - current_ns, 0);
                 if (self.polled.count() > 0) {
                     wait_ns = @min(wait_ns, @max(self.poll_due_ns - current_ns, 0));
                 }
                 try self.wait_for_changes(wait_ns);
                 try self.apply_hints();
+                if (self.has_batch()) {
+                    break;
+                }
+                if (self.now_ns() >= deadline_ns) {
+                    break;
+                }
             }
             self.is_list_returned = true;
             return .{
@@ -544,10 +549,11 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Waits for native events, or sleeps when no directory is watched natively.
+        // Waits for native events, or sleeps when no directory is watched natively. A wait of zero
+        // collects the events already queued without blocking.
         //
         fn wait_for_changes(self: *Self, wait_ns: i96) !void {
-            assert(wait_ns > 0);
+            assert(wait_ns >= 0);
             if (self.is_native_active) {
                 if (self.watch_count > 0) {
                     const wait_ms: u32 = @intCast(@min(
@@ -563,7 +569,9 @@ pub fn GenericWatcher(comptime Backend: type) type {
                     return;
                 }
             }
-            try self.io.sleep(.fromNanoseconds(wait_ns), .awake);
+            if (wait_ns > 0) {
+                try self.io.sleep(.fromNanoseconds(wait_ns), .awake);
+            }
         }
 
         //
