@@ -24,7 +24,7 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
 
 - Watch counters: directories, native watches, polled directories, budget and limit, from the tool's `-s` output.
 - Startup: the time to scan the tree, set up every watch and exit (`-d 0`).
-- Memory: the tool's memory after the burst, also given per watched entry: the peak on Linux and Windows, the memory in use on macOS. Entries include the load test files.
+- Memory: the tool's memory after the load tests, also given per watched entry: the peak on Linux and Windows, the memory in use on macOS. Entries include the load test files.
 - Idle CPU: CPU time used while watching the unchanged tree for a few seconds.
 - Single change latency: the time from appending to a file until its event is printed, as the median and maximum of a series of samples. A second watcher prints through a pipe, so the script wakes the moment the event arrives, and the clock is read with bash's `EPOCHREALTIME`, so timing starts no process. Each sample still includes the time bash takes to write the file and read the line.
 - Load: three tests of ten thousand changes each, timed from the first change until every changed file is reported, with the time taken to make the changes shown beside it. The script counts distinct reported files, so a test fails unless every one is reported:
