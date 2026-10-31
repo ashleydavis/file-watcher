@@ -24,7 +24,7 @@ One line per check, `ok` or `FAIL`, then the number passed and failed. The scrip
 ## Notes
 
 - It runs on Linux, macOS (including its bash 3.2) and Windows under Git Bash. On Windows it passes the work directory in Windows form and turns backslashes in the output into slashes before checking it, and the JSON check uses a file name with a space, because Windows forbids quotes in file names.
-- Each case runs the watcher in the background for a fixed duration (`-d`) and makes changes while it runs, so a full run takes under a minute.
+- Each case runs the watcher in the background, makes changes, waits until every expected change is reported and then stops the watcher. A slow machine, such as the iOS simulator in CI, only makes the wait longer. A change unreported after 60 seconds fails its check. A local run takes a few seconds.
 - The JSON check parses every line with Python when `python3` is installed. The YAML check parses the output when the Python `yaml` package is installed.
 - The interrupt case sends SIGINT to the running tool and checks it stops at once with exit code 130. It runs only where the tool is a plain local process: Git Bash cannot send Ctrl+C to a Windows program, and a launcher would receive the signal instead of the tool.
 - The overflow case reads the watch budget for a 1% quota from the tool's counters and creates more directories than that, so the last ones are polled. It is skipped when that budget is above 20000 directories.
