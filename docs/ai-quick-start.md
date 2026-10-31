@@ -20,6 +20,10 @@ Facts an AI agent needs to work in this repository.
 | Performance tests (Linux) | `zig build -Doptimize=ReleaseFast && scripts/performance-test.sh zig-out/bin/file-watcher 100000` |
 | Compile check for a target | `zig build check -Dtarget=aarch64-ios` |
 | Cross compile | `zig build -Dtarget=x86_64-windows` |
+| Install test binaries for another runner | `zig build install-tests -Dtarget=<target>` |
+| Windows unit tests under Wine (Linux) | `zig build test -Dtarget=x86_64-windows -fwine` |
+
+CI (`.github/workflows/ci.yml`) has one job per platform, written out in full rather than as a matrix.
 
 Check that these targets compile after any change to a backend or the watcher: `x86_64-windows`, `aarch64-macos`, `aarch64-linux-android` and `aarch64-ios`.
 
@@ -31,6 +35,7 @@ Check that these targets compile after any change to a backend or the watcher: `
 - Unit tests use `std.testing.allocator` and a `checkAllAllocationFailures` test wherever code allocates.
 - Line coverage stays at 100%: `scripts/coverage.sh run` fails otherwise.
 - Lines stay within 100 columns.
+- Tests build expected paths with `native_path("/root/a")` from the `mock_io` module, which uses the platform's separator, so the tests pass on Windows too. The mock file system accepts either separator.
 
 ## Test helpers
 

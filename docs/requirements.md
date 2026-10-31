@@ -46,6 +46,7 @@ This checklist records every requirement of the project. Each item is ticked onc
 - [x] Performance tests (shell script) that print stats (`scripts/performance-test.sh`).
 - [x] The CLI tool has been tested.
 - [x] The unit, smoke and performance tests have been run and all pass.
+- [ ] A CI pipeline tests on each platform, with one job per platform and no matrix (`.github/workflows/ci.yml`).
 
 ## Docs
 

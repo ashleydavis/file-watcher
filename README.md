@@ -120,6 +120,19 @@ zig build
 scripts/smoke-test.sh zig-out/bin/file-watcher
 ```
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request, with one job per platform:
+
+| Job | Runner | What it runs |
+| --- | --- | --- |
+| Linux | Ubuntu | Unit tests, coverage with kcov, smoke tests and a short performance run. |
+| Windows | Windows | Unit tests and smoke tests, under Git Bash. |
+| macOS | macOS | Unit tests and smoke tests. |
+| Android | Ubuntu | The x86_64 Android unit tests and smoke tests, which run on the Linux kernel, and builds for every Android ABI. |
+| iOS | macOS | A device build and the unit tests in the iOS simulator. |
+| Cross compile | Ubuntu | A release build for every supported target. |
+
 ## Run the performance tests
 
 The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and burst throughput for native watching and for polling. They read `/proc`, so they run on Linux.
