@@ -67,6 +67,14 @@ check() {
     else
         failed=$((failed + 1))
         echo "FAIL $name"
+        # Prints the files the check read, so a failure in CI can be diagnosed from its log.
+        local argument
+        for argument in "$@"; do
+            if [ -f "$argument" ]; then
+                echo "     $argument:"
+                head -n 20 "$argument" | sed 's/^/       /'
+            fi
+        done
     fi
 }
 
