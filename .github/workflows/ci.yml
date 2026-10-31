@@ -4,14 +4,22 @@
 # older CPUs than the build job, so every build targets the baseline CPU; a build for the build
 # machine's own CPU crashed there with illegal instructions. Each platform and kind of test has
 # its own job, so the run overview shows exactly which one failed. The performance jobs write
-# their results to the job summary.
+# their results to the job summary. Pushes to main and pull requests trigger a run, so a commit
+# on a pull request branch runs once. A newer commit cancels the runs still going for the same
+# branch or pull request.
 
 name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
