@@ -275,8 +275,13 @@ jobs:
           key: macos-build-${{ github.sha }}
           fail-on-cache-miss: true
 
+
+      - name: Install bash 5
+        # The performance script needs bash 5 for its microsecond clock; macOS ships bash 3.2.
+        run: brew install bash
       - name: Performance tests
-        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "macOS performance"
+        run: |
+          "$(brew --prefix)/bin/bash" scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "macOS performance"
 
   android-build:
     name: Android build
@@ -495,5 +500,10 @@ jobs:
           ')
           xcrun simctl boot "$device"
 
+
+      - name: Install bash 5
+        # The performance script needs bash 5 for its microsecond clock; macOS ships bash 3.2.
+        run: brew install bash
       - name: Performance tests in the simulator
-        run: scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "iOS simulator performance" xcrun simctl spawn booted
+        run: |
+          "$(brew --prefix)/bin/bash" scripts/performance-test.sh zig-out/release/bin/file-watcher 20000 "$GITHUB_STEP_SUMMARY" "iOS simulator performance" xcrun simctl spawn booted
