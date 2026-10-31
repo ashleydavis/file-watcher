@@ -1,6 +1,8 @@
 # Builds and tests the file watcher on every platform it supports, without a matrix. Each
 # platform has one build job that saves its output to a cache keyed by the commit SHA, and test
-# jobs that restore that build instead of building again. Each platform and kind of test has
+# jobs that restore that build instead of building again. The test jobs can land on machines with
+# older CPUs than the build job, so every build targets the baseline CPU; a build for the build
+# machine's own CPU crashed there with illegal instructions. Each platform and kind of test has
 # its own job, so the run overview shows exactly which one failed. The performance jobs write
 # their results to the job summary.
 
@@ -28,13 +30,13 @@ jobs:
           version: 0.16.0
 
       - name: Build the unit tests
-        run: zig build install-tests
+        run: zig build -Dcpu=baseline install-tests
 
       - name: Build the CLI tool
-        run: zig build
+        run: zig build -Dcpu=baseline
 
       - name: Build the CLI tool for performance tests
-        run: zig build -Doptimize=ReleaseFast --prefix zig-out/release
+        run: zig build -Dcpu=baseline -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -114,13 +116,13 @@ jobs:
           version: 0.16.0
 
       - name: Build the unit tests
-        run: zig build install-tests
+        run: zig build -Dcpu=baseline install-tests
 
       - name: Build the CLI tool
-        run: zig build
+        run: zig build -Dcpu=baseline
 
       - name: Build the CLI tool for performance tests
-        run: zig build -Doptimize=ReleaseFast --prefix zig-out/release
+        run: zig build -Dcpu=baseline -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -206,13 +208,13 @@ jobs:
           version: 0.16.0
 
       - name: Build the unit tests
-        run: zig build install-tests
+        run: zig build -Dcpu=baseline install-tests
 
       - name: Build the CLI tool
-        run: zig build
+        run: zig build -Dcpu=baseline
 
       - name: Build the CLI tool for performance tests
-        run: zig build -Doptimize=ReleaseFast --prefix zig-out/release
+        run: zig build -Dcpu=baseline -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -289,18 +291,18 @@ jobs:
           version: 0.16.0
 
       - name: Build the x86_64 unit tests
-        run: zig build install-tests -Dtarget=x86_64-linux-android
+        run: zig build -Dcpu=baseline install-tests -Dtarget=x86_64-linux-android
 
       - name: Build the x86_64 CLI tool
-        run: zig build -Dtarget=x86_64-linux-android
+        run: zig build -Dcpu=baseline -Dtarget=x86_64-linux-android
 
       - name: Build the x86_64 CLI tool for performance tests
-        run: zig build -Dtarget=x86_64-linux-android -Doptimize=ReleaseFast --prefix zig-out/release
+        run: zig build -Dcpu=baseline -Dtarget=x86_64-linux-android -Doptimize=ReleaseFast --prefix zig-out/release
 
       - name: Build for the other Android ABIs
         run: |
-          zig build -Dtarget=aarch64-linux-android --prefix zig-out/aarch64-linux-android
-          zig build -Dtarget=arm-linux-androideabi --prefix zig-out/arm-linux-androideabi
+          zig build -Dcpu=baseline -Dtarget=aarch64-linux-android --prefix zig-out/aarch64-linux-android
+          zig build -Dcpu=baseline -Dtarget=arm-linux-androideabi --prefix zig-out/arm-linux-androideabi
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -377,16 +379,16 @@ jobs:
           version: 0.16.0
 
       - name: Compile for devices
-        run: zig build -Dtarget=aarch64-ios
+        run: zig build -Dcpu=baseline -Dtarget=aarch64-ios
 
       - name: Build the unit tests for the simulator
-        run: zig build install-tests -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+        run: zig build -Dcpu=baseline install-tests -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
 
       - name: Build the CLI tool for the simulator
-        run: zig build -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+        run: zig build -Dcpu=baseline -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
 
       - name: Build the CLI tool for performance tests in the simulator
-        run: zig build -Dtarget=aarch64-ios-simulator -Doptimize=ReleaseFast --prefix zig-out/release --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+        run: zig build -Dcpu=baseline -Dtarget=aarch64-ios-simulator -Doptimize=ReleaseFast --prefix zig-out/release --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
 
       - name: Save the build for the test jobs
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
