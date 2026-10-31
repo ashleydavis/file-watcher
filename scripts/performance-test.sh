@@ -76,8 +76,13 @@ files_per_directory=100
 load_count=10000
 # The longest wait for one load test's changes to be reported, in seconds.
 load_timeout_seconds=300
-# Single changes timed in the latency test.
+# Single changes timed in the latency test: up to latency_samples, and at least
+# latency_samples_min. Once latency_seconds have passed the test stops at the minimum, so polled
+# watching, where each sample waits for a poll, takes a few samples instead of 20 slow ones.
+# Polled latency is set by the poll interval, so a few samples measure it as well as 20.
 latency_samples=20
+latency_samples_min=5
+latency_seconds=5
 # The cap on native watches in the mixed mode: one, taken by the files root, so the load root and
 # its directories are polled on every platform.
 mixed_watches=1
@@ -217,6 +222,11 @@ tool_pid() {
 
 echo "Generating $file_count files in $(( (file_count + files_per_directory - 1) / files_per_directory )) directories..."
 mkdir -p "$files_root" "$load_root"
+# The latency test appends to this file. It is in the load root, which the mixed mode always
+# polls, so mixed latency measures polling on every platform rather than depending on which
+# directory got the one native watch.
+latency_file="$load_root/latency.txt"
+: > "$latency_file"
 directory_index=0
 remaining=$file_count
 while [ "$remaining" -gt 0 ]; do
@@ -406,9 +416,13 @@ measure() {
     sleep 1
     local latencies=()
     local sample line end
+    local latency_deadline=$(( ${EPOCHREALTIME/./} + latency_seconds * 1000000 ))
     for sample in $(seq 1 "$latency_samples"); do
+        if [ "$sample" -gt "$latency_samples_min" ] && [ "${EPOCHREALTIME/./}" -gt "$latency_deadline" ]; then
+            break
+        fi
         start=${EPOCHREALTIME/./}
-        echo "$sample" >> "$files_root/d0/d0/f1.txt"
+        echo "$sample" >> "$latency_file"
         if ! read -r -t 10 -u "$watch_fd" line; then
             echo "FAIL $label: change $sample was not reported within 10 s"
             failed=1
@@ -487,7 +501,7 @@ for mode in "${modes[@]}"; do
     echo "  startup (scan + watch):  ${average[startup:$mode]}"
     echo "  memory:                  ${average[memory:$mode]}"
     echo "  idle CPU over ${idle_seconds} s:      ${average[idle:$mode]}"
-    echo "  single change latency:   ${average[latency:$mode]} ($latency_samples samples per run)"
+    echo "  single change latency:   ${average[latency:$mode]} ($latency_samples_min to $latency_samples samples per run)"
     for name in "${load_names[@]}"; do
         printf '  %-31s %s\n' "$load_count ${load_labels[$name]}:" "${average[$name:$mode]}"
     done
@@ -516,7 +530,7 @@ write_summary() {
     summary_row "Startup (scan and watch)" startup
     summary_row "$memory_label" memory
     summary_row "Idle CPU over ${idle_seconds} s" idle
-    summary_row "Single change latency ($latency_samples samples per run)" latency
+    summary_row "Single change latency ($latency_samples_min to $latency_samples samples per run)" latency
     for name in "${load_names[@]}"; do
         summary_row "$load_count files ${load_labels[$name]}" "$name"
     done

@@ -70,7 +70,7 @@ Load times run from the first change until the last change is reported, so they 
 
 - Linux and Android watch every directory natively. A change is reported in under a millisecond, and 10,000 changes are all reported about 10 ms after the last one is made.
 - On Windows most of each load time is the runner making the changes: creating 10,000 files takes about 6 seconds there. In native mode the watcher reported the last change 80 to 160 ms after it was made.
-- Windows mixed mode keeps the files root native, because one Windows watch covers a whole tree, so its latency matches native mode. On the other platforms the native watch covers only the files root's top directory, and the file edited for latency is polled.
+- In this baseline the latency test edited a file in the files root. Windows mixed mode keeps the files root native, because one Windows watch covers a whole tree, so its latency matched native mode. On the other platforms the native watch covered only the files root's top directory, and the file was polled. Later runs edit a file in the load root, which mixed mode always polls, so mixed latency on Windows is about one poll interval from then on.
 - macOS and iOS use kqueue, which needs one open file per watched file and directory. The quota is half the open file limit: 5,120 on macOS and 128 in the iOS simulator. That is not enough for the 20,000 files, so most of the tree is polled even in native mode, and latency is about one poll interval.
 - Polling costs CPU while idle. On Windows, polling 204 directories every second used about 4 seconds of CPU in 5 seconds, far more than on the other platforms.
 
