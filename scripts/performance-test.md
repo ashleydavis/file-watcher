@@ -32,4 +32,4 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
   - modified at once: ten thousand existing files touched with one `xargs touch`;
   - modified one after another: the same files appended to one at a time in a loop.
 
-The script exits with code 1 when a change goes unreported. It runs on Linux, macOS and Windows (Git Bash) with bash 5 or later. CPU time and memory come from `/proc` on Linux, `ps` on macOS and PowerShell's `Get-Process` on Windows. Linux and Windows report peak memory; macOS reports the memory in use after the burst, because it keeps no peak for another process.
+The script exits with code 1 when a change goes unreported. It runs on Linux, macOS and Windows (Git Bash) with bash 5 or later. CPU time and memory come from `/proc` on Linux, `ps` on macOS and PowerShell's `Get-Process` on Windows. Linux and Windows report peak memory; macOS reports the memory in use after the load tests, because it keeps no peak for another process.
