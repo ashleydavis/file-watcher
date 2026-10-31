@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # Measures the built CLI tool on a generated tree and prints the results: time to scan and
-# watch the tree, memory, CPU use while idle, how fast a burst of new files is reported and how
-# long a single change takes to be reported. Runs native watching and polling side by side.
+# watch the tree, memory, CPU use while idle, how long a single change takes to be reported, and
+# load: ten thousand files created at once, modified at once and modified one after another.
+# Runs native watching and polling side by side, and fails when any change goes unreported.
 #
 
 set -euo pipefail
@@ -48,7 +49,7 @@ case "$(uname -s)" in
         ;;
     Darwin)
         platform=macos
-        memory_label="Memory after the burst"
+        memory_label="Memory after the load tests"
         ;;
     MINGW* | MSYS* | CYGWIN*)
         platform=windows
@@ -62,8 +63,10 @@ esac
 
 # Files per directory in the generated tree, typical of a source tree.
 files_per_directory=100
-# Files created in the burst test.
-burst_count=10000
+# Files changed in each load test.
+load_count=10000
+# The longest wait for one load test's changes to be reported, in seconds.
+load_timeout_seconds=300
 # Single changes timed in the latency test.
 latency_samples=20
 # How long the idle CPU test watches an unchanging tree.
@@ -210,6 +213,81 @@ directory_count=$(find "$tree" -type d | wc -l)
 echo "Tree: $file_count files, $directory_count directories."
 echo
 
+# Creates the given number of empty files under a directory, in subdirectories of 100.
+make_files() {
+    local root="$1" count="$2"
+    local index=0
+    local remaining=$count
+    while [ "$remaining" -gt 0 ]; do
+        local directory="$root/d$index"
+        mkdir -p "$directory"
+        local batch=$(( remaining < files_per_directory ? remaining : files_per_directory ))
+        (cd "$directory" && seq -f "f%g.txt" 1 "$batch" | xargs touch)
+        remaining=$(( remaining - batch ))
+        index=$(( index + 1 ))
+    done
+}
+
+# Load actions. Each makes $load_count changes under the given directory.
+create_at_once() {
+    mkdir -p "$1"
+    (cd "$1" && seq -f "n%g.txt" 1 "$load_count" | xargs touch)
+}
+modify_at_once() {
+    find "$1" -type f -print0 | xargs -0 touch
+}
+modify_in_sequence() {
+    local file
+    while IFS= read -r -d '' file; do
+        echo "x" >> "$file"
+    done < <(find "$1" -type f -print0)
+}
+
+# Prints the number of distinct files reported with the given kind since the given line of the
+# output, among paths containing the marker.
+count_reported() {
+    local out="$1" from="$2" kind="$3" marker="$4"
+    # grep finds no line until the first change is reported, which is not an error here.
+    tail -n +"$(( from + 1 ))" "$out" | { grep "^$kind file .*$marker" || true; } | sort -u |
+        wc -l | tr -d ' '
+}
+
+# Runs one load test: makes the changes with the action, then waits until every changed file is
+# reported. Sets load_result to the time taken to make the changes and to have them all reported,
+# both counted from the first change, so they include the time the system took to make them.
+load_case() {
+    local label="$1" kind="$2" out="$3" marker="$4" action="$5" target="$6"
+    if [ "$action" = create_at_once ]; then
+        # The new directory is made first and given time to be watched, so the test measures
+        # the files inside it.
+        mkdir -p "$target"
+        sleep 1.2
+    fi
+    local before
+    before=$(wc -l < "$out")
+    local start=${EPOCHREALTIME/./}
+    "$action" "$target"
+    local made_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
+    local deadline=$(( start + load_timeout_seconds * 1000000 ))
+    local reported
+    reported=$(count_reported "$out" "$before" "$kind" "$marker")
+    while [ "$reported" -lt "$load_count" ]; do
+        if [ "${EPOCHREALTIME/./}" -gt "$deadline" ]; then
+            break
+        fi
+        sleep 0.05
+        reported=$(count_reported "$out" "$before" "$kind" "$marker")
+    done
+    local done_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
+    if [ "$reported" -lt "$load_count" ]; then
+        failed=1
+        load_result="FAILED: $reported of $load_count reported after ${done_ms} ms"
+        echo "FAIL $label: $action reported $reported of $load_count changes"
+        return
+    fi
+    load_result="all reported after ${done_ms} ms ($(( load_count * 1000 / (done_ms > 0 ? done_ms : 1) )) events/s); changes made in ${made_ms} ms"
+}
+
 # Measures one watch method. The arguments after the label are passed to the watcher.
 measure() {
     local label="$1"
@@ -221,7 +299,12 @@ measure() {
     run_tool "$@" -s -d 0 "$tree" > /dev/null 2> "$work/startup-$label.txt"
     local startup_ms=$(( ($(now_us) - start) / 1000 ))
 
-    # Idle and burst: the watcher writes events to a file.
+    # The files the modify tests change, in directories of 100 like the rest of the tree, made
+    # before the watcher starts so they are part of its first scan.
+    local load_dir="$tree/load-files-$label"
+    make_files "$load_dir" "$load_count"
+
+    # Idle and load: the watcher writes events to a file.
     local out="$work/out-$label.txt"
     exec_tool -s "$@" "$tree" > "$out" 2> "$work/err-$label.txt" &
     watcher_pid=$!
@@ -236,26 +319,18 @@ measure() {
     sleep "$idle_seconds"
     local idle_cpu=$(( $(cpu_ms "$pid") - idle_start_cpu ))
 
-    # Burst: create many files at once and time until every one is reported. The file is
-    # checked every millisecond, so the time includes up to a millisecond of the script's delay.
-    local burst_dir="$tree/burst-$label"
-    mkdir "$burst_dir"
-    sleep 1.2
-    local before
-    before=$(wc -l < "$out")
-    start=${EPOCHREALTIME/./}
-    (cd "$burst_dir" && seq -f "b%g.txt" 1 "$burst_count" | xargs touch)
-    local burst_ok=1
-    if ! wait_lines "$out" $((before + burst_count)) 60; then
-        burst_ok=0
-        failed=1
-    fi
-    local burst_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
-    local reported=$(( $(wc -l < "$out") - before ))
+    # Load: ten thousand files created at once, ten thousand existing files modified at once
+    # and the same files modified one after another.
+    load_case "$label" created "$out" "load-new-$label" create_at_once "$tree/load-new-$label"
+    result_load_created[$label]="$load_result"
+    load_case "$label" modified "$out" "load-files-$label" modify_at_once "$load_dir"
+    result_load_modified[$label]="$load_result"
+    load_case "$label" modified "$out" "load-files-$label" modify_in_sequence "$load_dir"
+    result_load_sequence[$label]="$load_result"
     local peak
     peak=$(memory_kib "$pid")
     stop_watcher
-    rm -rf "$burst_dir"
+    rm -rf "$tree/load-new-$label" "$load_dir"
 
     # Latency: a second watcher prints through a pipe, so the script wakes the moment an event
     # is printed. The clock is read with bash's own variable, so no process is started.
@@ -292,30 +367,25 @@ measure() {
     # Results are kept per method for the markdown summary.
     result_counters[$label]="${stats#stats: }"
     result_startup[$label]="${startup_ms} ms"
-    result_memory[$label]="$(( peak / 1024 )) MiB ($(( peak * 1024 / (file_count + directory_count) )) bytes per entry)"
+    local entries=$(( file_count + directory_count + load_count * 2 ))
+    result_memory[$label]="$(( peak / 1024 )) MiB ($(( peak * 1024 / entries )) bytes per entry)"
     result_idle[$label]="${idle_cpu} ms"
     result_latency[$label]="median ${median_us} us, max ${max_us} us"
-    if [ "$burst_ok" -eq 1 ]; then
-        result_burst[$label]="${burst_ms} ms ($(( burst_count * 1000 / (burst_ms > 0 ? burst_ms : 1) )) events/s)"
-    else
-        result_burst[$label]="FAILED: $reported of $burst_count reported"
-    fi
 
     echo "== $label"
     echo "  watch counters:          ${stats#stats: }"
     echo "  startup (scan + watch):  ${startup_ms} ms ($(( file_count * 1000 / (startup_ms > 0 ? startup_ms : 1) )) files/s)"
-    echo "  memory:             $(( peak / 1024 )) MiB ($(( peak * 1024 / (file_count + directory_count) )) bytes per entry)"
+    echo "  memory:                  ${result_memory[$label]}"
     echo "  idle CPU over ${idle_seconds} s:      ${idle_cpu} ms"
     echo "  single change latency:   median ${median_us} us, max ${max_us} us (${#latencies[@]} samples)"
-    if [ "$burst_ok" -eq 1 ]; then
-        echo "  burst of $burst_count files:   all reported in ${burst_ms} ms ($(( burst_count * 1000 / (burst_ms > 0 ? burst_ms : 1) )) events/s)"
-    else
-        echo "  FAIL burst of $burst_count files: $reported reported in ${burst_ms} ms"
-    fi
+    echo "  $load_count created at once:          ${result_load_created[$label]}"
+    echo "  $load_count modified at once:         ${result_load_modified[$label]}"
+    echo "  $load_count modified one by one:      ${result_load_sequence[$label]}"
     echo
 }
 
-declare -A result_counters result_startup result_memory result_idle result_latency result_burst
+declare -A result_counters result_startup result_memory result_idle result_latency
+declare -A result_load_created result_load_modified result_load_sequence
 measure native
 measure polling --poll -i 1000
 
@@ -335,7 +405,9 @@ write_summary() {
     echo "| $memory_label | ${result_memory[native]} | ${result_memory[polling]} |"
     echo "| Idle CPU over ${idle_seconds} s | ${result_idle[native]} | ${result_idle[polling]} |"
     echo "| Single change latency ($latency_samples samples) | ${result_latency[native]} | ${result_latency[polling]} |"
-    echo "| Burst of $burst_count new files, until all are reported | ${result_burst[native]} | ${result_burst[polling]} |"
+    echo "| $load_count files created at once | ${result_load_created[native]} | ${result_load_created[polling]} |"
+    echo "| $load_count files modified at once | ${result_load_modified[native]} | ${result_load_modified[polling]} |"
+    echo "| $load_count files modified one after another | ${result_load_sequence[native]} | ${result_load_sequence[polling]} |"
     echo "| Watch counters | ${result_counters[native]} | ${result_counters[polling]} |"
     echo
     if [ "$failed" -ne 0 ]; then
