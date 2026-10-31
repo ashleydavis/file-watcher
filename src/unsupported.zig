@@ -62,6 +62,14 @@ pub const Unsupported = struct {
     //
     // Never called, because `init` always fails.
     //
+    pub fn wake(self: *Unsupported) void {
+        _ = self;
+        unreachable;
+    }
+
+    //
+    // Never called, because `init` always fails.
+    //
     pub fn wait(self: *Unsupported, timeout_ms: u32, hints: *HintSet) !void {
         _ = self;
         _ = timeout_ms;

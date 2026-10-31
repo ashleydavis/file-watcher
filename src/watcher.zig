@@ -122,14 +122,32 @@ pub fn GenericWatcher(comptime Backend: type) type {
         snapshot: Snapshot,
 
         //
-        // The native backend, valid while `is_native_active` is set.
+        // The native backend, valid while `is_backend_started` is set.
         //
         backend: Backend,
+
+        //
+        // Whether the backend was started. It stays set after the backend fails, because the
+        // backend is only freed by `deinit`, so `wake` can always reach it from another thread.
+        //
+        is_backend_started: bool,
 
         //
         // Whether the native backend is running.
         //
         is_native_active: bool,
+
+        //
+        // Counts calls to `wake`. A call to `next` returns as soon as the count moves, and polled
+        // waits sleep on it, so `wake` can end them early.
+        //
+        wake_count: std.atomic.Value(u32),
+
+        //
+        // The wake count when `next` last returned because of a wake. A wake since then is
+        // pending, even when it came before `next` started. Only the thread calling `next` uses it.
+        //
+        wake_count_handled: u32,
 
         //
         // The platform's native watch limit.
@@ -191,7 +209,10 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 .options = options.*,
                 .snapshot = undefined,
                 .backend = undefined,
+                .is_backend_started = false,
                 .is_native_active = false,
+                .wake_count = .init(0),
+                .wake_count_handled = 0,
                 .native_limit = 0,
                 .watch_budget = 0,
                 .watch_count = 0,
@@ -214,7 +235,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
         // Stops every watch and frees every record.
         //
         pub fn deinit(self: *Self) void {
-            if (self.is_native_active) {
+            if (self.is_backend_started) {
                 self.backend.deinit();
             }
             for (self.polled.keys()) |path| {
@@ -256,6 +277,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
         //
         pub fn next(self: *Self, timeout_ms: u32) !Batch {
             self.clear_returned_batch();
+            const wake_count = self.wake_count_handled;
             const deadline_ns = self.now_ns() + @as(i96, timeout_ms) * std.time.ns_per_ms;
             var rounds: u32 = 0;
             while (true) : (rounds += 1) {
@@ -274,9 +296,14 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 if (self.polled.count() > 0) {
                     wait_ns = @min(wait_ns, @max(self.poll_due_ns - current_ns, 0));
                 }
-                try self.wait_for_changes(wait_ns);
+                try self.wait_for_changes(wait_ns, wake_count);
                 try self.apply_hints();
                 if (self.has_batch()) {
+                    break;
+                }
+                const current_wake_count = self.wake_count.load(.acquire);
+                if (current_wake_count != wake_count) {
+                    self.wake_count_handled = current_wake_count;
                     break;
                 }
                 if (self.now_ns() >= deadline_ns) {
@@ -295,6 +322,19 @@ pub fn GenericWatcher(comptime Backend: type) type {
         //
         fn has_batch(self: *const Self) bool {
             return self.list.events.items.len + self.list.problems.items.len > 0;
+        }
+
+        //
+        // Makes a call to `next` that is waiting, or the next call to start, return at once with
+        // the changes found so far. Safe to call from any thread, so another thread can stop a
+        // thread that waits in `next`, for example when an app quits.
+        //
+        pub fn wake(self: *Self) void {
+            _ = self.wake_count.fetchAdd(1, .release);
+            if (self.is_backend_started) {
+                self.backend.wake();
+            }
+            self.io.futexWake(u32, &self.wake_count.raw, 1);
         }
 
         //
@@ -330,6 +370,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 try self.list.append_problem("", err, .polled);
                 return;
             };
+            self.is_backend_started = true;
             self.is_native_active = true;
         }
 
@@ -550,9 +591,10 @@ pub fn GenericWatcher(comptime Backend: type) type {
 
         //
         // Waits for native events, or sleeps when no directory is watched natively. A wait of zero
-        // collects the events already queued without blocking.
+        // collects the events already queued without blocking. Either wait ends early when `wake`
+        // moves the wake count away from `wake_count`.
         //
-        fn wait_for_changes(self: *Self, wait_ns: i96) !void {
+        fn wait_for_changes(self: *Self, wait_ns: i96, wake_count: u32) !void {
             assert(wait_ns >= 0);
             if (self.is_native_active) {
                 if (self.watch_count > 0) {
@@ -570,17 +612,23 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 }
             }
             if (wait_ns > 0) {
-                try self.io.sleep(.fromNanoseconds(wait_ns), .awake);
+                try self.io.futexWaitTimeout(u32, &self.wake_count.raw, wake_count, .{
+                    .duration = .{
+                        .raw = .fromNanoseconds(wait_ns),
+                        .clock = .awake,
+                    },
+                });
             }
         }
 
         //
-        // Stops the native backend after it failed and polls every directory instead.
+        // Stops using the native backend after it failed and polls every directory instead. The
+        // backend stays allocated until `deinit`, so `wake` stays safe from other threads.
         //
         fn fall_back_to_polling(self: *Self, err: anyerror) !void {
             assert(self.is_native_active);
+            assert(self.is_backend_started);
             try self.list.append_problem("", err, .polled);
-            self.backend.deinit();
             self.is_native_active = false;
             self.watch_count = 0;
             self.hints.clear();

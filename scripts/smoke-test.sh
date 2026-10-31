@@ -76,6 +76,16 @@ lacks_text() {
     ! grep -qF -- "$2" "$1"
 }
 
+# Replaces the current shell with the tool, through the launcher when there is one. Used for
+# background runs, so the background process ID is the tool's own and signals reach it.
+exec_tool() {
+    if [ "$launcher_count" -eq 0 ]; then
+        exec "$binary" "$@"
+    else
+        exec "${launcher[@]}" "$binary" "$@"
+    fi
+}
+
 # Waits until the watcher writing standard error to the given file is watching: with -s it
 # prints its counters once every directory is added. Starting can take seconds, for example in
 # the iOS simulator, so a fixed sleep would let changes land before the first scan.
@@ -100,7 +110,7 @@ wait_ready() {
 start_watcher() {
     local case_dir="$1"
     shift
-    run_tool -s "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
+    exec_tool -s "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
     watcher_pid=$!
     watcher_case_dir="$case_dir"
     wait_ready "$case_dir/err.txt"
@@ -326,6 +336,28 @@ overlap_code=$?
 set -e
 check "roots: overlapping roots refused" test "$overlap_code" -eq 1
 check "roots: overlap explained" grep -q "overlaps another watched directory" "$case_dir/overlap.txt"
+
+# Ctrl+C stops the tool at once with exit code 130. Git Bash cannot send Ctrl+C to a Windows
+# program, and a launcher would receive the signal instead of the tool, so the case runs only
+# where the tool is a plain local process.
+if [ "$is_windows" -eq 0 ] && [ "$launcher_count" -eq 0 ]; then
+    case_dir="$(new_case interrupt)"
+    tree="$case_dir/tree"
+    start_watcher "$case_dir" -i 60000 "$tree"
+    echo "x" > "$tree/before-interrupt.txt"
+    sleep 0.3
+    SECONDS=0
+    kill -INT "$watcher_pid"
+    set +e
+    wait "$watcher_pid"
+    interrupt_code=$?
+    set -e
+    check "interrupt: Ctrl+C exits with code 130" test "$interrupt_code" -eq 130
+    check "interrupt: Ctrl+C stops at once" test "$SECONDS" -lt 2
+    check "interrupt: changes before Ctrl+C are printed" has_line "$case_dir/out.txt" "created file $tree/before-interrupt.txt"
+else
+    echo "skip interrupt: Ctrl+C cannot be sent to the tool on this platform from this script"
+fi
 
 # The duration ends the run on time.
 # Starting the tool can take seconds through a launcher, so that time is measured first and

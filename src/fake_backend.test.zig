@@ -91,6 +91,11 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         wait_error: ?anyerror,
 
         //
+        // Whether `wake` was called since the last wait.
+        //
+        is_woken: bool,
+
+        //
         // Starts the fake, or fails with the configured error.
         //
         pub fn init(self: *Self, gpa: Allocator) !void {
@@ -105,6 +110,7 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
                 .failing_path = null,
                 .watch_error = error.Unexpected,
                 .wait_error = null,
+                .is_woken = false,
             };
         }
 
@@ -154,7 +160,18 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         // Reports the queued hints, or fails with the queued error, or lets the timeout pass on the
         // mock clock when nothing is queued.
         //
+        //
+        // Makes the next wait return at once, without advancing the clock.
+        //
+        pub fn wake(self: *Self) void {
+            self.is_woken = true;
+        }
+
         pub fn wait(self: *Self, timeout_ms: u32, hints: *HintSet) !void {
+            if (self.is_woken) {
+                self.is_woken = false;
+                return;
+            }
             if (self.wait_error) |err| {
                 self.wait_error = null;
                 return err;

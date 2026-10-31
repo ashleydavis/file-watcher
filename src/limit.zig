@@ -16,9 +16,14 @@ pub const inotify_watches_default: u32 = 8192;
 
 //
 // The number of handles one call to `WaitForMultipleObjects` can wait on (`MAXIMUM_WAIT_OBJECTS`).
-// The Windows backend waits on one handle per root, so this bounds the roots it can watch.
 //
 pub const windows_handles_max: u32 = 64;
+
+//
+// The roots one Windows watcher can watch natively: one wait handle goes to the event `wake` sets,
+// and the rest to one root each.
+//
+pub const windows_roots_max: u32 = windows_handles_max - 1;
 
 //
 // The number of native watches the platform allows this process. On Linux and Android it is the
@@ -29,7 +34,7 @@ pub const windows_handles_max: u32 = 64;
 pub fn native_watch_limit(io: Io) !u32 {
     const limit = switch (builtin.os.tag) {
         .linux => read_inotify_limit(io),
-        .windows => windows_handles_max,
+        .windows => windows_roots_max,
         .macos,
         .ios,
         .tvos,

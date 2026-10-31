@@ -64,6 +64,12 @@ pub const Inotify = struct {
     fd: i32,
 
     //
+    // An eventfd that `wake` writes to. `wait` polls it beside the inotify descriptor, so a
+    // write from another thread ends the wait at once.
+    //
+    wake_fd: i32,
+
+    //
     // The path of each watch descriptor, owned by this map.
     //
     paths: std.AutoHashMapUnmanaged(i32, []const u8),
@@ -87,11 +93,20 @@ pub const Inotify = struct {
         if (result != .SUCCESS) {
             return init_error(result);
         }
+        const fd: i32 = @intCast(rc);
+        const wake_rc = linux.eventfd(0, linux.EFD.NONBLOCK | linux.EFD.CLOEXEC);
+        const wake_result = linux.errno(wake_rc);
+        if (wake_result != .SUCCESS) {
+            _ = linux.close(fd);
+            return init_error(wake_result);
+        }
         self.gpa = gpa;
-        self.fd = @intCast(rc);
+        self.fd = fd;
+        self.wake_fd = @intCast(wake_rc);
         self.paths = .empty;
         self.descriptors = .empty;
         assert(self.fd >= 0);
+        assert(self.wake_fd >= 0);
     }
 
     //
@@ -100,6 +115,7 @@ pub const Inotify = struct {
     pub fn deinit(self: *Inotify) void {
         assert(self.fd >= 0);
         _ = linux.close(self.fd);
+        _ = linux.close(self.wake_fd);
         var paths = self.paths.valueIterator();
         while (paths.next()) |path| {
             self.gpa.free(path.*);
@@ -163,18 +179,44 @@ pub const Inotify = struct {
     }
 
     //
+    // Ends a `wait` running on another thread, or the next one to start, at once. Writing to an
+    // eventfd is safe from any thread and from a signal handler.
+    //
+    pub fn wake(self: *Inotify) void {
+        const one = std.mem.toBytes(@as(u64, 1));
+        const rc = linux.write(self.wake_fd, &one, one.len);
+        // The write fails only when the counter is full, in which case a wake is pending anyway.
+        if (linux.errno(rc) != .SUCCESS) assert(linux.errno(rc) == .AGAIN);
+    }
+
+    //
     // Waits up to `timeout_ms` for changes and records the paths they touch in `hints`.
     //
     pub fn wait(self: *Inotify, timeout_ms: u32, hints: *HintSet) !void {
-        var poll_fds = [_]std.posix.pollfd{.{
-            .fd = self.fd,
-            .events = std.posix.POLL.IN,
-            .revents = 0,
-        }};
+        var poll_fds = [_]std.posix.pollfd{
+            .{
+                .fd = self.fd,
+                .events = std.posix.POLL.IN,
+                .revents = 0,
+            },
+            .{
+                .fd = self.wake_fd,
+                .events = std.posix.POLL.IN,
+                .revents = 0,
+            },
+        };
         const timeout: i32 = @intCast(@min(timeout_ms, std.math.maxInt(i32)));
         const ready = try std.posix.poll(&poll_fds, timeout);
         if (ready == 0) {
             return;
+        }
+        if (poll_fds[1].revents != 0) {
+            // Reading the counter clears it, so the next wait blocks again.
+            var counter: [8]u8 = undefined;
+            _ = std.posix.read(self.wake_fd, &counter) catch |err| switch (err) {
+                error.WouldBlock => 0,
+                else => return err,
+            };
         }
         var reads: u32 = 0;
         while (reads < reads_per_wait_max) : (reads += 1) {
@@ -189,7 +231,7 @@ pub const Inotify = struct {
 };
 
 //
-// Turns the error number of a failed `inotify_init1` into an error.
+// Turns the error number of a failed `inotify_init1` or `eventfd` into an error.
 //
 pub fn init_error(result: linux.E) anyerror {
     assert(result != .SUCCESS);

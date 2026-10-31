@@ -20,7 +20,7 @@ Watch two trees, print JSON and stop after a minute:
 file-watcher --format json --duration 60000 src tests
 ```
 
-The tool runs until it is stopped with Ctrl+C, or until the duration ends. Events are printed as soon as each batch is found.
+The tool runs until Ctrl+C, a termination request (SIGTERM) or the end of the duration. Events are printed as soon as each batch is found. Ctrl+C stops the tool at once: it prints the changes already found, frees its watches and exits with code 130.
 
 ## Options
 
@@ -122,6 +122,7 @@ stats: directories=1011 native_watches=1011 polled_directories=0 watch_budget=65
 | 0 | The duration ended, or help or the version was printed. |
 | 1 | A directory could not be watched: it is missing, is a file or overlaps another directory on the command line. |
 | 2 | The command line is wrong. The message says how to fix it. |
+| 130 | Stopped by Ctrl+C or a termination request. |
 
 ## The quota
 
@@ -129,7 +130,7 @@ Each platform limits native watches:
 
 - Linux and Android: the per-user inotify limit in `/proc/sys/fs/inotify/max_user_watches`. Each directory takes one watch.
 - macOS: the open file limit (`ulimit -n`). Each directory and each file takes one open descriptor.
-- Windows: 64 directory trees, the number one wait can cover. Each directory on the command line takes one watch for its whole tree.
+- Windows: 63 directory trees: one wait covers 64 handles, and one of them is kept for stopping the wait. Each directory on the command line takes one watch for its whole tree.
 
 The tool uses `--quota` percent of the limit and polls every directory beyond it. On Linux the limit is shared by every program of the user, so the default of 50% leaves room for editors and other watchers. To watch more directories natively on Linux, raise the limit:
 

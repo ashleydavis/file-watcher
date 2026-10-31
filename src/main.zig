@@ -6,6 +6,7 @@ const std = @import("std");
 const build_options = @import("build_options");
 const arguments = @import("arguments.zig");
 const file_watcher = @import("file_watcher");
+const interrupt = @import("interrupt.zig");
 const output = @import("output.zig");
 
 const assert = std.debug.assert;
@@ -15,16 +16,17 @@ const Watcher = file_watcher.Watcher;
 const Writer = std.Io.Writer;
 
 //
-// The longest wait for changes in one call, so the duration is checked at least this often.
-//
-const batch_wait_ms_max: u32 = 1000;
-
-//
 // Exit codes. Wrong usage is told apart from failures while running so scripts can react.
 //
 const exit_success: u8 = 0;
 const exit_failure: u8 = 1;
 const exit_usage: u8 = 2;
+
+//
+// The exit code after Ctrl+C or a termination request: 128 plus the number of SIGINT, as shells
+// report a process ended by Ctrl+C.
+//
+const exit_interrupted: u8 = 130;
 
 //
 // The process entry point. It hands the arguments, standard output and standard error to
@@ -109,14 +111,19 @@ fn watch(
         try stderr.flush();
     }
 
+    // Ctrl+C wakes the watcher, so the loop below ends at once, flushes and frees everything.
+    interrupt.install(watcher);
+    defer interrupt.uninstall();
+
     const start_ns = now_ns(io);
     const duration_ns: ?i96 = if (config.duration_ms) |duration_ms|
         @as(i96, duration_ms) * std.time.ns_per_ms
     else
         null;
-    // Without a duration the loop runs until the process is stopped, which is the tool's job.
-    while (true) {
-        var wait_ms = batch_wait_ms_max;
+    // Without a duration the loop runs until Ctrl+C or a termination request.
+    while (!interrupt.is_requested()) {
+        // Ctrl+C wakes the watcher, so the wait needs no limit of its own.
+        var wait_ms: u32 = std.math.maxInt(u32);
         if (duration_ns) |duration| {
             const elapsed_ns = now_ns(io) - start_ns;
             if (elapsed_ns >= duration) {
@@ -128,7 +135,7 @@ fn watch(
                 remaining_ns,
                 std.time.ns_per_ms,
             ) catch unreachable;
-            wait_ms = @intCast(@min(remaining_ms, batch_wait_ms_max));
+            wait_ms = @intCast(@min(remaining_ms, std.math.maxInt(u32)));
         }
         const batch = try watcher.next(wait_ms);
         for (batch.problems) |*problem| {
@@ -143,6 +150,9 @@ fn watch(
         if (batch.events.len > 0) {
             try stdout.flush();
         }
+    }
+    if (interrupt.is_requested()) {
+        return exit_interrupted;
     }
     return exit_success;
 }

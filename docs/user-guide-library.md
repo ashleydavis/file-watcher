@@ -111,9 +111,10 @@ The watcher for the platform being built for.
 - `deinit(self: *Watcher) void`: stops every watch and frees every record.
 - `add(self: *Watcher, path: []const u8) !void`: starts watching the tree at `path`. The current contents are recorded without events. Fails with `error.FileNotFound` when the path is missing, `error.NotDir` when it is a file and `error.OverlappingRoot` when it is inside, or contains, a path added before. Trailing separators are removed.
 - `next(self: *Watcher, timeout_ms: u32) !Batch`: blocks the calling thread until a change arrives or `timeout_ms` passes, then returns the batch: at least one event or problem, or an empty batch when the time runs out. With native watching it waits in the operating system (`poll`, `kevent` or `WaitForMultipleObjects`), so a waiting thread uses no CPU and wakes as soon as a change arrives. A timeout of 0 never blocks: it returns the changes already queued. The batch stays valid until the next call to `next` or `add`.
+- `wake(self: *Watcher) void`: makes a `next` that is waiting on another thread return at once with the changes found so far, or, when no `next` is waiting, makes the next call to `next` return at once. Safe to call from any thread and from a signal handler. Use it to stop a watcher thread without waiting for its timeout, for example when an app quits.
 - `stats(self: *const Watcher) Stats`: counters that show how the watcher spends its quota.
 
-The timeout only limits how long `next` waits when nothing changes. A change is reported as soon as it arrives, whatever the timeout, so a long timeout costs nothing in speed. Choose it by how often your loop needs to do something other than wait, such as checking a flag to stop: an idle loop wakes once per timeout and gets an empty batch. Use 0 from a timer or event loop that must never block. The largest timeout, `std.math.maxInt(u32)`, is about 49.7 days. In polling mode `next` also wakes for each poll interval, whatever the timeout.
+The timeout only limits how long `next` waits when nothing changes. A change is reported as soon as it arrives, whatever the timeout, so a long timeout costs nothing in speed. Choose it by how often your loop needs to do something other than wait: an idle loop wakes once per timeout and gets an empty batch. To stop a waiting thread, call `wake` from another thread instead of relying on the timeout. Use 0 from a timer or event loop that must never block. The largest timeout, `std.math.maxInt(u32)`, is about 49.7 days. In polling mode `next` also wakes for each poll interval, whatever the timeout.
 
 `next` and `add` return errors only for failures the watcher cannot work around, such as running out of memory. After such an error, call `deinit`. Paths that cannot be read or watched natively are problems in the batch instead, and the watcher carries on.
 
@@ -187,7 +188,7 @@ const Inbox = struct {
     paths: std.ArrayList([]u8) = .empty,
 };
 
-// Runs on its own thread until `stop` is set.
+// Runs on its own thread until `stop` is set and the watcher is woken.
 fn watch(
     gpa: std.mem.Allocator,
     io: std.Io,
@@ -196,8 +197,8 @@ fn watch(
     stop: *std.atomic.Value(bool),
 ) void {
     while (!stop.load(.acquire)) {
-        // Blocks until a change arrives or 250 ms pass, so `stop` is seen within 250 ms.
-        const batch = watcher.next(250) catch |err| {
+        // Blocks until a change arrives or another thread calls `wake`.
+        const batch = watcher.next(std.math.maxInt(u32)) catch |err| {
             std.log.err("The file watcher stopped: {t}.", .{err});
             return;
         };
@@ -229,7 +230,7 @@ fn take_changes(io: std.Io, inbox: *Inbox) std.ArrayList([]u8) {
 }
 ```
 
-Start the thread after adding the directories, and stop it before `deinit`:
+Start the thread after adding the directories. To stop it, for example when the user quits, set `stop`, then call `wake` so the thread's waiting `next` returns at once, then join the thread before `deinit`:
 
 ```zig
 var inbox: Inbox = .{};
@@ -239,10 +240,11 @@ const thread = try std.Thread.spawn(.{}, watch, .{ gpa, io, watcher, &inbox, &st
 // ... the app runs ...
 
 stop.store(true, .release);
+watcher.wake();
 thread.join();
 ```
 
-The timeout passed to `next` sets how quickly the thread sees `stop`. It costs nothing while the tree is quiet beyond one wake-up per timeout.
+The app quits without waiting for a timeout, so the thread can wait with the largest timeout and wakes only for changes and for `wake`.
 
 ### A UI timer
 

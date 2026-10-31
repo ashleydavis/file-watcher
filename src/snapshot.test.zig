@@ -187,7 +187,10 @@ test "add_root rejects bad roots" {
         error.FileNotFound,
         fixture.snapshot.add_root(native_path("/missing"), &fixture.list),
     );
-    try testing.expectError(error.NotDir, fixture.snapshot.add_root(native_path("/root/a.txt"), &fixture.list));
+    try testing.expectError(
+        error.NotDir,
+        fixture.snapshot.add_root(native_path("/root/a.txt"), &fixture.list),
+    );
     try fixture.snapshot.add_root(native_path("/root/sub"), &fixture.list);
     try testing.expectError(
         error.OverlappingRoot,

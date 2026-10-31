@@ -208,6 +208,89 @@ test "next with a zero timeout collects queued events" {
 }
 
 //
+// Goal: wake makes the next wait return at once, both for a native wait and for a polled sleep,
+// and later waits block again.
+// Method: wake each kind of watcher before calling next with a long timeout, and check the mock
+// clock did not move; then call next again and check it waited.
+//
+test "wake ends a wait at once" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
+    var native: Watcher = undefined;
+    try native.init(testing.allocator, mock.io(), &.{});
+    defer native.deinit();
+    native.backend.mock = &mock;
+    try native.add(native_path("/root"));
+
+    native.wake();
+    const woken = try native.next(60_000);
+    try testing.expectEqual(@as(usize, 0), woken.events.len);
+    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+    _ = try native.next(100);
+    try testing.expectEqual(@as(i96, 100 * std.time.ns_per_ms), mock.clock_ns);
+
+    var polling: Watcher = undefined;
+    try polling.init(testing.allocator, mock.io(), &.{
+        .method = .polling,
+        .poll_interval_ms = 60_000,
+    });
+    defer polling.deinit();
+    try polling.add(native_path("/root"));
+
+    const before_ns = mock.clock_ns;
+    polling.wake();
+    _ = try polling.next(60_000);
+    try testing.expectEqual(before_ns, mock.clock_ns);
+}
+
+//
+// Goal: a thread blocked in next on the platform's own backend returns as soon as another thread
+// calls wake, both with native watching and with polling.
+// Method: start a thread that calls next with a one-minute timeout until told to stop, then stop
+// it with wake and check it ended long before the timeout.
+//
+test "wake stops a thread waiting in next" {
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var base: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try tmp.dir.realPath(testing.io, &base);
+
+    for ([_]options_module.Method{ .native, .polling }) |method| {
+        const watcher = try testing.allocator.create(watcher_module.Watcher);
+        defer testing.allocator.destroy(watcher);
+        try watcher.init(testing.allocator, testing.io, &.{
+            .method = method,
+            .poll_interval_ms = 60_000,
+        });
+        defer watcher.deinit();
+        try watcher.add(base[0..length]);
+
+        var stop: std.atomic.Value(bool) = .init(false);
+        const thread = try std.Thread.spawn(.{}, wait_until_stopped, .{ watcher, &stop });
+        try testing.io.sleep(.fromMilliseconds(100), .awake);
+        const start = std.Io.Timestamp.now(testing.io, .awake);
+        stop.store(true, .release);
+        watcher.wake();
+        thread.join();
+        const elapsed = start.durationTo(std.Io.Timestamp.now(testing.io, .awake));
+        try testing.expect(elapsed.nanoseconds < 10 * std.time.ns_per_s);
+    }
+}
+
+//
+// Calls next with a one-minute timeout until `stop` is set, as an app's watcher thread does.
+//
+fn wait_until_stopped(watcher: *watcher_module.Watcher, stop: *std.atomic.Value(bool)) void {
+    while (!stop.load(.acquire)) {
+        _ = watcher.next(60_000) catch unreachable;
+    }
+}
+
+//
 // Goal: a recursive backend watches only roots, and a file-watching backend watches files and
 // drops their watches when they are deleted.
 // Method: add a tree to each kind of fake backend and check what is watched.

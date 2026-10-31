@@ -4,6 +4,7 @@
 //
 
 const std = @import("std");
+const builtin = @import("builtin");
 const main = @import("main.zig");
 const mock_io_module = @import("mock_io");
 
@@ -143,6 +144,33 @@ test "run prints changes until the duration ends" {
     );
     try testing.expect(std.mem.startsWith(u8, result.stderr.written(), "stats: directories=1"));
     try testing.expect(mock.clock_ns >= 2500 * std.time.ns_per_ms);
+}
+
+//
+// Sends the tool Ctrl+C the first time it waits, as a user would.
+//
+fn interrupt_on_sleep(mock: *MockIo) void {
+    _ = mock;
+    std.posix.raise(.INT) catch unreachable;
+}
+
+//
+// Goal: Ctrl+C stops a run with no duration and exits with the code shells use for Ctrl+C.
+// Method: watch with no duration, raise SIGINT while the tool waits and check it returns.
+//
+test "run stops on Ctrl+C" {
+    if (builtin.os.tag == .windows) {
+        return error.SkipZigTest;
+    }
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try mock.add_directory("/root");
+    mock.sleep_callback = interrupt_on_sleep;
+
+    var result = try run(&mock, &.{ "--poll", "-i", "60000", "/root" });
+    defer result.deinit();
+    try testing.expectEqual(@as(u8, 130), result.code);
 }
 
 //

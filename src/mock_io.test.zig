@@ -148,6 +148,8 @@ pub const MockIo = struct {
         vtable.dirRead = dir_read;
         vtable.now = now;
         vtable.sleep = sleep;
+        vtable.futexWait = futex_wait;
+        vtable.futexWake = futex_wake;
         self.* = .{
             .gpa = gpa,
             .nodes = .empty,
@@ -480,6 +482,31 @@ fn now(userdata: ?*anyopaque, clock: Io.Clock) Io.Timestamp {
     return .{
         .nanoseconds = self.clock_ns,
     };
+}
+
+//
+// Returns at once when the value has moved, as a real futex does. Otherwise moves the mock clock
+// forward by the timeout instead of waiting, then runs the sleep callback.
+//
+fn futex_wait(
+    userdata: ?*anyopaque,
+    ptr: *const u32,
+    expected: u32,
+    timeout: Io.Timeout,
+) Io.Cancelable!void {
+    if (@atomicLoad(u32, ptr, .acquire) != expected) {
+        return;
+    }
+    return sleep(userdata, timeout);
+}
+
+//
+// Nothing to wake: the mock never blocks.
+//
+fn futex_wake(userdata: ?*anyopaque, ptr: *const u32, max_waiters: u32) void {
+    _ = userdata;
+    _ = ptr;
+    _ = max_waiters;
 }
 
 //

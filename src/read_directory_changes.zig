@@ -115,6 +115,8 @@ const windows_api = if (builtin.os.tag == .windows) struct {
         lpOverlapped: ?*OVERLAPPED,
     ) callconv(.winapi) BOOL;
     extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(.winapi) BOOL;
+    extern "kernel32" fn SetEvent(hEvent: HANDLE) callconv(.winapi) BOOL;
+    extern "kernel32" fn ResetEvent(hEvent: HANDLE) callconv(.winapi) BOOL;
     extern "kernel32" fn GetLastError() callconv(.winapi) DWORD;
 } else struct {};
 
@@ -169,12 +171,13 @@ pub const ReadDirectoryChanges = struct {
     gpa: Allocator,
 
     //
-    // The watched roots, in the same order as `events`.
+    // The watched roots. Root `index` signals `events[index + 1]`.
     //
     roots: std.ArrayList(*Root),
 
     //
-    // The event handle of each root, passed to `WaitForMultipleObjects`.
+    // The handles passed to `WaitForMultipleObjects`: first the event `wake` sets, then the
+    // event of each root.
     //
     events: std.ArrayList(HANDLE),
 
@@ -187,7 +190,23 @@ pub const ReadDirectoryChanges = struct {
             .roots = .empty,
             .events = .empty,
         };
-        assert(self.roots.items.len == 0);
+        try self.events.ensureTotalCapacity(gpa, 1);
+        const wake_event = windows_api.CreateEventW(null, 1, 0, null) orelse {
+            self.events.deinit(gpa);
+            return error_from_code(windows_api.GetLastError());
+        };
+        self.events.appendAssumeCapacity(wake_event);
+        assert(self.events.items.len == self.roots.items.len + 1);
+    }
+
+    //
+    // Ends a `wait` running on another thread, or the next one to start, at once, by setting
+    // the wake event. The event stays set until a wait sees it.
+    //
+    pub fn wake(self: *ReadDirectoryChanges) void {
+        assert(self.events.items.len > 0);
+        // Setting a valid event handle cannot fail, so the result needs no check.
+        _ = windows_api.SetEvent(self.events.items[0]);
     }
 
     //
@@ -198,6 +217,7 @@ pub const ReadDirectoryChanges = struct {
             const root = self.roots.items[self.roots.items.len - 1];
             assert(self.unwatch(root.path));
         }
+        _ = windows_api.CloseHandle(self.events.items[0]);
         self.roots.deinit(self.gpa);
         self.events.deinit(self.gpa);
         self.* = undefined;
@@ -214,7 +234,7 @@ pub const ReadDirectoryChanges = struct {
                 return false;
             }
         }
-        if (self.roots.items.len >= limit.windows_handles_max) {
+        if (self.roots.items.len >= limit.windows_roots_max) {
             return error.LimitReached;
         }
         try self.roots.ensureUnusedCapacity(self.gpa, 1);
@@ -251,7 +271,7 @@ pub const ReadDirectoryChanges = struct {
         try start_read(root);
         self.roots.appendAssumeCapacity(root);
         self.events.appendAssumeCapacity(event);
-        assert(self.roots.items.len == self.events.items.len);
+        assert(self.events.items.len == self.roots.items.len + 1);
         return true;
     }
 
@@ -263,7 +283,7 @@ pub const ReadDirectoryChanges = struct {
         for (self.roots.items, 0..) |root, index| {
             if (std.mem.eql(u8, root.path, path)) {
                 _ = self.roots.orderedRemove(index);
-                _ = self.events.orderedRemove(index);
+                _ = self.events.orderedRemove(index + 1);
                 // Cancel the pending read and wait for it to finish, so the system is done
                 // with the buffer before it is freed. The results are not needed.
                 _ = windows_api.CancelIoEx(root.handle, null);
@@ -273,7 +293,7 @@ pub const ReadDirectoryChanges = struct {
                 _ = windows_api.CloseHandle(root.handle);
                 self.gpa.free(root.path);
                 self.gpa.destroy(root);
-                assert(self.roots.items.len == self.events.items.len);
+                assert(self.events.items.len == self.roots.items.len + 1);
                 return true;
             }
         }
@@ -301,7 +321,12 @@ pub const ReadDirectoryChanges = struct {
             if (index >= self.events.items.len) {
                 return error_from_code(windows_api.GetLastError());
             }
-            try read_changes(self.roots.items[index], hints);
+            if (index == 0) {
+                // Woken: clear the event so the next wait blocks again.
+                _ = windows_api.ResetEvent(self.events.items[0]);
+                return;
+            }
+            try read_changes(self.roots.items[index - 1], hints);
             timeout = 0;
         }
     }

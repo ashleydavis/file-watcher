@@ -216,3 +216,60 @@ test "Inotify init reports a full descriptor table" {
     var inotify: Inotify = undefined;
     try testing.expectError(error.ProcessFdQuotaExceeded, inotify.init(testing.allocator));
 }
+
+//
+// Goal: wake ends a wait at once, and the next wait blocks again.
+// Method: wake an instance, wait with a long timeout and check it returned quickly with no hints,
+// then wait briefly and check the wake was cleared.
+//
+test "Inotify wake ends a wait" {
+    if (builtin.os.tag != .linux) {
+        return error.SkipZigTest;
+    }
+    const inotify = try testing.allocator.create(Inotify);
+    defer testing.allocator.destroy(inotify);
+    try inotify.init(testing.allocator);
+    defer inotify.deinit();
+    var hints = HintSet.init(testing.allocator);
+    defer hints.deinit();
+
+    inotify.wake();
+    inotify.wake();
+    const start = std.Io.Timestamp.now(testing.io, .awake);
+    try inotify.wait(60_000, &hints);
+    const elapsed = start.durationTo(std.Io.Timestamp.now(testing.io, .awake));
+    try testing.expect(elapsed.nanoseconds < 10 * std.time.ns_per_s);
+    try testing.expectEqual(@as(usize, 0), hints.paths.count());
+
+    const again = std.Io.Timestamp.now(testing.io, .awake);
+    try inotify.wait(50, &hints);
+    const waited = again.durationTo(std.Io.Timestamp.now(testing.io, .awake));
+    try testing.expect(waited.nanoseconds >= 40 * std.time.ns_per_ms);
+}
+
+//
+// Goal: when the wake descriptor cannot be created, the inotify descriptor is closed and the
+// error says why.
+// Method: lower the open file limit so the inotify descriptor takes the last free number, then
+// create an instance and restore the limit.
+//
+test "Inotify init reports a missing wake descriptor" {
+    if (builtin.os.tag != .linux) {
+        return error.SkipZigTest;
+    }
+    const saved = try std.posix.getrlimit(.NOFILE);
+    const probe = linux.dup(0);
+    try testing.expect(linux.errno(probe) == .SUCCESS);
+    _ = linux.close(@intCast(probe));
+    try std.posix.setrlimit(.NOFILE, .{
+        .cur = probe + 1,
+        .max = saved.max,
+    });
+    defer std.posix.setrlimit(.NOFILE, saved) catch unreachable;
+
+    var inotify: Inotify = undefined;
+    try testing.expectError(error.ProcessFdQuotaExceeded, inotify.init(testing.allocator));
+    const after = linux.dup(0);
+    try testing.expectEqual(probe, after);
+    _ = linux.close(@intCast(after));
+}

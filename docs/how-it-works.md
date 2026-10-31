@@ -44,7 +44,7 @@ A backend only says which paths may have changed. The watcher collects those pat
 | --- | --- | --- | --- |
 | Linux, Android | inotify | One directory and the files in it | `max_user_watches`, per user |
 | macOS, iOS | kqueue | One directory or one file | The open file limit |
-| Windows | `ReadDirectoryChangesW` | A whole tree | 64 trees per wait |
+| Windows | `ReadDirectoryChangesW` | A whole tree | 63 trees per watcher |
 
 ### inotify
 
@@ -58,7 +58,7 @@ kqueue is used rather than FSEvents. kqueue is part of the C library on macOS an
 
 ### ReadDirectoryChangesW
 
-Each root gets one directory handle and one asynchronous read covering its whole tree, with a 64 KiB buffer. Windows reports the relative path of each change, and the watcher checks that path. When the buffer overflows, the whole tree is rescanned. One `WaitForMultipleObjects` call waits on every root at once, which limits a watcher to 64 roots.
+Each root gets one directory handle and one asynchronous read covering its whole tree, with a 64 KiB buffer. Windows reports the relative path of each change, and the watcher checks that path. When the buffer overflows, the whole tree is rescanned. One `WaitForMultipleObjects` call waits on every root at once, plus the event `wake` sets. One call covers 64 handles, which limits a watcher to 63 roots.
 
 ## The quota
 
@@ -66,7 +66,7 @@ At start the watcher reads the platform limit:
 
 - Linux and Android: `/proc/sys/fs/inotify/max_user_watches`. When it cannot be read, as in Android apps, the kernel default of 8192 is used.
 - macOS and iOS: the soft limit on open files.
-- Windows: 64.
+- Windows: 63.
 
 The budget is `quota_percent` of the limit, rounded down. Each native watch takes one from the budget, and each removed watch gives one back. When the budget is used up, the next directory is polled instead, and a file's directory is polled when the file cannot get its own watch. On Windows, where one watch covers a whole tree, a root that cannot get its watch has every directory under it polled, including directories created later. When the platform refuses a watch for lack of resources before the budget is used up, the budget drops to the number in use. The first time either happens, a `LimitReached` problem is reported.
 
@@ -85,6 +85,12 @@ When native watching fails to start, or fails while waiting for events, the watc
 3. Check every path the backend reported and record the events.
 
 New directories in the events get watches and deleted ones lose them, before the batch is returned. Event paths live in an arena that is reset at the start of the next batch, so a steady stream of batches stops allocating once the arena fits a typical batch.
+
+## Waking a waiting watcher
+
+`wake` lets another thread, or a signal handler, end a `next` that is waiting. Each backend waits on one extra signal beside its watches: an eventfd on Linux and Android, a kqueue user event on macOS and iOS, and an event handle on Windows. Polled waits sleep on a futex holding a wake count. `wake` raises the count, signals the backend and wakes the futex, and `next` returns as soon as it sees the count move. A wake made while no `next` is waiting is kept, so the next call returns at once.
+
+The CLI tool calls `wake` from its Ctrl+C and SIGTERM handlers, so it waits for changes with no timeout and still stops at once.
 
 ## Memory
 

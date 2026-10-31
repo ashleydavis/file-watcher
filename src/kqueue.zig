@@ -53,6 +53,12 @@ const watch_flags: u32 = note_delete | note_write | note_extend | note_attrib | 
 const events_per_wait_max: u32 = 256;
 
 //
+// The identifier of the user event `wake` triggers. User events have their own identifiers,
+// apart from the descriptors of watched paths.
+//
+const wake_ident: usize = 1;
+
+//
 // Which checks a kqueue event calls for. Pure, so it is tested on every platform.
 //
 pub fn checks_for(fflags: u32, is_directory: bool) Checks {
@@ -136,6 +142,21 @@ pub const Kqueue = struct {
                 else => |err| std.posix.unexpectedErrno(err),
             };
         }
+        // A user event lets `wake` end a wait from another thread.
+        const wake_event: std.c.Kevent = .{
+            .ident = wake_ident,
+            .filter = std.c.EVFILT.USER,
+            .flags = std.c.EV.ADD | std.c.EV.ENABLE | std.c.EV.CLEAR,
+            .fflags = 0,
+            .data = 0,
+            .udata = 0,
+        };
+        var no_events: [0]std.c.Kevent = .{};
+        if (std.c.kevent(rc, @ptrCast(&wake_event), 1, &no_events, 0, null) < 0) {
+            const err = std.c.errno(-1);
+            _ = std.c.close(rc);
+            return std.posix.unexpectedErrno(err);
+        }
         self.* = .{
             .gpa = gpa,
             .kq = rc,
@@ -143,6 +164,25 @@ pub const Kqueue = struct {
             .paths = .empty,
         };
         assert(self.kq >= 0);
+    }
+
+    //
+    // Ends a `wait` running on another thread, or the next one to start, at once, by triggering
+    // the user event registered in `init`.
+    //
+    pub fn wake(self: *Kqueue) void {
+        assert(self.kq >= 0);
+        const trigger: std.c.Kevent = .{
+            .ident = wake_ident,
+            .filter = std.c.EVFILT.USER,
+            .flags = 0,
+            .fflags = std.c.NOTE.TRIGGER,
+            .data = 0,
+            .udata = 0,
+        };
+        var no_events: [0]std.c.Kevent = .{};
+        // Triggering a registered user event cannot fail, so the result needs no check.
+        _ = std.c.kevent(self.kq, @ptrCast(&trigger), 1, &no_events, 0, null);
     }
 
     //
@@ -250,6 +290,9 @@ pub const Kqueue = struct {
         const count: usize = @intCast(rc);
         assert(count <= events.len);
         for (events[0..count]) |event| {
+            if (event.filter == std.c.EVFILT.USER) {
+                continue;
+            }
             const fd: i32 = @intCast(event.ident);
             const path = self.paths.get(fd) orelse continue;
             const checks = checks_for(event.fflags, self.watches.get(path).?.is_directory);
