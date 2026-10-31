@@ -124,6 +124,18 @@ pub fn build(builder: *std.Build) void {
         },
     });
 
+    // Linking iOS tests needs the C library stubs from the SDK given with `--sysroot`. Zig looks
+    // in the SDK's `/usr/lib` only when told to, and prefixes the path with the sysroot itself.
+    if (os == .ios) {
+        if (builder.sysroot != null) {
+            for ([_]*std.Build.Module{ library_test_module, cli_test_module }) |module| {
+                module.addLibraryPath(.{
+                    .cwd_relative = "/usr/lib",
+                });
+            }
+        }
+    }
+
     const library_tests = builder.addTest(.{
         .root_module = library_test_module,
     });
