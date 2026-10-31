@@ -1,6 +1,6 @@
 # performance-test.sh
 
-Measures the built CLI tool on a generated tree and prints the results for native watching and for polling side by side.
+Measures the built CLI tool on a generated tree and prints the results for native, mixed and polling watching side by side. Every test runs 5 times and the averages are reported.
 
 ## Usage
 
@@ -20,6 +20,8 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
 - `[title]`: the heading of the markdown table, such as the platform measured. Default `Performance`.
 - `[launcher...]`: a command that runs the binary, such as `xcrun simctl spawn booted` for a binary built for the iOS simulator. The tool's process is then found by its path to read its CPU time and memory.
 
+Set the `RUNS` environment variable to change how many times each test runs. Default 5.
+
 ## What it measures
 
 - Watch counters: directories, native watches, polled directories, budget and limit, from the tool's `-s` output.
@@ -33,5 +35,7 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
   - files deleted at once (one `xargs rm`) and in sequence (one at a time in a Perl loop, because starting `rm` once per file takes minutes on Windows).
 
 The tree is watched as two roots: the generated files and the directory the load tests change. Every measurement runs in three modes: native, where every directory has a native watch; mixed, where `--max-watches 1` gives the only native watch to the files root, so the load root is polled on every platform, Windows included; and polling, where every directory is polled.
+
+Each run measures the three modes in turn, so a slow spell on the machine affects all of them. Every figure is the average over the runs, except the latency's worst case, which is the slowest sample of any run. A load test fails if any run misses a change.
 
 The script exits with code 1 when a change goes unreported. It runs on Linux, macOS and Windows (Git Bash) with bash 5 or later. CPU time and memory come from `/proc` on Linux, `ps` on macOS and PowerShell's `Get-Process` on Windows. Linux and Windows report peak memory; macOS reports the memory in use after the load tests, because it keeps no peak for another process.

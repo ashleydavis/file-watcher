@@ -3,8 +3,8 @@
 # Measures the built CLI tool on a generated tree and prints the results: time to scan and
 # watch the tree, memory, CPU use while idle, how long a single change takes to be reported, and
 # load: ten thousand files created, modified and deleted, each at once and in sequence. Runs
-# native watching, mixed native and polled watching and polling side by side, and fails when any change
-# goes unreported.
+# native watching, mixed native and polled watching and polling side by side, repeats every test
+# $runs times (5 by default) and reports the averages. Fails when any change goes unreported.
 #
 
 set -euo pipefail
@@ -22,6 +22,8 @@ if [ $# -lt 1 ]; then
     echo "title heads the markdown summary, such as the platform measured (default Performance)."
     echo "launcher, when given, is a command that runs the binary, such as"
     echo "'xcrun simctl spawn booted' for a binary built for the iOS simulator."
+    echo
+    echo "Every test runs 5 times and the averages are reported. Set RUNS to change the count."
     echo
     echo "Runs on Linux, macOS and Windows (Git Bash), with bash 5 or later."
     exit 2
@@ -41,6 +43,12 @@ summary_file="${3:--}"
 summary_title="${4:-Performance}"
 shift $(( $# < 4 ? $# : 4 ))
 launcher=("$@")
+# How many times each test runs; the results are averaged.
+runs="${RUNS:-5}"
+if ! [[ "$runs" =~ ^[1-9][0-9]*$ ]]; then
+    echo "error: RUNS must be a whole number above 0, not '$runs'."
+    exit 2
+fi
 
 # Each platform reports a process's CPU time and memory in its own way.
 case "$(uname -s)" in
@@ -279,8 +287,9 @@ count_reported() {
 }
 
 # Runs one load test: makes the changes with the action, then waits until every changed file is
-# reported. Sets load_result to the time taken to make the changes and to have them all reported,
-# both counted from the first change, so they include the time the system took to make them.
+# reported. Sets load_made_ms and load_done_ms to the time taken to make the changes and to have
+# them all reported, both counted from the first change, so they include the time the system took
+# to make them, and load_reported to the number of changes reported.
 load_case() {
     local label="$1" kind="$2" out="$3" marker="$4" action="$5" target="$6"
     if [ "$action" = create_at_once ] || [ "$action" = create_in_sequence ]; then
@@ -304,14 +313,42 @@ load_case() {
         sleep 0.05
         reported=$(count_reported "$out" "$before" "$kind" "$marker")
     done
-    local done_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
+    load_done_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
+    load_made_ms=$made_ms
+    load_reported=$reported
     if [ "$reported" -lt "$load_count" ]; then
         failed=1
-        load_result="FAILED: $reported of $load_count reported after ${done_ms} ms"
         echo "FAIL $label: $action reported $reported of $load_count changes"
-        return
     fi
-    load_result="all reported after ${done_ms} ms ($(( load_count * 1000 / (done_ms > 0 ? done_ms : 1) )) events/s); changes made in ${made_ms} ms"
+}
+
+# The load tests, in the order they run: name, kind of change, action and label.
+load_names=(created_at_once created_in_sequence modified_at_once modified_in_sequence deleted_at_once deleted_in_sequence)
+declare -A load_labels=(
+    [created_at_once]="created at once"
+    [created_in_sequence]="created in sequence"
+    [modified_at_once]="modified at once"
+    [modified_in_sequence]="modified in sequence"
+    [deleted_at_once]="deleted at once"
+    [deleted_in_sequence]="deleted in sequence"
+)
+
+# Totals over every run, keyed by mode, or by mode and load test, averaged at the end.
+declare -A total_startup total_memory total_idle total_median total_load_done total_load_made
+declare -A worst_latency fewest_reported counters
+
+# Runs one load test and adds its results to the totals.
+record_load() {
+    local label="$1" name="$2"
+    shift 2
+    load_case "$label" "$@"
+    local key="$label:$name"
+    total_load_done[$key]=$(( ${total_load_done[$key]:-0} + load_done_ms ))
+    total_load_made[$key]=$(( ${total_load_made[$key]:-0} + load_made_ms ))
+    if [ "$load_reported" -lt "${fewest_reported[$key]:-$load_count}" ]; then
+        fewest_reported[$key]=$load_reported
+    fi
+    echo "  $load_count ${load_labels[$name]}: $load_reported reported after ${load_done_ms} ms; changes made in ${load_made_ms} ms"
 }
 
 # Measures one watch method. The arguments after the label are passed to the watcher.
@@ -348,18 +385,13 @@ measure() {
     # Load: ten thousand files created, modified and deleted, each at once and in sequence.
     local new_dir="$load_root/load-new-$label"
     local sequence_dir="$load_root/load-sequence-$label"
-    load_case "$label" created "$out" "load-new-$label" create_at_once "$new_dir"
-    result_load_created[$label]="$load_result"
-    load_case "$label" created "$out" "load-sequence-$label" create_in_sequence "$sequence_dir"
-    result_load_created_sequence[$label]="$load_result"
-    load_case "$label" modified "$out" "load-files-$label" modify_at_once "$load_dir"
-    result_load_modified[$label]="$load_result"
-    load_case "$label" modified "$out" "load-files-$label" modify_in_sequence "$load_dir"
-    result_load_sequence[$label]="$load_result"
-    load_case "$label" deleted "$out" "load-new-$label" delete_at_once "$new_dir"
-    result_load_deleted[$label]="$load_result"
-    load_case "$label" deleted "$out" "load-sequence-$label" delete_in_sequence "$sequence_dir"
-    result_load_deleted_sequence[$label]="$load_result"
+    echo "== $label, run $run of $runs"
+    record_load "$label" created_at_once created "$out" "load-new-$label" create_at_once "$new_dir"
+    record_load "$label" created_in_sequence created "$out" "load-sequence-$label" create_in_sequence "$sequence_dir"
+    record_load "$label" modified_at_once modified "$out" "load-files-$label" modify_at_once "$load_dir"
+    record_load "$label" modified_in_sequence modified "$out" "load-files-$label" modify_in_sequence "$load_dir"
+    record_load "$label" deleted_at_once deleted "$out" "load-new-$label" delete_at_once "$new_dir"
+    record_load "$label" deleted_in_sequence deleted "$out" "load-sequence-$label" delete_in_sequence "$sequence_dir"
     local peak
     peak=$(memory_kib "$pid")
     stop_watcher
@@ -397,42 +429,74 @@ measure() {
     local stats
     stats=$(grep "^stats:" "$work/startup-$label.txt" | head -n 1 || true)
 
-    # Results are kept per method for the markdown summary.
-    result_counters[$label]="${stats#stats: }"
-    result_startup[$label]="${startup_ms} ms"
-    local entries=$(( file_count + directory_count + load_count * 3 ))
-    result_memory[$label]="$(( peak / 1024 )) MiB ($(( peak * 1024 / entries )) bytes per entry)"
-    result_idle[$label]="${idle_cpu} ms"
-    result_latency[$label]="median ${median_us} us, max ${max_us} us"
+    # Results are added to the totals, which are averaged once every run is done.
+    counters[$label]="${stats#stats: }"
+    total_startup[$label]=$(( ${total_startup[$label]:-0} + startup_ms ))
+    total_memory[$label]=$(( ${total_memory[$label]:-0} + peak ))
+    total_idle[$label]=$(( ${total_idle[$label]:-0} + idle_cpu ))
+    total_median[$label]=$(( ${total_median[$label]:-0} + ${median_us:-0} ))
+    if [ "${max_us:-0}" -gt "${worst_latency[$label]:-0}" ]; then
+        worst_latency[$label]=$max_us
+    fi
 
-    echo "== $label"
     echo "  watch counters:          ${stats#stats: }"
-    echo "  startup (scan + watch):  ${startup_ms} ms ($(( file_count * 1000 / (startup_ms > 0 ? startup_ms : 1) )) files/s)"
-    echo "  memory:                  ${result_memory[$label]}"
+    echo "  startup (scan + watch):  ${startup_ms} ms"
+    echo "  memory:                  $(( peak / 1024 )) MiB"
     echo "  idle CPU over ${idle_seconds} s:      ${idle_cpu} ms"
     echo "  single change latency:   median ${median_us} us, max ${max_us} us (${#latencies[@]} samples)"
-    echo "  $load_count created at once:          ${result_load_created[$label]}"
-    echo "  $load_count created in sequence:      ${result_load_created_sequence[$label]}"
-    echo "  $load_count modified at once:         ${result_load_modified[$label]}"
-    echo "  $load_count modified in sequence:     ${result_load_sequence[$label]}"
-    echo "  $load_count deleted at once:          ${result_load_deleted[$label]}"
-    echo "  $load_count deleted in sequence:      ${result_load_deleted_sequence[$label]}"
     echo
 }
 
-declare -A result_counters result_startup result_memory result_idle result_latency
-declare -A result_load_created result_load_created_sequence result_load_modified
-declare -A result_load_sequence result_load_deleted result_load_deleted_sequence
-# Native watching up to the quota; mixed, where a cap on native watches is reached, so most
+# Each run measures every mode in turn, so slow spells on the machine spread over all three:
+# native watching up to the quota; mixed, where a cap on native watches is reached, so most
 # directories are polled while the rest stay native; and polling throughout.
-measure native
-measure mixed --max-watches "$mixed_watches" -i 1000
-measure polling --poll -i 1000
+modes=(native mixed polling)
+for run in $(seq 1 "$runs"); do
+    measure native
+    measure mixed --max-watches "$mixed_watches" -i 1000
+    measure polling --poll -i 1000
+done
 
-# Writes one row of the summary table: the measure's name, then its result for each mode.
+# Average results, keyed by measure and mode, for the printed results and the markdown summary.
+declare -A average
+entries=$(( file_count + directory_count + load_count * 3 ))
+for mode in "${modes[@]}"; do
+    average[startup:$mode]="$(( total_startup[$mode] / runs )) ms"
+    memory_average=$(( total_memory[$mode] / runs ))
+    average[memory:$mode]="$(( memory_average / 1024 )) MiB ($(( memory_average * 1024 / entries )) bytes per entry)"
+    average[idle:$mode]="$(( total_idle[$mode] / runs )) ms"
+    average[latency:$mode]="median $(( total_median[$mode] / runs )) us, worst ${worst_latency[$mode]:-0} us"
+    average[counters:$mode]="${counters[$mode]}"
+    for name in "${load_names[@]}"; do
+        key="$mode:$name"
+        done_ms=$(( total_load_done[$key] / runs ))
+        made_ms=$(( total_load_made[$key] / runs ))
+        if [ "${fewest_reported[$key]:-$load_count}" -lt "$load_count" ]; then
+            average[$name:$mode]="FAILED: as few as ${fewest_reported[$key]} of $load_count reported"
+        else
+            average[$name:$mode]="all reported after ${done_ms} ms ($(( load_count * 1000 / (done_ms > 0 ? done_ms : 1) )) events/s); changes made in ${made_ms} ms"
+        fi
+    done
+done
+
+echo "Averages over $runs runs:"
+echo
+for mode in "${modes[@]}"; do
+    echo "== $mode"
+    echo "  watch counters:          ${average[counters:$mode]}"
+    echo "  startup (scan + watch):  ${average[startup:$mode]}"
+    echo "  memory:                  ${average[memory:$mode]}"
+    echo "  idle CPU over ${idle_seconds} s:      ${average[idle:$mode]}"
+    echo "  single change latency:   ${average[latency:$mode]} ($latency_samples samples per run)"
+    for name in "${load_names[@]}"; do
+        printf '  %-31s %s\n' "$load_count ${load_labels[$name]}:" "${average[$name:$mode]}"
+    done
+    echo
+done
+
+# Writes one row of the summary table: the measure's name, then its average for each mode.
 summary_row() {
-    local -n results="$2"
-    echo "| $1 | ${results[native]} | ${results[mixed]} | ${results[polling]} |"
+    echo "| $1 | ${average[$2:native]} | ${average[$2:mixed]} | ${average[$2:polling]} |"
 }
 
 # Writes the results as a markdown table, such as a GitHub Actions job summary.
@@ -443,23 +507,20 @@ write_summary() {
     if [ ${#launcher[@]} -gt 0 ]; then
         where="$where through '${launcher[*]}'"
     fi
-    echo "A tree of $file_count files in $directory_count directories, measured $where."
+    echo "A tree of $file_count files in $directory_count directories, measured $where. Each figure is the average of $runs runs; the latency's worst case is the slowest of every run."
     echo
     echo "The tree is watched as two roots, the files and the load test directory. The mixed mode allows $mixed_watches native watch, so the load tests run in polled directories while the files root stays native."
     echo
     echo "| Measure | Native | Mixed ($mixed_watches native watch, rest polled) | Polling (1 s interval) |"
     echo "| --- | --- | --- | --- |"
-    summary_row "Startup (scan and watch)" result_startup
-    summary_row "$memory_label" result_memory
-    summary_row "Idle CPU over ${idle_seconds} s" result_idle
-    summary_row "Single change latency ($latency_samples samples)" result_latency
-    summary_row "$load_count files created at once" result_load_created
-    summary_row "$load_count files created in sequence" result_load_created_sequence
-    summary_row "$load_count files modified at once" result_load_modified
-    summary_row "$load_count files modified in sequence" result_load_sequence
-    summary_row "$load_count files deleted at once" result_load_deleted
-    summary_row "$load_count files deleted in sequence" result_load_deleted_sequence
-    summary_row "Watch counters" result_counters
+    summary_row "Startup (scan and watch)" startup
+    summary_row "$memory_label" memory
+    summary_row "Idle CPU over ${idle_seconds} s" idle
+    summary_row "Single change latency ($latency_samples samples per run)" latency
+    for name in "${load_names[@]}"; do
+        summary_row "$load_count files ${load_labels[$name]}" "$name"
+    done
+    summary_row "Watch counters" counters
     echo
     if [ "$failed" -ne 0 ]; then
         echo "**Some changes were not reported.**"
