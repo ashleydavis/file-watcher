@@ -24,6 +24,16 @@ fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+# On Windows (Git Bash) the tool prints Windows paths joined with backslashes, so the work
+# directory is passed in Windows form and the output's backslashes are turned into slashes.
+is_windows=0
+case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*)
+        is_windows=1
+        work="$(cygpath -m "$work")"
+        ;;
+esac
+
 passed=0
 failed=0
 
@@ -57,12 +67,24 @@ start_watcher() {
     shift
     "$binary" "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
     watcher_pid=$!
+    watcher_case_dir="$case_dir"
     sleep 0.5
+}
+
+# Turns the backslashes of Windows paths in a file into slashes. JSON escapes each backslash
+# as two, which become one slash.
+slash_paths() {
+    sed -e 's#\\\\#/#g' -e 's#\\#/#g' "$1" > "$1.slashed"
+    mv "$1.slashed" "$1"
 }
 
 # Waits for the watcher started last to exit.
 wait_watcher() {
     wait "$watcher_pid"
+    if [ "$is_windows" -eq 1 ]; then
+        slash_paths "$watcher_case_dir/out.txt"
+        slash_paths "$watcher_case_dir/err.txt"
+    fi
 }
 
 # Creates a fresh directory for one case and prints its path.
@@ -131,11 +153,18 @@ check "text: no warnings" test ! -s "$case_dir/err.txt"
 # JSON output.
 case_dir="$(new_case json)"
 tree="$case_dir/tree"
+# Windows forbids quotes in file names, so there the name checks a space instead.
+json_name='quote"name.txt'
+json_escaped='quote\"name.txt'
+if [ "$is_windows" -eq 1 ]; then
+    json_name='space name.txt'
+    json_escaped='space name.txt'
+fi
 start_watcher "$case_dir" -f json -d 1500 "$tree"
-echo "x" > "$tree/quote\"name.txt"
+echo "x" > "$tree/$json_name"
 wait_watcher
 out="$case_dir/out.txt"
-check "json: created event" has_line "$out" "{\"kind\":\"created\",\"type\":\"file\",\"path\":\"$tree/quote\\\"name.txt\"}"
+check "json: created event" has_line "$out" "{\"kind\":\"created\",\"type\":\"file\",\"path\":\"$tree/$json_escaped\"}"
 if command -v python3 > /dev/null; then
     check "json: every line parses" python3 -c '
 import json, sys
@@ -235,7 +264,12 @@ tree="$case_dir/tree"
 mkdir -p "$tree/a" "$tree/b"
 start_watcher "$case_dir" -s -d 600 "$tree"
 wait_watcher
-check "stats: native watch per directory" grep -q "directories=3 native_watches=3 polled_directories=0" "$case_dir/err.txt"
+# Windows watches a whole tree with one watch; the other platforms use one per directory.
+expected_watches=3
+if [ "$is_windows" -eq 1 ]; then
+    expected_watches=1
+fi
+check "stats: native watches" grep -q "directories=3 native_watches=$expected_watches polled_directories=0" "$case_dir/err.txt"
 
 # Several roots, and overlapping roots.
 case_dir="$(new_case roots)"
@@ -254,10 +288,9 @@ check "roots: overlapping roots refused" test "$overlap_code" -eq 1
 check "roots: overlap explained" grep -q "overlaps another watched directory" "$case_dir/overlap.txt"
 
 # The duration ends the run on time.
-start_ns=$(date +%s%N)
+SECONDS=0
 "$binary" -d 300 "$work" > /dev/null
-elapsed_ms=$(( ($(date +%s%N) - start_ns) / 1000000 ))
-check "duration: exits after the duration" test "$elapsed_ms" -lt 1500
+check "duration: exits after the duration" test "$SECONDS" -lt 3
 
 echo
 echo "$passed passed, $failed failed"

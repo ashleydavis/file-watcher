@@ -13,6 +13,7 @@ const testing = std.testing;
 const EventKind = event_module.EventKind;
 const EventList = event_module.EventList;
 const MockIo = mock_io_module.MockIo;
+const native_path = mock_io_module.native_path;
 const Snapshot = snapshot_module.Snapshot;
 
 //
@@ -136,13 +137,13 @@ const Fixture = struct {
         };
         self.snapshot = Snapshot.init(testing.allocator, self.mock.io(), &self.options);
         self.list = EventList.init(testing.allocator);
-        try self.mock.add_directory("/root");
-        try self.mock.add_file("/root/a.txt", 1);
-        try self.mock.add_directory("/root/sub");
-        try self.mock.add_file("/root/sub/b.txt", 2);
-        try self.mock.add_directory("/root/node_modules");
-        try self.mock.add_file("/root/node_modules/c.js", 3);
-        try self.mock.add_file("/root/skip.log", 4);
+        try self.mock.add_directory(native_path("/root"));
+        try self.mock.add_file(native_path("/root/a.txt"), 1);
+        try self.mock.add_directory(native_path("/root/sub"));
+        try self.mock.add_file(native_path("/root/sub/b.txt"), 2);
+        try self.mock.add_directory(native_path("/root/node_modules"));
+        try self.mock.add_file(native_path("/root/node_modules/c.js"), 3);
+        try self.mock.add_file(native_path("/root/skip.log"), 4);
     }
 
     //
@@ -165,12 +166,12 @@ test "add_root records the tree silently and applies exclusions" {
     try fixture.init();
     defer fixture.deinit();
 
-    try fixture.snapshot.add_root("/root/", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root/"), &fixture.list);
     try expect_events(&fixture.list, &.{});
     try testing.expectEqual(@as(u32, 2), fixture.snapshot.directory_count());
-    try testing.expect(fixture.snapshot.contains_directory("/root"));
-    try testing.expect(fixture.snapshot.contains_directory("/root/sub"));
-    try testing.expect(!fixture.snapshot.contains_directory("/root/node_modules"));
+    try testing.expect(fixture.snapshot.contains_directory(native_path("/root")));
+    try testing.expect(fixture.snapshot.contains_directory(native_path("/root/sub")));
+    try testing.expect(!fixture.snapshot.contains_directory(native_path("/root/node_modules")));
 }
 
 //
@@ -184,17 +185,17 @@ test "add_root rejects bad roots" {
 
     try testing.expectError(
         error.FileNotFound,
-        fixture.snapshot.add_root("/missing", &fixture.list),
+        fixture.snapshot.add_root(native_path("/missing"), &fixture.list),
     );
-    try testing.expectError(error.NotDir, fixture.snapshot.add_root("/root/a.txt", &fixture.list));
-    try fixture.snapshot.add_root("/root/sub", &fixture.list);
+    try testing.expectError(error.NotDir, fixture.snapshot.add_root(native_path("/root/a.txt"), &fixture.list));
+    try fixture.snapshot.add_root(native_path("/root/sub"), &fixture.list);
     try testing.expectError(
         error.OverlappingRoot,
-        fixture.snapshot.add_root("/root", &fixture.list),
+        fixture.snapshot.add_root(native_path("/root"), &fixture.list),
     );
     try testing.expectError(
         error.OverlappingRoot,
-        fixture.snapshot.add_root("/root/sub", &fixture.list),
+        fixture.snapshot.add_root(native_path("/root/sub"), &fixture.list),
     );
 }
 
@@ -207,30 +208,30 @@ test "rescan_directory reports every kind of change" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
     fixture.mock.clock_ns = 5;
-    fixture.mock.write_file("/root/a.txt", 10);
-    fixture.mock.remove("/root/sub");
-    try fixture.mock.add_directory("/root/new");
-    try fixture.mock.add_directory("/root/new/deeper");
-    try fixture.mock.add_file("/root/new/deeper/d.txt", 1);
-    try fixture.mock.add_file("/root/new.log", 1);
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    fixture.mock.write_file(native_path("/root/a.txt"), 10);
+    fixture.mock.remove(native_path("/root/sub"));
+    try fixture.mock.add_directory(native_path("/root/new"));
+    try fixture.mock.add_directory(native_path("/root/new/deeper"));
+    try fixture.mock.add_file(native_path("/root/new/deeper/d.txt"), 1);
+    try fixture.mock.add_file(native_path("/root/new.log"), 1);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
 
     try expect_events(&fixture.list, &.{
-        modified_file("/root/a.txt"),
-        deleted_directory("/root/sub"),
-        deleted_file("/root/sub/b.txt"),
-        created_directory("/root/new"),
-        created_directory("/root/new/deeper"),
-        created_file("/root/new/deeper/d.txt"),
+        modified_file(native_path("/root/a.txt")),
+        deleted_directory(native_path("/root/sub")),
+        deleted_file(native_path("/root/sub/b.txt")),
+        created_directory(native_path("/root/new")),
+        created_directory(native_path("/root/new/deeper")),
+        created_file(native_path("/root/new/deeper/d.txt")),
     });
-    try testing.expect(fixture.snapshot.contains_directory("/root/new/deeper"));
-    try testing.expect(!fixture.snapshot.contains_directory("/root/sub"));
+    try testing.expect(fixture.snapshot.contains_directory(native_path("/root/new/deeper")));
+    try testing.expect(!fixture.snapshot.contains_directory(native_path("/root/sub")));
 
     fixture.list.clear();
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{});
 }
 
@@ -243,15 +244,15 @@ test "rescan_directory detects replaced files and ignores directory times" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    try fixture.mock.add_file("/root/a.txt", 1);
+    try fixture.mock.add_file(native_path("/root/a.txt"), 1);
     fixture.mock.clock_ns = 9;
-    try fixture.mock.add_file("/root/sub/e.txt", 1);
+    try fixture.mock.add_file(native_path("/root/sub/e.txt"), 1);
     fixture.mock.nodes.getPtr("/root/sub").?.mtime_ns = 9;
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        modified_file("/root/a.txt"),
+        modified_file(native_path("/root/a.txt")),
     });
 }
 
@@ -264,30 +265,30 @@ test "rescan_directory reports kind changes and replaced directories" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    fixture.mock.remove("/root/a.txt");
-    try fixture.mock.add_directory("/root/a.txt");
-    fixture.mock.remove("/root/sub");
-    try fixture.mock.add_file("/root/sub", 1);
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    fixture.mock.remove(native_path("/root/a.txt"));
+    try fixture.mock.add_directory(native_path("/root/a.txt"));
+    fixture.mock.remove(native_path("/root/sub"));
+    try fixture.mock.add_file(native_path("/root/sub"), 1);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        deleted_file("/root/a.txt"),
-        created_directory("/root/a.txt"),
-        deleted_directory("/root/sub"),
-        deleted_file("/root/sub/b.txt"),
-        created_file("/root/sub"),
+        deleted_file(native_path("/root/a.txt")),
+        created_directory(native_path("/root/a.txt")),
+        deleted_directory(native_path("/root/sub")),
+        deleted_file(native_path("/root/sub/b.txt")),
+        created_file(native_path("/root/sub")),
     });
 
     fixture.list.clear();
-    fixture.mock.remove("/root/a.txt");
-    try fixture.mock.add_directory("/root/a.txt");
-    try fixture.mock.add_file("/root/a.txt/inner", 1);
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    fixture.mock.remove(native_path("/root/a.txt"));
+    try fixture.mock.add_directory(native_path("/root/a.txt"));
+    try fixture.mock.add_file(native_path("/root/a.txt/inner"), 1);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        deleted_directory("/root/a.txt"),
-        created_directory("/root/a.txt"),
-        created_file("/root/a.txt/inner"),
+        deleted_directory(native_path("/root/a.txt")),
+        created_directory(native_path("/root/a.txt")),
+        created_file(native_path("/root/a.txt/inner")),
     });
 }
 
@@ -299,30 +300,30 @@ test "check_entry reports one path" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    try fixture.mock.add_file("/root/sub/new.txt", 1);
-    try fixture.snapshot.check_entry("/root/sub/new.txt", &fixture.list);
+    try fixture.mock.add_file(native_path("/root/sub/new.txt"), 1);
+    try fixture.snapshot.check_entry(native_path("/root/sub/new.txt"), &fixture.list);
     fixture.mock.clock_ns = 3;
-    fixture.mock.write_file("/root/a.txt", 7);
-    try fixture.snapshot.check_entry("/root/a.txt", &fixture.list);
-    fixture.mock.remove("/root/sub/b.txt");
-    try fixture.snapshot.check_entry("/root/sub/b.txt", &fixture.list);
-    try fixture.mock.add_file("/root/ignored.log", 1);
-    try fixture.snapshot.check_entry("/root/ignored.log", &fixture.list);
-    try fixture.snapshot.check_entry("/root/node_modules/c.js", &fixture.list);
-    try fixture.snapshot.check_entry("/elsewhere/file", &fixture.list);
-    try fixture.snapshot.check_entry("/", &fixture.list);
-    try fixture.mock.add_directory("/root/node_modules2");
-    try fixture.snapshot.check_entry("/root/node_modules2", &fixture.list);
-    try fixture.mock.add_directory("/root/node_modules/inner");
-    try fixture.snapshot.check_entry("/root/node_modules/inner", &fixture.list);
+    fixture.mock.write_file(native_path("/root/a.txt"), 7);
+    try fixture.snapshot.check_entry(native_path("/root/a.txt"), &fixture.list);
+    fixture.mock.remove(native_path("/root/sub/b.txt"));
+    try fixture.snapshot.check_entry(native_path("/root/sub/b.txt"), &fixture.list);
+    try fixture.mock.add_file(native_path("/root/ignored.log"), 1);
+    try fixture.snapshot.check_entry(native_path("/root/ignored.log"), &fixture.list);
+    try fixture.snapshot.check_entry(native_path("/root/node_modules/c.js"), &fixture.list);
+    try fixture.snapshot.check_entry(native_path("/elsewhere/file"), &fixture.list);
+    try fixture.snapshot.check_entry(native_path("/"), &fixture.list);
+    try fixture.mock.add_directory(native_path("/root/node_modules2"));
+    try fixture.snapshot.check_entry(native_path("/root/node_modules2"), &fixture.list);
+    try fixture.mock.add_directory(native_path("/root/node_modules/inner"));
+    try fixture.snapshot.check_entry(native_path("/root/node_modules/inner"), &fixture.list);
 
     try expect_events(&fixture.list, &.{
-        created_file("/root/sub/new.txt"),
-        modified_file("/root/a.txt"),
-        deleted_file("/root/sub/b.txt"),
-        created_directory("/root/node_modules2"),
+        created_file(native_path("/root/sub/new.txt")),
+        modified_file(native_path("/root/a.txt")),
+        deleted_file(native_path("/root/sub/b.txt")),
+        created_directory(native_path("/root/node_modules2")),
     });
 }
 
@@ -334,21 +335,21 @@ test "check_entry on a deleted root removes it" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    fixture.mock.remove("/root");
-    try fixture.snapshot.check_entry("/root", &fixture.list);
+    fixture.mock.remove(native_path("/root"));
+    try fixture.snapshot.check_entry(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        deleted_directory("/root"),
-        deleted_file("/root/a.txt"),
-        deleted_directory("/root/sub"),
-        deleted_file("/root/sub/b.txt"),
+        deleted_directory(native_path("/root")),
+        deleted_file(native_path("/root/a.txt")),
+        deleted_directory(native_path("/root/sub")),
+        deleted_file(native_path("/root/sub/b.txt")),
     });
     try testing.expectEqual(@as(u32, 0), fixture.snapshot.directory_count());
 
     fixture.list.clear();
-    try fixture.snapshot.check_entry("/root", &fixture.list);
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    try fixture.snapshot.check_entry(native_path("/root"), &fixture.list);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{});
 }
 
@@ -360,12 +361,12 @@ test "check_entry on a live root rescans it" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    try fixture.mock.add_file("/root/f.txt", 1);
-    try fixture.snapshot.check_entry("/root", &fixture.list);
+    try fixture.mock.add_file(native_path("/root/f.txt"), 1);
+    try fixture.snapshot.check_entry(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        created_file("/root/f.txt"),
+        created_file(native_path("/root/f.txt")),
     });
 }
 
@@ -377,13 +378,13 @@ test "rescan_directory of a vanished subdirectory reports it deleted" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    fixture.mock.remove("/root/sub");
-    try fixture.snapshot.rescan_directory("/root/sub", &fixture.list);
+    fixture.mock.remove(native_path("/root/sub"));
+    try fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        deleted_directory("/root/sub"),
-        deleted_file("/root/sub/b.txt"),
+        deleted_directory(native_path("/root/sub")),
+        deleted_file(native_path("/root/sub/b.txt")),
     });
 }
 
@@ -395,14 +396,14 @@ test "rescan_tree rescans every directory under a path" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    try fixture.mock.add_file("/root/top.txt", 1);
-    try fixture.mock.add_file("/root/sub/deep.txt", 1);
-    try fixture.snapshot.rescan_tree("/root", &fixture.list);
+    try fixture.mock.add_file(native_path("/root/top.txt"), 1);
+    try fixture.mock.add_file(native_path("/root/sub/deep.txt"), 1);
+    try fixture.snapshot.rescan_tree(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        created_file("/root/top.txt"),
-        created_file("/root/sub/deep.txt"),
+        created_file(native_path("/root/top.txt")),
+        created_file(native_path("/root/sub/deep.txt")),
     });
 }
 
@@ -416,30 +417,30 @@ test "faults are reported as problems" {
     try fixture.init();
     defer fixture.deinit();
 
-    try fixture.mock.add_directory("/root/locked");
-    try fixture.mock.set_faults("/root/locked", .{
+    try fixture.mock.add_directory(native_path("/root/locked"));
+    try fixture.mock.set_faults(native_path("/root/locked"), .{
         .open = true,
     });
-    try fixture.mock.set_faults("/root/a.txt", .{
+    try fixture.mock.set_faults(native_path("/root/a.txt"), .{
         .stat = true,
     });
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
     try testing.expectEqual(@as(usize, 2), fixture.list.problems.items.len);
-    try testing.expect(fixture.snapshot.contains_directory("/root/locked"));
+    try testing.expect(fixture.snapshot.contains_directory(native_path("/root/locked")));
 
     fixture.list.clear();
-    try fixture.mock.set_faults("/root/sub", .{
+    try fixture.mock.set_faults(native_path("/root/sub"), .{
         .read = true,
     });
-    try fixture.snapshot.rescan_directory("/root/sub", &fixture.list);
+    try fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list);
     try expect_events(&fixture.list, &.{});
     try testing.expectEqual(@as(usize, 1), fixture.list.problems.items.len);
-    try testing.expectEqualStrings("/root/sub", fixture.list.problems.items[0].path);
+    try testing.expectEqualStrings(native_path("/root/sub"), fixture.list.problems.items[0].path);
     try testing.expectEqual(error.AccessDenied, fixture.list.problems.items[0].reason);
 
     fixture.list.clear();
-    try fixture.snapshot.check_entry("/root/a.txt", &fixture.list);
-    try testing.expectEqualStrings("/root/a.txt", fixture.list.problems.items[0].path);
+    try fixture.snapshot.check_entry(native_path("/root/a.txt"), &fixture.list);
+    try testing.expectEqualStrings(native_path("/root/a.txt"), fixture.list.problems.items[0].path);
 }
 
 //
@@ -450,32 +451,32 @@ test "cancellation is passed on" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    try fixture.mock.set_faults("/root/sub", .{
+    try fixture.mock.set_faults(native_path("/root/sub"), .{
         .open = true,
         .is_canceled = true,
     });
     try testing.expectError(
         error.Canceled,
-        fixture.snapshot.rescan_directory("/root/sub", &fixture.list),
+        fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list),
     );
-    try fixture.mock.set_faults("/root/sub", .{
+    try fixture.mock.set_faults(native_path("/root/sub"), .{
         .read = true,
         .is_canceled = true,
     });
     try testing.expectError(
         error.Canceled,
-        fixture.snapshot.rescan_directory("/root/sub", &fixture.list),
+        fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list),
     );
-    try fixture.mock.set_faults("/root/sub/b.txt", .{
+    try fixture.mock.set_faults(native_path("/root/sub/b.txt"), .{
         .stat = true,
         .is_canceled = true,
     });
-    try fixture.mock.set_faults("/root/sub", .{});
+    try fixture.mock.set_faults(native_path("/root/sub"), .{});
     try testing.expectError(
         error.Canceled,
-        fixture.snapshot.rescan_directory("/root/sub", &fixture.list),
+        fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list),
     );
 }
 
@@ -487,13 +488,13 @@ test "rescan_directory detects a time-only change" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
     fixture.mock.clock_ns = 77;
-    fixture.mock.write_file("/root/a.txt", 1);
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    fixture.mock.write_file(native_path("/root/a.txt"), 1);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        modified_file("/root/a.txt"),
+        modified_file(native_path("/root/a.txt")),
     });
 }
 
@@ -505,17 +506,17 @@ test "deleting one root keeps the others" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.mock.add_directory("/other");
-    try fixture.snapshot.add_root("/root", &fixture.list);
-    try fixture.snapshot.add_root("/other", &fixture.list);
+    try fixture.mock.add_directory(native_path("/other"));
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
+    try fixture.snapshot.add_root(native_path("/other"), &fixture.list);
 
-    fixture.mock.remove("/other");
-    try fixture.snapshot.check_entry("/other", &fixture.list);
+    fixture.mock.remove(native_path("/other"));
+    try fixture.snapshot.check_entry(native_path("/other"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        deleted_directory("/other"),
+        deleted_directory(native_path("/other")),
     });
-    try testing.expect(fixture.snapshot.is_root("/root"));
-    try testing.expect(!fixture.snapshot.is_root("/other"));
+    try testing.expect(fixture.snapshot.is_root(native_path("/root")));
+    try testing.expect(!fixture.snapshot.is_root(native_path("/other")));
 }
 
 //
@@ -526,12 +527,12 @@ test "special entries are reported as files" {
     var fixture: Fixture = undefined;
     try fixture.init();
     defer fixture.deinit();
-    try fixture.snapshot.add_root("/root", &fixture.list);
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
 
-    try fixture.mock.put("/root/link", .sym_link, 0);
-    try fixture.snapshot.rescan_directory("/root", &fixture.list);
+    try fixture.mock.put(native_path("/root/link"), .sym_link, 0);
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
     try expect_events(&fixture.list, &.{
-        created_file("/root/link"),
+        created_file(native_path("/root/link")),
     });
 }
 
@@ -588,17 +589,17 @@ fn run_full_cycle(gpa: std.mem.Allocator) !void {
     var list = EventList.init(gpa);
     defer list.deinit();
 
-    try mock.add_directory("/root");
-    try mock.add_directory("/root/sub");
-    try mock.add_file("/root/sub/a", 1);
-    try snapshot.add_root("/root", &list);
-    try mock.add_directory("/root/new");
-    try mock.add_file("/root/new/b", 1);
-    mock.remove("/root/sub");
-    try snapshot.rescan_directory("/root", &list);
-    try snapshot.rescan_tree("/root", &list);
-    try mock.add_file("/root/new/c", 1);
-    try snapshot.check_entry("/root/new/c", &list);
+    try mock.add_directory(native_path("/root"));
+    try mock.add_directory(native_path("/root/sub"));
+    try mock.add_file(native_path("/root/sub/a"), 1);
+    try snapshot.add_root(native_path("/root"), &list);
+    try mock.add_directory(native_path("/root/new"));
+    try mock.add_file(native_path("/root/new/b"), 1);
+    mock.remove(native_path("/root/sub"));
+    try snapshot.rescan_directory(native_path("/root"), &list);
+    try snapshot.rescan_tree(native_path("/root"), &list);
+    try mock.add_file(native_path("/root/new/c"), 1);
+    try snapshot.check_entry(native_path("/root/new/c"), &list);
 }
 
 //

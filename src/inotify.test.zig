@@ -5,11 +5,13 @@
 //
 
 const std = @import("std");
+const mock_io_module = @import("mock_io");
 const builtin = @import("builtin");
 const hints_module = @import("hints.zig");
 const inotify_module = @import("inotify.zig");
 
 const testing = std.testing;
+const native_path = mock_io_module.native_path;
 const linux = std.os.linux;
 const HintSet = hints_module.HintSet;
 const Inotify = inotify_module.Inotify;
@@ -57,8 +59,8 @@ const EventBuffer = struct {
 test "decode_events turns raw events into hints" {
     var paths: std.AutoHashMapUnmanaged(i32, []const u8) = .empty;
     defer paths.deinit(testing.allocator);
-    try paths.put(testing.allocator, 1, "/root");
-    try paths.put(testing.allocator, 2, "/root/sub");
+    try paths.put(testing.allocator, 1, native_path("/root"));
+    try paths.put(testing.allocator, 2, native_path("/root/sub"));
 
     var buffer: EventBuffer = .{};
     buffer.add(1, linux.IN.CREATE, "a.txt");
@@ -70,15 +72,15 @@ test "decode_events turns raw events into hints" {
     defer hints.deinit();
     try inotify_module.decode_events(buffer.bytes[0..buffer.len], &paths, &hints);
     try testing.expectEqual(@as(usize, 2), hints.paths.count());
-    try testing.expect(hints.paths.get("/root/a.txt").?.entry);
-    try testing.expect(hints.paths.get("/root/sub").?.entry);
+    try testing.expect(hints.paths.get(native_path("/root/a.txt")).?.entry);
+    try testing.expect(hints.paths.get(native_path("/root/sub")).?.entry);
 
     hints.clear();
     var overflow: EventBuffer = .{};
     overflow.add(-1, linux.IN.Q_OVERFLOW, "");
     try inotify_module.decode_events(overflow.bytes[0..overflow.len], &paths, &hints);
-    try testing.expect(hints.paths.get("/root").?.directory);
-    try testing.expect(hints.paths.get("/root/sub").?.directory);
+    try testing.expect(hints.paths.get(native_path("/root")).?.directory);
+    try testing.expect(hints.paths.get(native_path("/root/sub")).?.directory);
 }
 
 //

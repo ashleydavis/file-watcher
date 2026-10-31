@@ -55,7 +55,34 @@ fn run(mock: *MockIo, argv: []const []const u8) !Result {
         &result.stdout.writer,
         &result.stderr.writer,
     );
+    slash_output(&result.stdout);
+    slash_output(&result.stderr);
     return result;
+}
+
+//
+// Replaces backslashes in captured output with slashes, so expected output written with slashes
+// matches the paths a Windows build joins. JSON escapes a backslash as two, which become one.
+//
+fn slash_output(output: *std.Io.Writer.Allocating) void {
+    const text = output.written();
+    var source: usize = 0;
+    var target: usize = 0;
+    while (source < text.len) : (target += 1) {
+        if (text[source] == '\\') {
+            text[target] = '/';
+            source += 1;
+            if (source < text.len) {
+                if (text[source] == '\\') {
+                    source += 1;
+                }
+            }
+        } else {
+            text[target] = text[source];
+            source += 1;
+        }
+    }
+    output.shrinkRetainingCapacity(target);
 }
 
 //

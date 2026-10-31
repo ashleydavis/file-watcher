@@ -16,7 +16,31 @@ const File = std.Io.File;
 // The first handle number given to an opened directory, chosen far from real descriptors and
 // from the current directory's special value, so a mix-up fails loudly.
 //
-const handle_base: i32 = 1000;
+const handle_base: usize = 1000;
+
+//
+// `path` with every `/` replaced by the separator of the platform the tests run on, so expected
+// paths match the paths the code under test joins.
+//
+pub fn native_path(comptime path: []const u8) []const u8 {
+    const result = comptime native: {
+        var native: [path.len]u8 = path[0..path.len].*;
+        std.mem.replaceScalar(u8, &native, '/', std.fs.path.sep);
+        break :native native;
+    };
+    return &result;
+}
+
+//
+// Copies `path` into `buffer` with every backslash replaced by a slash. The mock keeps every
+// path with slashes, so Windows builds, which join with backslashes, find the same entries.
+//
+fn slash_path(buffer: []u8, path: []const u8) []const u8 {
+    const copy = buffer[0..path.len];
+    @memcpy(copy, path);
+    std.mem.replaceScalar(u8, copy, '\\', '/');
+    return copy;
+}
 
 //
 // One file or directory in the in-memory file system.
@@ -183,7 +207,9 @@ pub const MockIo = struct {
     //
     // Creates or replaces an entry of any kind.
     //
-    pub fn put(self: *MockIo, path: []const u8, kind: File.Kind, size: u64) !void {
+    pub fn put(self: *MockIo, raw_path: []const u8, kind: File.Kind, size: u64) !void {
+        var buffer: [std.fs.max_path_bytes]u8 = undefined;
+        const path = slash_path(&buffer, raw_path);
         const result = try self.nodes.getOrPut(self.gpa, path);
         if (!result.found_existing) {
             result.key_ptr.* = try self.gpa.dupe(u8, path);
@@ -200,7 +226,9 @@ pub const MockIo = struct {
     //
     // Changes a file's size and modification time, as a write would.
     //
-    pub fn write_file(self: *MockIo, path: []const u8, size: u64) void {
+    pub fn write_file(self: *MockIo, raw_path: []const u8, size: u64) void {
+        var buffer: [std.fs.max_path_bytes]u8 = undefined;
+        const path = slash_path(&buffer, raw_path);
         const node = self.nodes.getPtr(path).?;
         node.size = size;
         node.mtime_ns = self.clock_ns;
@@ -209,7 +237,9 @@ pub const MockIo = struct {
     //
     // Removes an entry and everything under it.
     //
-    pub fn remove(self: *MockIo, path: []const u8) void {
+    pub fn remove(self: *MockIo, raw_path: []const u8) void {
+        var buffer: [std.fs.max_path_bytes]u8 = undefined;
+        const path = slash_path(&buffer, raw_path);
         var index: usize = 0;
         while (index < self.nodes.count()) {
             const key = self.nodes.keys()[index];
@@ -225,7 +255,9 @@ pub const MockIo = struct {
     //
     // Makes calls on `path` fail.
     //
-    pub fn set_faults(self: *MockIo, path: []const u8, faults: Faults) !void {
+    pub fn set_faults(self: *MockIo, raw_path: []const u8, faults: Faults) !void {
+        var buffer: [std.fs.max_path_bytes]u8 = undefined;
+        const path = slash_path(&buffer, raw_path);
         const result = try self.faults.getOrPut(self.gpa, path);
         if (!result.found_existing) {
             result.key_ptr.* = try self.gpa.dupe(u8, path);
@@ -258,16 +290,40 @@ pub const MockIo = struct {
     //
     fn resolve(self: *MockIo, dir: Dir, sub_path: []const u8, buffer: []u8) []const u8 {
         if (dir.handle == Dir.cwd().handle) {
-            return sub_path;
+            return slash_path(buffer, sub_path);
         }
-        if (std.fs.path.isAbsolute(sub_path)) {
-            return sub_path;
+        if (std.fs.path.isSep(sub_path[0])) {
+            return slash_path(buffer, sub_path);
         }
-        const index: usize = @intCast(dir.handle - handle_base);
-        const base = self.handles.items[index].?;
-        return std.fmt.bufPrint(buffer, "{s}/{s}", .{ base, sub_path }) catch unreachable;
+        const base = self.handles.items[index_from_handle(dir.handle)].?;
+        const path = std.fmt.bufPrint(buffer, "{s}/{s}", .{ base, sub_path }) catch unreachable;
+        std.mem.replaceScalar(u8, path, '\\', '/');
+        return path;
     }
 };
+
+//
+// The directory handle for an index into `handles`. Handles are descriptors on POSIX systems and
+// pointers on Windows, so the number is converted to whichever the target uses.
+//
+fn handle_from_index(index: usize) Dir.Handle {
+    const value = handle_base + index;
+    return switch (@typeInfo(Dir.Handle)) {
+        .pointer => @ptrFromInt(value),
+        else => @intCast(value),
+    };
+}
+
+//
+// The index into `handles` of a directory handle.
+//
+fn index_from_handle(handle: Dir.Handle) usize {
+    const value: usize = switch (@typeInfo(Dir.Handle)) {
+        .pointer => @intFromPtr(handle),
+        else => @intCast(handle),
+    };
+    return value - handle_base;
+}
 
 //
 // The mock behind an `Io`.
@@ -315,9 +371,8 @@ fn dir_open_dir(
         self.gpa.free(path_copy);
         return error.SystemResources;
     };
-    const index: i32 = @intCast(self.handles.items.len - 1);
     return .{
-        .handle = handle_base + index,
+        .handle = handle_from_index(self.handles.items.len - 1),
     };
 }
 
@@ -362,7 +417,7 @@ fn dir_stat_file(
 fn dir_close(userdata: ?*anyopaque, dirs: []const Dir) void {
     const self = mock_from(userdata);
     for (dirs) |dir| {
-        const index: usize = @intCast(dir.handle - handle_base);
+        const index = index_from_handle(dir.handle);
         self.gpa.free(self.handles.items[index].?);
         self.handles.items[index] = null;
     }
@@ -377,7 +432,7 @@ fn dir_read(
     entries: []Dir.Entry,
 ) Dir.Reader.Error!usize {
     const self = mock_from(userdata);
-    const index: usize = @intCast(reader.dir.handle - handle_base);
+    const index = index_from_handle(reader.dir.handle);
     const path = self.handles.items[index].?;
     const faults = self.faults_of(path);
     if (faults.read) {

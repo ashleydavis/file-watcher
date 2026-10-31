@@ -134,6 +134,24 @@ pub fn build(builder: *std.Build) void {
     test_step.dependOn(&builder.addRunArtifact(library_tests).step);
     test_step.dependOn(&builder.addRunArtifact(cli_tests).step);
 
+    // Installing the test binaries lets them run where the build cannot run them, such as the
+    // iOS simulator.
+    const install_tests_step = builder.step("install-tests", "Install the unit test binaries");
+    for ([_]*std.Build.Step.Compile{ library_tests, cli_tests }, [_][]const u8{
+        "library-tests",
+        "cli-tests",
+    }) |tests, name| {
+        const install = builder.addInstallArtifact(tests, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = "tests",
+                },
+            },
+            .dest_sub_path = name,
+        });
+        install_tests_step.dependOn(&install.step);
+    }
+
     // kcov reads the debug information of LLVM builds, so coverage builds use LLVM.
     const coverage_step = builder.step("coverage", "Measure unit test coverage with kcov");
     const coverage_library_tests = builder.addTest(.{
