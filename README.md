@@ -14,6 +14,7 @@ A fast file watcher written in Zig: a library for Zig projects and a CLI tool bu
 - [User guide: CLI tool](docs/user-guide-cli.md)
 - [User guide: code library](docs/user-guide-library.md)
 - [How it works](docs/how-it-works.md)
+- [Performance baseline](docs/performance-baseline.md)
 - [Requirements checklist](docs/requirements.md)
 
 ## Requirements
