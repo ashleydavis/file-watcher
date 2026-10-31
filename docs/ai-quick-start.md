@@ -23,7 +23,7 @@ Facts an AI agent needs to work in this repository.
 | Install test binaries for another runner | `zig build install-tests -Dtarget=<target>` |
 | Windows unit tests under Wine (Linux) | `zig build test -Dtarget=x86_64-windows -fwine` |
 
-CI (`.github/workflows/ci.yml`) has one job per platform, written out in full rather than as a matrix.
+CI (`.github/workflows/ci.yml`) has one job per platform and kind of test, written out in full rather than as a matrix.
 
 Check that these targets compile after any change to a backend or the watcher: `x86_64-windows`, `aarch64-macos`, `aarch64-linux-android` and `aarch64-ios`.
 

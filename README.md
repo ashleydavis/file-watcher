@@ -122,16 +122,24 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and pull request, with one job per platform:
+`.github/workflows/ci.yml` runs on every push and pull request. Each platform and kind of test has its own job, so the run overview shows exactly what failed:
 
 | Job | Runner | What it runs |
 | --- | --- | --- |
-| Linux | Ubuntu | Unit tests, coverage with kcov, smoke tests and a short performance run. |
-| Windows | Windows | Unit tests and smoke tests, under Git Bash. |
-| macOS | macOS | Unit tests and smoke tests. |
-| Android | Ubuntu | The x86_64 Android unit tests and smoke tests, which run on the Linux kernel, and builds for every Android ABI. |
-| iOS | macOS | A device build and the unit tests in the iOS simulator. |
-| Cross compile | Ubuntu | A release build for every supported target. |
+| Linux unit tests | Ubuntu | `zig build test` |
+| Linux coverage | Ubuntu | kcov, failing below 100% line coverage |
+| Linux smoke tests | Ubuntu | `scripts/smoke-test.sh` |
+| Linux performance tests | Ubuntu | `scripts/performance-test.sh` on 20000 files |
+| Windows unit tests | Windows | `zig build test` |
+| Windows smoke tests | Windows | `scripts/smoke-test.sh` under Git Bash |
+| macOS unit tests | macOS | `zig build test` |
+| macOS smoke tests | macOS | `scripts/smoke-test.sh` |
+| Android unit tests | Ubuntu | The x86_64 Android tests, which run on the Linux kernel |
+| Android build | Ubuntu | A build for every Android ABI |
+| Android smoke tests | Ubuntu | `scripts/smoke-test.sh` against the x86_64 Android build |
+| iOS build | macOS | A device build |
+| iOS unit tests | macOS | The unit tests in the iOS simulator |
+| Cross compile | Ubuntu | A release build for every supported target |
 
 ## Run the performance tests
 

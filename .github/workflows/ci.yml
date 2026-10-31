@@ -1,5 +1,6 @@
-# Builds and tests the file watcher on every platform it supports. Each platform has its own job,
-# written out in full, so a reader sees exactly what runs where.
+# Builds and tests the file watcher on every platform it supports. Each platform and kind of test
+# has its own job, written out in full rather than as a matrix, so the run overview shows exactly
+# which platform and which kind of test failed.
 
 name: CI
 
@@ -12,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  linux:
-    name: Linux
+  linux-unit:
+    name: Linux unit tests
     runs-on: ubuntu-24.04
     steps:
       - name: Check out
@@ -27,6 +28,18 @@ jobs:
       - name: Unit tests
         run: zig build test --summary all
 
+  linux-coverage:
+    name: Linux coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
       - name: Install kcov
         run: |
           sudo apt-get update
@@ -39,19 +52,44 @@ jobs:
       - name: Coverage
         run: scripts/coverage.sh run
 
+  linux-smoke:
+    name: Linux smoke tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
       - name: Build
         run: zig build
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
 
-      - name: Performance tests
-        run: |
-          zig build -Doptimize=ReleaseFast --prefix zig-out/release
-          scripts/performance-test.sh zig-out/release/bin/file-watcher 20000
+  linux-performance:
+    name: Linux performance tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-  windows:
-    name: Windows
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Performance tests
+        run: scripts/performance-test.sh zig-out/bin/file-watcher 20000
+
+  windows-unit:
+    name: Windows unit tests
     runs-on: windows-2025
     defaults:
       run:
@@ -68,14 +106,29 @@ jobs:
       - name: Unit tests
         run: zig build test --summary all
 
+  windows-smoke:
+    name: Windows smoke tests
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
       - name: Build
         run: zig build
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher.exe
 
-  macos:
-    name: macOS
+  macos-unit:
+    name: macOS unit tests
     runs-on: macos-15
     steps:
       - name: Check out
@@ -89,14 +142,26 @@ jobs:
       - name: Unit tests
         run: zig build test --summary all
 
+  macos-smoke:
+    name: macOS smoke tests
+    runs-on: macos-15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
       - name: Build
         run: zig build
 
       - name: Smoke tests
         run: scripts/smoke-test.sh zig-out/bin/file-watcher
 
-  android:
-    name: Android
+  android-unit:
+    name: Android unit tests
     runs-on: ubuntu-24.04
     steps:
       - name: Check out
@@ -107,10 +172,20 @@ jobs:
         with:
           version: 0.16.0
 
-      # Android runs the Linux kernel, so the static x86_64 Android test binaries run directly
-      # on the Linux runner.
       - name: Unit tests
         run: zig build test -Dtarget=x86_64-linux-android --summary all
+
+  android-build:
+    name: Android build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
 
       - name: Build for every Android ABI
         run: |
@@ -118,11 +193,26 @@ jobs:
           zig build -Dtarget=arm-linux-androideabi --prefix zig-out/arm-linux-androideabi
           zig build -Dtarget=x86_64-linux-android --prefix zig-out/x86_64-linux-android
 
-      - name: Smoke tests
-        run: scripts/smoke-test.sh zig-out/x86_64-linux-android/bin/file-watcher
+  android-smoke:
+    name: Android smoke tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-  ios:
-    name: iOS
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
+      - name: Build
+        run: zig build -Dtarget=x86_64-linux-android
+
+      - name: Smoke tests
+        run: scripts/smoke-test.sh zig-out/bin/file-watcher
+
+  ios-build:
+    name: iOS build
     runs-on: macos-15
     steps:
       - name: Check out
@@ -135,6 +225,18 @@ jobs:
 
       - name: Compile for devices
         run: zig build -Dtarget=aarch64-ios
+
+  ios-unit:
+    name: iOS unit tests
+    runs-on: macos-15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
 
       - name: Build the unit tests for the simulator
         run: zig build install-tests -Dtarget=aarch64-ios-simulator --sysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)"
