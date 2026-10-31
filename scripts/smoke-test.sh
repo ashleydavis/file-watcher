@@ -76,15 +76,39 @@ lacks_text() {
     ! grep -qF -- "$2" "$1"
 }
 
+# Waits until the watcher writing standard error to the given file is watching: with -s it
+# prints its counters once every directory is added. Starting can take seconds, for example in
+# the iOS simulator, so a fixed sleep would let changes land before the first scan.
+wait_ready() {
+    local err="$1"
+    local attempt
+    for attempt in $(seq 1 600); do
+        if grep -q "^stats:" "$err" 2> /dev/null; then
+            return 0
+        fi
+        if ! kill -0 "$watcher_pid" 2> /dev/null; then
+            return 0
+        fi
+        sleep 0.1
+    done
+    echo "error: The watcher did not start within 60 seconds."
+    exit 1
+}
+
 # Starts the watcher in the background with the given arguments, writing standard output to
 # out.txt and standard error to err.txt in the case directory, and waits until it is watching.
 start_watcher() {
     local case_dir="$1"
     shift
-    run_tool "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
+    run_tool -s "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
     watcher_pid=$!
     watcher_case_dir="$case_dir"
-    sleep 0.5
+    wait_ready "$case_dir/err.txt"
+}
+
+# Whether the file holds no lines other than the counters printed by -s.
+has_no_warnings() {
+    ! grep -v "^stats:" "$1" | grep -q .
 }
 
 # Turns the backslashes of Windows paths in a file into slashes. JSON escapes each backslash
@@ -164,7 +188,7 @@ check "text: created nested directory" has_line "$out" "created directory $tree/
 check "text: file in a new directory" has_line "$out" "created file $tree/new-dir/deeper/file.txt"
 check "text: deleted directory" has_line "$out" "deleted directory $tree/gone"
 check "text: deleted file inside a deleted directory" has_line "$out" "deleted file $tree/gone/inner/file.txt"
-check "text: no warnings" test ! -s "$case_dir/err.txt"
+check "text: no warnings" has_no_warnings "$case_dir/err.txt"
 
 # JSON output.
 case_dir="$(new_case json)"
@@ -304,9 +328,15 @@ check "roots: overlapping roots refused" test "$overlap_code" -eq 1
 check "roots: overlap explained" grep -q "overlaps another watched directory" "$case_dir/overlap.txt"
 
 # The duration ends the run on time.
+# Starting the tool can take seconds through a launcher, so that time is measured first and
+# allowed for.
+mkdir -p "$work/empty"
 SECONDS=0
-run_tool -d 300 "$work" > /dev/null
-check "duration: exits after the duration" test "$SECONDS" -lt 3
+run_tool --version > /dev/null
+start_seconds=$SECONDS
+SECONDS=0
+run_tool -d 300 "$work/empty" > /dev/null
+check "duration: exits after the duration" test "$SECONDS" -lt $((start_seconds + 3))
 
 echo
 echo "$passed passed, $failed failed"

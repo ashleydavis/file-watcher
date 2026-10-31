@@ -142,6 +142,21 @@ memory_kib() {
     esac
 }
 
+# Waits until the watcher writing standard error to the given file is watching: with -s it
+# prints its counters once every directory is added. Starting can take seconds, for example in
+# the iOS simulator, so a fixed sleep would let changes land before the first scan.
+wait_ready() {
+    local attempt
+    for attempt in $(seq 1 1200); do
+        if grep -q "^stats:" "$1" 2> /dev/null; then
+            return 0
+        fi
+        sleep 0.1
+    done
+    echo "error: The watcher did not start within 120 seconds."
+    exit 1
+}
+
 # Runs the tool with the given arguments, through the launcher when there is one.
 run_tool() {
     if [ ${#launcher[@]} -eq 0 ]; then
@@ -208,8 +223,9 @@ measure() {
 
     # Idle and burst: the watcher writes events to a file.
     local out="$work/out-$label.txt"
-    exec_tool "$@" "$tree" > "$out" 2> "$work/err-$label.txt" &
+    exec_tool -s "$@" "$tree" > "$out" 2> "$work/err-$label.txt" &
     watcher_pid=$!
+    wait_ready "$work/err-$label.txt"
     local pid
     pid=$(tool_pid "$watcher_pid")
     sleep 1
@@ -244,8 +260,9 @@ measure() {
     # Latency: a second watcher prints through a pipe, so the script wakes the moment an event
     # is printed. The clock is read with bash's own variable, so no process is started.
     local watch_fd
-    exec {watch_fd}< <(exec_tool "$@" "$tree" 2> /dev/null)
+    exec {watch_fd}< <(exec_tool -s "$@" "$tree" 2> "$work/latency-err-$label.txt")
     watcher_pid=$!
+    wait_ready "$work/latency-err-$label.txt"
     sleep 1
     local latencies=()
     local sample line end
