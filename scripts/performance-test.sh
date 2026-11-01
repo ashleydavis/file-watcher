@@ -170,11 +170,14 @@ memory_kib() {
 
 # Waits until the watcher writing standard error to the given file is watching: with -s it
 # prints its counters once every directory is added. Starting can take seconds, for example in
-# the iOS simulator, so a fixed sleep would let changes land before the first scan.
+# the iOS simulator, so a fixed sleep would let changes land before the first scan. The whole
+# counters line is waited for, up to its last field, because a launcher such as the iOS
+# simulator's can pass output on in pieces, and a watcher stopped after only part of the line
+# arrived would leave it cut short.
 wait_ready() {
     local attempt
     for attempt in $(seq 1 1200); do
-        if grep -q "^stats:" "$1" 2> /dev/null; then
+        if grep -qE "^stats: .*native_active=(true|false)" "$1" 2> /dev/null; then
             return 0
         fi
         sleep 0.1
