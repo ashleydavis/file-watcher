@@ -22,6 +22,7 @@ pub const ProblemAction = event.ProblemAction;
 test {
     _ = @import("event.zig");
     _ = @import("filter.zig");
+    _ = @import("fsevents.zig");
     _ = @import("hints.zig");
     _ = @import("inotify.zig");
     _ = @import("kqueue.zig");

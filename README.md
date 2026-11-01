@@ -2,7 +2,7 @@
 
 A fast file watcher written in Zig: a library for Zig projects and a CLI tool built on it.
 
-- Uses the native watch method of each platform: inotify on Linux and Android, kqueue on macOS and iOS, and `ReadDirectoryChangesW` on Windows.
+- Uses the native watch method of each platform: inotify on Linux and Android, FSEvents on macOS, kqueue on iOS, and `ReadDirectoryChangesW` on Windows.
 - Knows the platform's limit on native watches, uses a configurable percentage of it and polls every directory beyond that, or every directory when native watching fails.
 - Leaves out `node_modules`, `.git` and other well known heavy directories by default. Excluded directories and file extensions are configurable.
 - Reports created, modified and deleted files and directories in batches.

@@ -52,3 +52,15 @@ test "native_watch_limit reads the platform limit" {
     const value = try limit.native_watch_limit(testing.io);
     try testing.expect(value > 0);
 }
+
+//
+// Goal: the soft open file limit is raised to the hard limit, capped at OPEN_MAX on Apple
+// platforms, and never lowered.
+// Method: compute the raised limit for limits below, at and above the cap.
+//
+test "raised_open_file_limit reaches the hard limit within OPEN_MAX" {
+    try testing.expectEqual(@as(u64, 4096), limit.raised_open_file_limit(256, 4096, true));
+    try testing.expectEqual(limit.darwin_open_max, limit.raised_open_file_limit(256, std.math.maxInt(u64), true));
+    try testing.expectEqual(@as(u64, 1 << 20), limit.raised_open_file_limit(1024, 1 << 20, false));
+    try testing.expectEqual(@as(u64, 20000), limit.raised_open_file_limit(20000, 30000, true));
+}

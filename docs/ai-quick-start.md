@@ -5,7 +5,7 @@ Facts an AI agent needs to work in this repository.
 ## Project
 
 - A file watcher written in Zig 0.16.0: a library (`src/root.zig`, module `file_watcher`) and a CLI tool (`src/main.zig`, binary `file-watcher`) built on it.
-- Native backends: inotify (Linux, Android), kqueue (macOS, iOS), `ReadDirectoryChangesW` (Windows). Other platforms poll.
+- Native backends: inotify (Linux, Android), FSEvents (macOS, loaded at run time), kqueue (iOS), `ReadDirectoryChangesW` (Windows, which also lists directories with one query for polling). Other platforms poll.
 - Every change is found by comparing the in-memory snapshot (`src/snapshot.zig`) with the file system. Backends only report paths to check.
 - [How it works](how-it-works.md) describes each file's job.
 
@@ -48,4 +48,4 @@ Check that these targets compile after any change to a backend or the watcher: `
 - A `Watcher` keeps a pointer into itself. Create it in place (`init(self: *Watcher, ...)`) and keep it at that address.
 - Zig 0.16 resolves every `@import` path eagerly, including in `test` blocks, so a test file must exist before the code that imports it compiles.
 - kcov reads LLVM debug information only, so `scripts/coverage.sh` builds the tests with `-Dllvm=true`.
-- The Windows and kqueue system calls are compiled only for their platforms. Their decoding functions are pure and tested on every platform.
+- The Windows, FSEvents and kqueue system calls are compiled only for their platforms. Their decoding functions are pure and tested on every platform, and each has a test against a real directory that runs only on its own platform.

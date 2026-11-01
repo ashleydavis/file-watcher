@@ -50,6 +50,15 @@ case "$(uname -s)" in
         ;;
 esac
 
+# Windows and macOS watch a whole tree with one watch per root; the other platforms use one
+# watch per directory. iOS runs through a launcher and uses one watch per directory.
+is_tree_backend=0
+if [ "$is_windows" -eq 1 ]; then
+    is_tree_backend=1
+elif [ "$(uname -s)" = "Darwin" ] && [ "$launcher_count" -eq 0 ]; then
+    is_tree_backend=1
+fi
+
 passed=0
 failed=0
 # The longest wait for a case's changes to be reported. Watchers in change cases run with this
@@ -373,7 +382,9 @@ case_dir="$(new_case overflow)"
 tree="$case_dir/tree"
 run_tool -q 1 -s -d 0 "$tree" 2> "$case_dir/budget.txt"
 budget=$(sed -n 's/.*watch_budget=\([0-9]*\).*/\1/p' "$case_dir/budget.txt")
-if [ -n "$budget" ] && [ "$budget" -gt 0 ] && [ "$budget" -lt 20000 ]; then
+if [ "$is_tree_backend" -eq 1 ]; then
+    echo "skip overflow: one watch covers a whole tree on this platform, so directories never overflow the quota"
+elif [ -n "$budget" ] && [ "$budget" -gt 0 ] && [ "$budget" -lt 20000 ]; then
     for index in $(seq 1 $((budget + 5))); do
         mkdir "$tree/dir$index"
     done
@@ -393,9 +404,9 @@ tree="$case_dir/tree"
 mkdir -p "$tree/a" "$tree/b"
 start_watcher "$case_dir" -s -d 600 "$tree"
 wait_watcher
-# Windows watches a whole tree with one watch; the other platforms use one per directory.
+# A tree backend watches the root alone; the other platforms use one watch per directory.
 expected_watches=3
-if [ "$is_windows" -eq 1 ]; then
+if [ "$is_tree_backend" -eq 1 ]; then
     expected_watches=1
 fi
 check "stats: native watches" grep -q "directories=3 native_watches=$expected_watches polled_directories=0" "$case_dir/err.txt"

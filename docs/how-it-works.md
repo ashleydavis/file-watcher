@@ -11,7 +11,8 @@ The watcher keeps a record of every watched directory in memory and compares it 
 | `src/snapshot.zig` | The in-memory record of each directory's entries, and the comparison that produces events. |
 | `src/hints.zig` | The set of paths a native backend says may have changed in one batch. |
 | `src/inotify.zig` | The Linux and Android backend. |
-| `src/kqueue.zig` | The macOS and iOS backend. |
+| `src/fsevents.zig` | The macOS backend. |
+| `src/kqueue.zig` | The iOS backend. |
 | `src/read_directory_changes.zig` | The Windows backend. |
 | `src/windows_listing.zig` | Lists a Windows directory with every entry's metadata in one query. |
 | `src/unsupported.zig` | The backend for other platforms, which always polls. |
@@ -44,18 +45,23 @@ A backend only says which paths may have changed. The watcher collects those pat
 | Platform | Method | One watch covers | Limit |
 | --- | --- | --- | --- |
 | Linux, Android | inotify | One directory and the files in it | `max_user_watches`, per user |
-| macOS, iOS | kqueue | One directory or one file | The open file limit |
+| macOS | FSEvents | A whole tree | 1024 trees per watcher |
+| iOS | kqueue | One directory or one file | The open file limit |
 | Windows | `ReadDirectoryChangesW` | A whole tree | 63 trees per watcher |
 
 ### inotify
 
 Each directory gets one watch. inotify reports the name of each entry that is created, deleted, moved, written or changed, and the watcher checks that path. When the kernel's event queue overflows, every watched directory is rescanned. Events are read in batches of up to 64 KiB.
 
+### FSEvents
+
+Each root gets one FSEvents stream, which reports every created, changed or deleted file and directory under it by path, with no open descriptor per entry. Streams deliver their events on a dispatch queue thread, which queues them and triggers a kqueue user event; `next` waits on that kqueue, which `wake` triggers too. FSEvents reports paths with symbolic links resolved, such as `/private/tmp` for `/tmp`, so each event path is rewritten to start with the root as it was added. When FSEvents drops events, or more than 4 MiB of event paths queue up between batches, every root is rescanned.
+
+CoreServices, which provides FSEvents, is loaded when the watcher starts rather than linked, so macOS builds need no Apple SDK and cross compile from any machine. If it cannot be loaded, the watcher reports a problem and polls.
+
 ### kqueue
 
-kqueue watches open descriptors. A directory's descriptor reports that its entries changed, without names, so the watcher rescans that directory. A file's descriptor reports writes to that file. Files need their own descriptors, so on macOS and iOS the quota covers files as well as directories.
-
-kqueue is used rather than FSEvents. kqueue is part of the C library on macOS and iOS, so the library cross compiles from any machine. FSEvents needs Apple's SDK frameworks to link and is unavailable to iOS apps.
+kqueue watches open descriptors. A directory's descriptor reports that its entries changed, without names, so the watcher rescans that directory. A file's descriptor reports writes to that file. Files need their own descriptors, so on iOS the quota covers files as well as directories. FSEvents is unavailable to iOS apps, so iOS uses kqueue.
 
 ### ReadDirectoryChangesW
 
@@ -66,10 +72,11 @@ Each root gets one directory handle and one asynchronous read covering its whole
 At start the watcher reads the platform limit:
 
 - Linux and Android: `/proc/sys/fs/inotify/max_user_watches`. When it cannot be read, as in Android apps, the kernel default of 8192 is used.
-- macOS and iOS: the soft limit on open files.
+- macOS: 1024 streams, one per root.
+- iOS: the limit on open files. The watcher first raises the soft limit to the hard limit, capped at `OPEN_MAX` (10240), as the Go runtime does, so the quota counts every descriptor the app may open.
 - Windows: 63.
 
-The budget is `quota_percent` of the limit, rounded down. Each native watch takes one from the budget, and each removed watch gives one back. When the budget is used up, the next directory is polled instead, and a file's directory is polled when the file cannot get its own watch. On Windows, where one watch covers a whole tree, a root that cannot get its watch has every directory under it polled, including directories created later. When the platform refuses a watch for lack of resources before the budget is used up, the budget drops to the number in use. The first time either happens, a `LimitReached` problem is reported.
+The budget is `quota_percent` of the limit, rounded down. Each native watch takes one from the budget, and each removed watch gives one back. When the budget is used up, the next directory is polled instead, and a file's directory is polled when the file cannot get its own watch. On Windows and macOS, where one watch covers a whole tree, a root that cannot get its watch has every directory under it polled, including directories created later. When the platform refuses a watch for lack of resources before the budget is used up, the budget drops to the number in use. The first time either happens, a `LimitReached` problem is reported.
 
 ## Polling
 

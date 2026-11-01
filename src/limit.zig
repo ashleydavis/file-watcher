@@ -26,16 +26,29 @@ pub const windows_handles_max: u32 = 64;
 pub const windows_roots_max: u32 = windows_handles_max - 1;
 
 //
+// The roots one macOS watcher watches natively, one FSEvents stream each. FSEvents documents no
+// limit per process; this bound keeps one watcher from tying up the system's event daemon.
+//
+pub const fsevents_streams_max: u32 = 1024;
+
+//
+// `OPEN_MAX` on Apple platforms: the highest soft open file limit `setrlimit` accepts there,
+// whatever the hard limit says.
+//
+pub const darwin_open_max: u64 = 10240;
+
+//
 // The number of native watches the platform allows this process. On Linux and Android it is the
-// per-user inotify watch limit. On macOS, iOS and the BSDs it is the open file limit, because
-// kqueue needs one open descriptor per watched path. On Windows it is the number of roots one
-// wait can cover.
+// per-user inotify watch limit. On macOS it is the number of FSEvents streams, one per root. On
+// iOS and the BSDs it is the open file limit, because kqueue needs one open descriptor per
+// watched path; the soft limit is first raised to the hard limit, so the quota counts every
+// descriptor the process may open. On Windows it is the number of roots one wait can cover.
 //
 pub fn native_watch_limit(io: Io) !u32 {
     const limit = switch (builtin.os.tag) {
         .linux => read_inotify_limit(io),
         .windows => windows_roots_max,
-        .macos,
+        .macos => fsevents_streams_max,
         .ios,
         .tvos,
         .watchos,
@@ -44,7 +57,10 @@ pub fn native_watch_limit(io: Io) !u32 {
         .netbsd,
         .openbsd,
         .dragonfly,
-        => try read_open_file_limit(),
+        => raise_and_read: {
+            raise_open_file_limit();
+            break :raise_and_read try read_open_file_limit();
+        },
         else => 0,
     };
     assert(limit <= std.math.maxInt(u32));
@@ -81,6 +97,32 @@ pub fn parse_limit(text: []const u8) ?u32 {
 //
 // Reads the soft limit on open files for this process.
 //
+//
+// The soft open file limit to ask for: the hard limit, capped at `OPEN_MAX` on Apple platforms,
+// and never lower than the current soft limit.
+//
+pub fn raised_open_file_limit(current: u64, hard: u64, is_darwin: bool) u64 {
+    assert(current <= hard);
+    const target = if (is_darwin) @min(hard, darwin_open_max) else hard;
+    return @max(current, target);
+}
+
+//
+// Raises the soft open file limit as far as `raised_open_file_limit` allows, as the Go runtime
+// does on every Unix. A refusal leaves the limit as it was, which the quota then counts.
+//
+fn raise_open_file_limit() void {
+    const limits = std.posix.getrlimit(.NOFILE) catch return;
+    const wanted = raised_open_file_limit(limits.cur, limits.max, builtin.os.tag.isDarwin());
+    if (wanted == limits.cur) {
+        return;
+    }
+    std.posix.setrlimit(.NOFILE, .{
+        .cur = wanted,
+        .max = limits.max,
+    }) catch {};
+}
+
 fn read_open_file_limit() !u32 {
     const limits = try std.posix.getrlimit(.NOFILE);
     assert(limits.cur <= limits.max);

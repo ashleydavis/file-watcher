@@ -1,9 +1,8 @@
 //
-// The native backend for macOS and iOS. kqueue watches open descriptors, so every directory and
-// every file needs its own descriptor: a directory watch reports entries added or removed, and a
-// file watch reports writes to that file. kqueue is used rather than FSEvents because it is part
-// of the C library on both platforms, while FSEvents needs Apple's SDK frameworks to link and
-// is unavailable to iOS apps.
+// The native backend for iOS and the other Apple platforms except macOS, which uses FSEvents.
+// kqueue watches open descriptors, so every directory and every file needs its own descriptor: a
+// directory watch reports entries added or removed, and a file watch reports writes to that
+// file. FSEvents is unavailable to iOS apps.
 //
 
 const std = @import("std");

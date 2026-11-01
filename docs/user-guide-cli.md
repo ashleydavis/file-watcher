@@ -130,17 +130,11 @@ stats: directories=1011 native_watches=1011 polled_directories=0 watch_budget=65
 Each platform limits native watches:
 
 - Linux and Android: the per-user inotify limit in `/proc/sys/fs/inotify/max_user_watches`. Each directory takes one watch.
-- macOS: the open file limit (`ulimit -n`). Each directory and each file takes one open descriptor.
+- macOS: 1024 directory trees. Each directory on the command line takes one FSEvents stream for its whole tree.
 - Windows: 63 directory trees: one wait covers 64 handles, and one of them is kept for stopping the wait. Each directory on the command line takes one watch for its whole tree.
 
 The tool uses `--quota` percent of the limit and polls every directory beyond it. On Linux the limit is shared by every program of the user, so the default of 50% leaves room for editors and other watchers. To watch more directories natively on Linux, raise the limit:
 
 ```bash
 sudo sysctl fs.inotify.max_user_watches=524288
-```
-
-On macOS, raise the open file limit for the shell that runs the tool:
-
-```bash
-ulimit -n 65536
 ```

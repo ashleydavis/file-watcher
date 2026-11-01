@@ -38,7 +38,7 @@ const exe = b.addExecutable(.{
 });
 ```
 
-The library needs Zig 0.16.0. On Apple platforms the module links the C library, which provides kqueue.
+The library needs Zig 0.16.0. On Apple platforms the module links the C library, which provides kqueue. On macOS it loads CoreServices for FSEvents when a watcher starts, so building needs no Apple SDK.
 
 ## Watch a directory
 
@@ -167,7 +167,7 @@ A rename is reported as `.deleted` for the old path and `.created` for the new o
 
 On Android the library uses inotify, like Linux. Android refuses apps access to `/proc/sys`, so the library assumes the kernel's default limit of 8192 watches there.
 
-On iOS the library uses kqueue, like macOS, with the open file limit as the watch limit, because each watched file and directory holds an open descriptor.
+On iOS the library uses kqueue, with the open file limit as the watch limit, because each watched file and directory holds an open descriptor. When the watcher starts it raises the process's soft open file limit to the hard limit, capped at 10240, as the Go runtime does, so the quota covers as much of the tree as the app is allowed. FSEvents, which macOS uses, is unavailable to iOS apps.
 
 Build your app's Zig code for the device target, for example `-Dtarget=aarch64-linux-android` or `-Dtarget=aarch64-ios`, and import the module as shown above. Pass the app's own directories to `add`, because apps can only read inside their sandbox.
 

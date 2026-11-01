@@ -9,6 +9,7 @@ const builtin = @import("builtin");
 const event_module = @import("event.zig");
 const hints_module = @import("hints.zig");
 const inotify = @import("inotify.zig");
+const fsevents = @import("fsevents.zig");
 const kqueue = @import("kqueue.zig");
 const limit = @import("limit.zig");
 const options_module = @import("options.zig");
@@ -32,7 +33,8 @@ const Snapshot = snapshot_module.Snapshot;
 pub const NativeBackend = switch (builtin.os.tag) {
     .linux => inotify.Inotify,
     .windows => read_directory_changes.ReadDirectoryChanges,
-    .macos, .ios, .tvos, .watchos, .visionos => kqueue.Kqueue,
+    .macos => fsevents.FsEvents,
+    .ios, .tvos, .watchos, .visionos => kqueue.Kqueue,
     else => unsupported.Unsupported,
 };
 
