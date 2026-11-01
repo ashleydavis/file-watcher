@@ -224,6 +224,9 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 .hints = HintSet.init(gpa),
             };
             self.snapshot = Snapshot.init(gpa, io, &self.options);
+            if (@hasDecl(Backend, "lister")) {
+                self.snapshot.lister = Backend.lister;
+            }
             self.poll_due_ns = self.now_ns() + self.poll_interval_ns();
             if (self.options.method == .native) {
                 try self.start_native();

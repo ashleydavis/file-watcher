@@ -90,6 +90,36 @@ pub fn stamp_from_stat(stat: *const Io.File.Stat) Stamp {
 }
 
 //
+// One entry found by a `Lister`.
+//
+pub const Listed = struct {
+    //
+    // The entry's name inside its directory.
+    //
+    name: []const u8,
+
+    //
+    // The entry's metadata.
+    //
+    stamp: Stamp,
+};
+
+//
+// Lists the entries of `dir`, the directory at `dir_path`, with their stamps, or only the entry
+// called `name` when it is given, allocating from `arena`. A missing `name` leaves `entries`
+// empty. A backend provides one when its platform reads a whole directory's metadata faster than
+// each entry's on its own; without one the snapshot lists names and reads each entry's metadata.
+//
+pub const Lister = *const fn (
+    io: Io,
+    dir: Dir,
+    dir_path: []const u8,
+    name: ?[]const u8,
+    arena: Allocator,
+    entries: *std.ArrayList(Listed),
+) anyerror!void;
+
+//
 // The entries of one watched directory, keyed by name.
 //
 const Directory = struct {
@@ -123,6 +153,12 @@ pub const Snapshot = struct {
     // Decides which entries are left out.
     //
     options: *const Options,
+
+    //
+    // Lists directories with their entries' metadata, when the backend provides a faster way
+    // than reading each entry's metadata. Set by the watcher after `init`.
+    //
+    lister: ?Lister,
 
     //
     // The root paths added by the caller, owned by the snapshot.
@@ -160,6 +196,7 @@ pub const Snapshot = struct {
             .gpa = gpa,
             .io = io,
             .options = options,
+            .lister = null,
             .roots = .empty,
             .directories = .empty,
             .scratch = .init(gpa),
@@ -256,7 +293,10 @@ pub const Snapshot = struct {
         if (!self.directories.contains(parent)) {
             return;
         }
-        const stamp = try self.stat_entry(Dir.cwd(), null, path, out);
+        const stamp = if (self.lister) |lister|
+            try self.stat_listed(lister, parent, path, out)
+        else
+            try self.stat_entry(Dir.cwd(), null, path, out);
         try self.apply_child(parent, std.fs.path.basename(path), stamp, true, out);
         try self.scan_pending(true, out);
         assert(self.pending.items.len == 0);
@@ -417,6 +457,24 @@ pub const Snapshot = struct {
         };
         defer dir.close(self.io);
 
+        if (self.lister) |lister| {
+            var listed: std.ArrayList(Listed) = .empty;
+            lister(self.io, dir, path, null, scratch, &listed) catch |err| switch (err) {
+                error.Canceled => return error.Canceled,
+                error.OutOfMemory => return error.OutOfMemory,
+                else => {
+                    try out.append_problem(path, err, .skipped);
+                    return false;
+                },
+            };
+            for (listed.items) |item| {
+                if (self.is_kept(item.name, item.stamp)) {
+                    try listing.put(scratch, item.name, item.stamp);
+                }
+            }
+            return true;
+        }
+
         var iterator = dir.iterate();
         var count: u32 = 0;
         while (true) {
@@ -464,16 +522,70 @@ pub const Snapshot = struct {
             },
         };
         const stamp = stamp_from_stat(&stat);
-        if (stamp.kind == .directory) {
-            if (filter.is_excluded_directory(self.options, name)) {
-                return null;
-            }
-        } else {
-            if (filter.is_excluded_file(self.options, name)) {
-                return null;
-            }
+        if (!self.is_kept(name, stamp)) {
+            return null;
         }
         return stamp;
+    }
+
+    //
+    // Reads the stamp of the entry at `path`, inside the directory at `parent`, through the
+    // lister, so it matches the stamps listings give. Returns null when the entry is gone or
+    // excluded.
+    //
+    fn stat_listed(
+        self: *Snapshot,
+        lister: Lister,
+        parent: []const u8,
+        path: []const u8,
+        out: *EventList,
+    ) !?Stamp {
+        assert(path.len > parent.len);
+        const name = std.fs.path.basename(path);
+        assert(name.len > 0);
+        var dir = Dir.cwd().openDir(self.io, parent, .{
+            .access_sub_paths = true,
+            .iterate = true,
+            .follow_symlinks = false,
+        }) catch |err| switch (err) {
+            error.FileNotFound, error.NotDir => return null,
+            error.Canceled => return error.Canceled,
+            else => {
+                try out.append_problem(path, err, .skipped);
+                return null;
+            },
+        };
+        defer dir.close(self.io);
+        const scratch = self.scratch.allocator();
+        var listed: std.ArrayList(Listed) = .empty;
+        lister(self.io, dir, parent, name, scratch, &listed) catch |err| switch (err) {
+            error.Canceled => return error.Canceled,
+            error.OutOfMemory => return error.OutOfMemory,
+            else => {
+                try out.append_problem(path, err, .skipped);
+                return null;
+            },
+        };
+        // A name matches one entry, so the first is the one asked for.
+        if (listed.items.len == 0) {
+            return null;
+        }
+        const stamp = listed.items[0].stamp;
+        if (!self.is_kept(name, stamp)) {
+            return null;
+        }
+        return stamp;
+    }
+
+    //
+    // Whether the entry called `name` with this stamp is watched rather than excluded.
+    //
+    fn is_kept(self: *const Snapshot, name: []const u8, stamp: Stamp) bool {
+        assert(name.len > 0);
+        if (stamp.kind == .directory) {
+            return !filter.is_excluded_directory(self.options, name);
+        }
+        return !filter.is_excluded_file(self.options, name);
     }
 
     //

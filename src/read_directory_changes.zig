@@ -8,6 +8,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const hints_module = @import("hints.zig");
 const limit = @import("limit.zig");
+const snapshot_module = @import("snapshot.zig");
+const windows_listing = @import("windows_listing.zig");
 
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
@@ -164,6 +166,12 @@ pub const ReadDirectoryChanges = struct {
     // The tree watch reports file changes too.
     //
     pub const watches_files = false;
+
+    //
+    // Lists each directory with its entries' metadata in one query, which polling and rescans
+    // need on Windows, where reading each entry's metadata on its own opens a handle per entry.
+    //
+    pub const lister: snapshot_module.Lister = windows_listing.list;
 
     //
     // Allocates the roots.

@@ -13,6 +13,7 @@ The watcher keeps a record of every watched directory in memory and compares it 
 | `src/inotify.zig` | The Linux and Android backend. |
 | `src/kqueue.zig` | The macOS and iOS backend. |
 | `src/read_directory_changes.zig` | The Windows backend. |
+| `src/windows_listing.zig` | Lists a Windows directory with every entry's metadata in one query. |
 | `src/unsupported.zig` | The backend for other platforms, which always polls. |
 | `src/limit.zig` | The platform's native watch limit and the quota arithmetic. |
 | `src/filter.zig` | Which directories and files are left out. |
@@ -72,7 +73,7 @@ The budget is `quota_percent` of the limit, rounded down. Each native watch take
 
 ## Polling
 
-Polled directories are rescanned every `poll_interval_ms`. A rescan lists the directory and reads the metadata of each entry, so its cost grows with the number of entries. New directories found by polling get a native watch when the budget allows.
+Polled directories are rescanned every `poll_interval_ms`. A rescan lists the directory and reads the metadata of each entry, so its cost grows with the number of entries. On Windows, reading one entry's metadata opens a handle to it, so the Windows backend gives the snapshot a lister instead: one `NtQueryDirectoryFile` call returns the size, write time, attributes and file ID of every entry in a directory. Single paths are checked through the same query, limited to one name, so every stamp on Windows comes from the same source. New directories found by polling get a native watch when the budget allows.
 
 When native watching fails to start, or fails while waiting for events, the watcher reports a problem with an empty path, stops the backend and polls every directory.
 

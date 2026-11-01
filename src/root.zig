@@ -28,6 +28,7 @@ test {
     _ = @import("limit.zig");
     _ = @import("options.zig");
     _ = @import("read_directory_changes.zig");
+    _ = @import("windows_listing.zig");
     _ = @import("snapshot.zig");
     _ = @import("watcher.zig");
 }

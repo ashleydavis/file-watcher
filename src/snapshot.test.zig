@@ -612,3 +612,183 @@ fn run_full_cycle(gpa: std.mem.Allocator) !void {
 test "snapshot survives allocation failure" {
     try testing.checkAllAllocationFailures(testing.allocator, run_full_cycle, .{});
 }
+
+//
+// A lister for tests that reads the mock file system the way the snapshot does without one, so
+// the snapshot's lister path can be checked against the same tree.
+//
+fn mock_lister(
+    io: std.Io,
+    dir: std.Io.Dir,
+    dir_path: []const u8,
+    name: ?[]const u8,
+    arena: std.mem.Allocator,
+    entries: *std.ArrayList(snapshot_module.Listed),
+) anyerror!void {
+    try testing.expect(dir_path.len > 0);
+    if (name) |entry_name| {
+        const stat = dir.statFile(io, entry_name, .{
+            .follow_symlinks = false,
+        }) catch |err| switch (err) {
+            error.FileNotFound => return,
+            else => return err,
+        };
+        try entries.append(arena, .{
+            .name = try arena.dupe(u8, entry_name),
+            .stamp = snapshot_module.stamp_from_stat(&stat),
+        });
+        return;
+    }
+    var iterator = dir.iterate();
+    while (try iterator.next(io)) |entry| {
+        const stat = try dir.statFile(io, entry.name, .{
+            .follow_symlinks = false,
+        });
+        try entries.append(arena, .{
+            .name = try arena.dupe(u8, entry.name),
+            .stamp = snapshot_module.stamp_from_stat(&stat),
+        });
+    }
+}
+
+//
+// A lister that always runs out of memory.
+//
+fn out_of_memory_lister(
+    io: std.Io,
+    dir: std.Io.Dir,
+    dir_path: []const u8,
+    name: ?[]const u8,
+    arena: std.mem.Allocator,
+    entries: *std.ArrayList(snapshot_module.Listed),
+) anyerror!void {
+    _ = io;
+    _ = dir;
+    _ = dir_path;
+    _ = name;
+    _ = arena;
+    _ = entries;
+    return error.OutOfMemory;
+}
+
+//
+// Goal: with a lister, scanning, rescanning and checking one path report the same changes and
+// exclusions as reading each entry's metadata.
+// Method: set the mock lister, add the root, change the tree and check each kind of change.
+//
+test "a lister gives the same results" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    fixture.snapshot.lister = mock_lister;
+
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
+    try expect_events(&fixture.list, &.{});
+    try testing.expect(!fixture.snapshot.contains_directory(native_path("/root/node_modules")));
+
+    fixture.list.clear();
+    try fixture.mock.add_file(native_path("/root/new.txt"), 1);
+    fixture.mock.write_file(native_path("/root/a.txt"), 9);
+    fixture.mock.remove(native_path("/root/sub/b.txt"));
+    try fixture.snapshot.rescan_directory(native_path("/root"), &fixture.list);
+    try fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list);
+    try expect_events(&fixture.list, &.{
+        created_file(native_path("/root/new.txt")),
+        modified_file(native_path("/root/a.txt")),
+        deleted_file(native_path("/root/sub/b.txt")),
+    });
+
+    fixture.list.clear();
+    try fixture.mock.add_file(native_path("/root/sub/c.txt"), 1);
+    try fixture.snapshot.check_entry(native_path("/root/sub/c.txt"), &fixture.list);
+    fixture.mock.write_file(native_path("/root/sub/c.txt"), 5);
+    try fixture.snapshot.check_entry(native_path("/root/sub/c.txt"), &fixture.list);
+    fixture.mock.remove(native_path("/root/sub/c.txt"));
+    try fixture.snapshot.check_entry(native_path("/root/sub/c.txt"), &fixture.list);
+    try fixture.mock.add_file(native_path("/root/sub/d.log"), 1);
+    try fixture.snapshot.check_entry(native_path("/root/sub/d.log"), &fixture.list);
+    try expect_events(&fixture.list, &.{
+        created_file(native_path("/root/sub/c.txt")),
+        modified_file(native_path("/root/sub/c.txt")),
+        deleted_file(native_path("/root/sub/c.txt")),
+    });
+
+    fixture.list.clear();
+    fixture.mock.remove(native_path("/root/sub"));
+    try fixture.snapshot.check_entry(native_path("/root/sub/e.txt"), &fixture.list);
+    try expect_events(&fixture.list, &.{});
+    try testing.expectEqual(@as(usize, 0), fixture.list.problems.items.len);
+}
+
+//
+// Goal: with a lister, failures are reported as problems, cancellation is passed on and running
+// out of memory is returned.
+// Method: make opening and listing fail in each way, through rescans and single checks.
+//
+test "a lister's failures are handled" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    fixture.snapshot.lister = mock_lister;
+    try fixture.snapshot.add_root(native_path("/root"), &fixture.list);
+
+    try fixture.mock.set_faults(native_path("/root/sub"), .{
+        .read = true,
+    });
+    try fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list);
+    try testing.expectEqual(@as(usize, 1), fixture.list.problems.items.len);
+    try testing.expectEqualStrings(native_path("/root/sub"), fixture.list.problems.items[0].path);
+
+    fixture.list.clear();
+    try fixture.mock.set_faults(native_path("/root/sub"), .{
+        .open = true,
+    });
+    try fixture.snapshot.check_entry(native_path("/root/sub/b.txt"), &fixture.list);
+    try testing.expectEqual(@as(usize, 1), fixture.list.problems.items.len);
+    try testing.expectEqualStrings(
+        native_path("/root/sub/b.txt"),
+        fixture.list.problems.items[0].path,
+    );
+
+    fixture.list.clear();
+    try fixture.mock.set_faults(native_path("/root/sub"), .{});
+    try fixture.mock.set_faults(native_path("/root/sub/b.txt"), .{
+        .stat = true,
+    });
+    try fixture.snapshot.check_entry(native_path("/root/sub/b.txt"), &fixture.list);
+    try testing.expectEqual(@as(usize, 1), fixture.list.problems.items.len);
+    try expect_events(&fixture.list, &.{});
+
+    try fixture.mock.set_faults(native_path("/root/sub/b.txt"), .{
+        .stat = true,
+        .is_canceled = true,
+    });
+    try testing.expectError(
+        error.Canceled,
+        fixture.snapshot.check_entry(native_path("/root/sub/b.txt"), &fixture.list),
+    );
+    try testing.expectError(
+        error.Canceled,
+        fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list),
+    );
+    try fixture.mock.set_faults(native_path("/root/sub/b.txt"), .{});
+    try fixture.mock.set_faults(native_path("/root/sub"), .{
+        .open = true,
+        .is_canceled = true,
+    });
+    try testing.expectError(
+        error.Canceled,
+        fixture.snapshot.check_entry(native_path("/root/sub/b.txt"), &fixture.list),
+    );
+
+    try fixture.mock.set_faults(native_path("/root/sub"), .{});
+    fixture.snapshot.lister = out_of_memory_lister;
+    try testing.expectError(
+        error.OutOfMemory,
+        fixture.snapshot.rescan_directory(native_path("/root/sub"), &fixture.list),
+    );
+    try testing.expectError(
+        error.OutOfMemory,
+        fixture.snapshot.check_entry(native_path("/root/sub/b.txt"), &fixture.list),
+    );
+}
