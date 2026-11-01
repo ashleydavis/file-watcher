@@ -343,15 +343,16 @@ check "text: every line names the watched directory" lacks_text "$out" "$tree/"
 check "text: no warnings" has_no_warnings "$case_dir/err.txt"
 
 # The throttle: a second change soon after the first is held back and reported once the
-# throttle time has passed, not at once.
+# throttle time has passed, not at once. The throttle is long, because through a launcher such
+# as the iOS simulator's, output can reach the file seconds after the tool wrote it.
 case_dir="$(new_case throttle)"
 tree="$case_dir/tree"
-start_watcher "$case_dir" -t 3000 -d "$event_duration_ms" "$tree"
+start_watcher "$case_dir" -t 10000 -d "$event_duration_ms" "$tree"
 check "throttle: first change reported at once" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/one.txt"'
 SECONDS=0
 check "throttle: second change held back" no_changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/two.txt"'
 check "throttle: held change reported when the throttle time ends" wait_lines_count "$case_dir/out.txt" "$tree" 2
-check "throttle: held change reported no sooner than the throttle time" test "$SECONDS" -ge 2
+check "throttle: held change reported no sooner than the throttle time" test "$SECONDS" -ge 5
 stop_watcher
 
 # JSON output.
