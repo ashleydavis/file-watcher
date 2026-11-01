@@ -1,6 +1,6 @@
 # performance-test.sh
 
-Measures the built CLI tool on a generated tree and prints the results for native, mixed and polling watching side by side. Every test runs 5 times and the averages are reported.
+Measures the built CLI tool on a generated tree and prints the results for native, mixed and polling watching side by side. Every test repeats for up to 4 minutes, and the averages are reported. The whole script finishes within about 5 minutes.
 
 ## Usage
 
@@ -19,7 +19,7 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
 - `[summary-file]`: a file that receives the results as a markdown table, appended to its end, or `-` for none. CI passes `$GITHUB_STEP_SUMMARY`, so the table shows on the job's summary page.
 - `[title]`: the heading of the markdown table, such as the platform measured. Default `Performance`.
 
-Set the `RUNS` environment variable to change how many times each test runs. Default 5.
+Every test repeats, all three modes in turn, until 4 minutes have passed since the script started, then the script finishes and reports. A run is not started when the slowest run so far would end after 4 minutes 45 seconds, so the whole script takes at most about 5 minutes. Every mode runs at least once. Set the `RUNS` environment variable to cap how many times each test runs. Default 5.
 
 ## What it measures
 
@@ -32,6 +32,6 @@ Set the `RUNS` environment variable to change how many times each test runs. Def
 
 The tree is watched as two roots: the generated files and the directory the load tests change. Every measurement runs in three modes: native, where every directory has a native watch; mixed, where `--max-watches 1` gives the only native watch to the files root, so the load root is polled on every platform, Windows included; and polling, where every directory is polled. With `--max-watches 1` a tree backend (Windows, macOS) watches the files root natively, and a backend that watches each directory runs out on the files root too, so both roots are polled there.
 
-Each run measures the three modes in turn, so a slow spell on the machine affects all of them. Every figure is the average over the runs, except the latency's worst case, which is the slowest sample of any run. A load test fails if any run misses a burst or the later change.
+Each run measures the three modes in turn, so a slow spell on the machine affects all of them. Every figure is the average over that mode's runs, which the results list, except the latency's worst case, which is the slowest sample of any run. A load test fails if any run misses a burst or the later change.
 
 The script exits with code 1 when a change goes unreported. It runs on Linux, macOS and Windows (Git Bash) with bash 5 or later. CPU time and memory come from `/proc` on Linux, `ps` on macOS and PowerShell's `Get-Process` on Windows. Linux and Windows report peak memory; macOS reports the memory in use after the load tests, because it keeps no peak for another process.

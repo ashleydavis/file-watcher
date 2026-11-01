@@ -4,7 +4,8 @@
 # watch the tree, memory, CPU use while idle, how long a single change takes to be reported, and
 # load: ten thousand files created, modified and deleted, each at once and in sequence. Runs
 # native watching, mixed native and polled watching and polling side by side, repeats every test
-# $runs times (5 by default) and reports the averages. Fails when any change goes unreported.
+# for as long as the time budget allows (up to $runs times) and reports the averages. The whole
+# script finishes within 5 minutes. Fails when any change goes unreported.
 #
 
 set -euo pipefail
@@ -21,7 +22,8 @@ if [ $# -lt 1 ]; then
     echo "\$GITHUB_STEP_SUMMARY in GitHub Actions. Pass - for none."
     echo "title heads the markdown summary, such as the platform measured (default Performance)."
     echo
-    echo "Every test runs 5 times and the averages are reported. Set RUNS to change the count."
+    echo "Every test repeats until 4 minutes have passed, and the averages are reported. The"
+    echo "script finishes within 5 minutes. Set RUNS to cap the number of runs (default 5)."
     echo
     echo "Runs on Linux, macOS and Windows (Git Bash), with bash 5 or later."
     exit 2
@@ -39,7 +41,9 @@ fi
 file_count="${2:-100000}"
 summary_file="${3:--}"
 summary_title="${4:-Performance}"
-# How many times each test runs; the results are averaged.
+# The time the script started, in microseconds, which the time budget counts from.
+script_start_us="${EPOCHREALTIME/./}"
+# The most times each test runs; the results are averaged.
 runs="${RUNS:-5}"
 if ! [[ "$runs" =~ ^[1-9][0-9]*$ ]]; then
     echo "error: RUNS must be a whole number above 0, not '$runs'."
@@ -70,8 +74,13 @@ esac
 files_per_directory=100
 # Files changed in each load test.
 load_count=10000
-# The longest wait for one load test's changes to be reported, in seconds.
-load_timeout_seconds=300
+# The longest wait for one load test's changes to be reported, in seconds. Only a failing test
+# waits this long.
+load_timeout_seconds=30
+# No new run starts once this many seconds have passed since the script started, or when the
+# slowest run so far would end after finish_seconds. Every mode runs at least once.
+budget_seconds=240
+finish_seconds=285
 # Single changes timed in the latency test: up to latency_samples, and at least
 # latency_samples_min. Once latency_seconds have passed the test stops at the minimum, so polled
 # watching, where each sample waits for a poll, takes a few samples instead of 20 slow ones.
@@ -398,7 +407,7 @@ measure() {
     # Reports stop once no line arrives for longer than the one second throttle and the one
     # second poll interval.
     quiet_ms=1500
-    echo "== $label, run $run of $runs"
+    echo "== $label, run $run"
     record_load "$label" created_at_once "$out" create_at_once "$new_dir"
     record_load "$label" created_in_sequence "$out" create_in_sequence "$sequence_dir"
     record_load "$label" modified_at_once "$out" modify_at_once "$load_dir"
@@ -471,16 +480,44 @@ measure() {
 # native watching up to the quota; mixed, where a cap on native watches is reached, so most
 # directories are polled while the rest stay native; and polling throughout.
 modes=(native mixed polling)
-for run in $(seq 1 "$runs"); do
-    measure native
-    measure mixed --max-watches "$mixed_watches" -i 1000
-    measure polling --poll -i 1000
+# Whether another run fits in the time budget, given the slowest run so far.
+declare -A mode_runs
+slowest_run_seconds=0
+fits_budget() {
+    local elapsed=$(( (${EPOCHREALTIME/./} - script_start_us) / 1000000 ))
+    [ "$elapsed" -lt "$budget_seconds" ] && [ $(( elapsed + slowest_run_seconds )) -le "$finish_seconds" ]
+}
+
+# Measures one mode, unless it has run before and the budget is used up, and returns whether it
+# ran.
+measure_in_budget() {
+    local label="$1"
+    if [ "${mode_runs[$label]:-0}" -gt 0 ] && ! fits_budget; then
+        return 1
+    fi
+    local start_us=${EPOCHREALTIME/./}
+    measure "$@"
+    mode_runs[$label]=$(( ${mode_runs[$label]:-0} + 1 ))
+    local seconds=$(( (${EPOCHREALTIME/./} - start_us + 999999) / 1000000 ))
+    if [ "$seconds" -gt "$slowest_run_seconds" ]; then
+        slowest_run_seconds=$seconds
+    fi
+}
+
+run=1
+while [ "$run" -le "$runs" ]; do
+    measure_in_budget native || break
+    measure_in_budget mixed --max-watches "$mixed_watches" -i 1000 || break
+    measure_in_budget polling --poll -i 1000 || break
+    run=$(( run + 1 ))
 done
 
 # Average results, keyed by measure and mode, for the printed results and the markdown summary.
 declare -A average
 entries=$(( file_count + directory_count + load_count * 3 ))
 for mode in "${modes[@]}"; do
+    runs=${mode_runs[$mode]}
+    average[runs:$mode]=$runs
     average[startup:$mode]="$(( total_startup[$mode] / runs )) ms"
     memory_average=$(( total_memory[$mode] / runs ))
     average[memory:$mode]="${memory_average} KiB ($(( memory_average * 1024 / entries )) bytes per entry)"
@@ -500,10 +537,11 @@ for mode in "${modes[@]}"; do
     done
 done
 
-echo "Averages over $runs runs:"
+total_seconds=$(( (${EPOCHREALTIME/./} - script_start_us) / 1000000 ))
+echo "Averages, measured in $total_seconds s:"
 echo
 for mode in "${modes[@]}"; do
-    echo "== $mode"
+    echo "== $mode (${average[runs:$mode]} runs)"
     echo "  watch counters:          ${average[counters:$mode]}"
     echo "  startup (scan + watch):  ${average[startup:$mode]}"
     echo "  memory:                  ${average[memory:$mode]}"
@@ -525,12 +563,13 @@ write_summary() {
     echo "## $summary_title"
     echo
     local where="on $(uname -sm)"
-    echo "A tree of $file_count files in $directory_count directories, measured $where. Each figure is the average of $runs runs; the latency's worst case is the slowest of every run."
+    echo "A tree of $file_count files in $directory_count directories, measured $where. Each figure is the average of every run of its mode; the latency's worst case is the slowest of every run."
     echo
     echo "The tree is watched as two roots, the files and the load test directory, and the tool reports which of them changed. The mixed mode allows $mixed_watches native watch, so the load root is polled. Each load test makes $load_count changes, waits until the reports stop, then times the report of one more change, which shows the watcher kept up."
     echo
     echo "| Measure | Native | Mixed ($mixed_watches native watch, rest polled) | Polling (1 s interval) |"
     echo "| --- | --- | --- | --- |"
+    summary_row "Runs" runs
     summary_row "Startup (scan and watch)" startup
     summary_row "$memory_label" memory
     summary_row "Idle CPU over ${idle_seconds} s" idle
