@@ -108,7 +108,7 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and pull request. Each platform has a build job that builds the CLI tool and the unit test binaries once and saves them to a cache keyed by the commit SHA. That platform's test jobs restore the build and run it, so the code is built once per platform per commit. Each platform and kind of test has its own job, so the run overview shows exactly what failed:
+`.github/workflows/ci.yml` runs on every push, and can be started by hand from the Actions tab. A newer push cancels the run still going for the same branch. Each platform has a build job that builds the CLI tool and the unit test binaries once and saves them to a cache keyed by the commit SHA. That platform's test jobs restore the build and run it, so the code is built once per platform per commit. Each platform and kind of test has its own job, so the run overview shows exactly what failed:
 
 | Job | Runner | What it runs |
 | --- | --- | --- |
@@ -127,7 +127,7 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Run the performance tests
 
-The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and load results in three modes: native, mixed (native watches run out, so the watched directories are polled) and polling. Each load test makes ten thousand changes (created, modified and deleted, each at once and in sequence), waits until the reports stop, then checks that one more change is reported. CI runs the same test on every platform. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
+The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and load results in three modes: native, mixed (native watches run out, so the watched directories are polled) and polling. Each load test makes ten thousand changes (created, modified and deleted, each at once and in sequence), waits until the reports stop, then checks that one more change is reported. Every test repeats for up to 4 minutes and the script finishes within 5, so each performance job takes about 5 minutes. CI runs the same test on every platform. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
 
 ```bash
 zig build -Doptimize=ReleaseFast
