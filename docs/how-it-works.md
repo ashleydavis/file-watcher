@@ -56,7 +56,7 @@ CoreServices, which provides FSEvents, is loaded when the watcher starts rather 
 
 ### kqueue
 
-kqueue watches open descriptors. A directory's descriptor reports that its entries changed, and the watcher then watches any new entries. A file's descriptor reports writes to that file. Files need their own descriptors, so on iOS the quota covers files as well as directories. FSEvents is unavailable to iOS apps, so iOS uses kqueue.
+kqueue watches open descriptors. A directory's descriptor reports that its entries changed but not which, so the watcher keeps one number per watched directory: a sum of the names in it that are not excluded. A directory event counts as a change only when that sum moves, so creating an excluded file does not, and the watcher then watches any new entries. A file's descriptor reports writes to that file. Files need their own descriptors, so on iOS the quota covers files as well as directories. FSEvents is unavailable to iOS apps, so iOS uses kqueue.
 
 ### ReadDirectoryChangesW
 
@@ -106,7 +106,7 @@ The CLI tool calls `wake` from its Ctrl+C and SIGTERM handlers, so it waits for 
 
 ## Memory
 
-Nothing is kept per file. Native watching keeps the path of each watch the backend holds. On Linux that is one per directory, on macOS and Windows one per root, and on iOS one per directory and file. Polling keeps one number per root. On a tree of 100,000 files in 1,011 directories, the CLI tool's peak memory was 1.1 MiB watching natively and 1.0 MiB polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
+Nothing is kept per file. Native watching keeps the path of each watch the backend holds, and on iOS one number per watched directory. On Linux that is one per directory, on macOS and Windows one per root, and on iOS one per directory and file. Polling keeps one number per root. On a tree of 100,000 files in 1,011 directories, the CLI tool's peak memory was 1.1 MiB watching natively and 1.0 MiB polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
 
 ## Tests
 
