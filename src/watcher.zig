@@ -13,7 +13,6 @@ const fingerprint_module = @import("fingerprint.zig");
 const fsevents = @import("fsevents.zig");
 const hints_module = @import("hints.zig");
 const inotify = @import("inotify.zig");
-const kqueue = @import("kqueue.zig");
 const limit = @import("limit.zig");
 const options_module = @import("options.zig");
 const paths = @import("paths.zig");
@@ -36,7 +35,6 @@ pub const NativeBackend = switch (builtin.os.tag) {
     .linux => inotify.Inotify,
     .windows => read_directory_changes.ReadDirectoryChanges,
     .macos => fsevents.FsEvents,
-    .ios, .tvos, .watchos, .visionos => kqueue.Kqueue,
     else => unsupported.Unsupported,
 };
 
@@ -125,14 +123,6 @@ const Root = struct {
     // throttle time has passed.
     //
     is_pending: bool,
-};
-
-//
-// An entry of a directory that is not excluded.
-//
-const Kept = struct {
-    name: []const u8,
-    is_directory: bool,
 };
 
 //
@@ -263,13 +253,6 @@ pub fn GenericWatcher(comptime Backend: type) type {
         hints: HintSet,
 
         //
-        // A sum of the names that are not excluded in each watched directory, keyed by its path,
-        // for backends that watch files, whose directory events do not name the entry. Keys are
-        // owned by the map.
-        //
-        names: std.StringHashMapUnmanaged(u64),
-
-        //
         // Creates a watcher with no roots. Problems found here, such as the native method being
         // unavailable, are reported by the first call to `next`.
         //
@@ -292,7 +275,6 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 .list = EventList.init(gpa),
                 .is_list_returned = false,
                 .hints = HintSet.init(gpa),
-                .names = .empty,
             };
             self.poll_due_ns = self.now_ns() + self.poll_interval_ns();
             if (self.options.method == .native) {
@@ -311,11 +293,6 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 self.gpa.free(root.path);
             }
             self.roots.deinit(self.gpa);
-            var names = self.names.keyIterator();
-            while (names.next()) |key| {
-                self.gpa.free(key.*);
-            }
-            self.names.deinit(self.gpa);
             self.list.deinit();
             self.hints.deinit();
             self.* = undefined;
@@ -356,10 +333,10 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 return;
             }
             if (Backend.is_recursive) {
-                _ = try self.watch_one(index, owned, true);
+                _ = try self.watch_one(index, owned);
                 return;
             }
-            _ = try self.sync_watches(index, owned, true);
+            try self.sync_watches(index, owned, true);
         }
 
         //
@@ -475,10 +452,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
         //
         fn start_native(self: *Self) !void {
             assert(!self.is_native_active);
-            self.native_limit = limit.native_watch_limit(self.io) catch |err| {
-                try self.list.append_problem("", err, .polled);
-                return;
-            };
+            self.native_limit = limit.native_watch_limit(self.io);
             self.watch_budget = limit.watch_budget(self.native_limit, self.options.quota_percent);
             if (self.options.native_watches_max) |watches_max| {
                 self.watch_budget = @min(self.watch_budget, watches_max);
@@ -506,156 +480,59 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Watches what is under `start` in root `index`, for backends that watch each directory
-        // (and, for some, each file). The start directory is always listed. Below it, a
+        // Watches what is under `start` in root `index`, for backends that watch each directory. The start directory is always listed. Below it, a
         // directory is listed when it got a new watch, or always when `is_full`, so a check after
         // dropped events reaches everything while a new directory costs only its own tree.
         //
-        fn sync_watches(self: *Self, index: usize, start: []const u8, is_full: bool) !bool {
+        fn sync_watches(self: *Self, index: usize, start: []const u8, is_full: bool) !void {
             assert(!Backend.is_recursive);
             var arena_state: std.heap.ArenaAllocator = .init(self.gpa);
             defer arena_state.deinit();
             const arena = arena_state.allocator();
 
-            var is_start_changed = true;
             var pending: std.ArrayList([]const u8) = .empty;
             try pending.append(arena, start);
             var walked: u32 = 0;
             while (pending.pop()) |path| {
                 assert(walked < std.math.maxInt(u32));
                 walked += 1;
-                switch (try self.watch_one(index, path, true)) {
-                    .quota => return is_start_changed,
+                switch (try self.watch_one(index, path)) {
+                    .quota => return,
                     .failed => continue,
                     .existing => if (path.ptr != start.ptr and !is_full) continue,
                     .new => {},
                 }
-                var kept: std.ArrayList(Kept) = .empty;
-                const sum = try self.list_kept(path, arena, &kept) orelse continue;
-                if (Backend.watches_files) {
-                    const is_changed = try self.store_names(path, sum);
-                    if (path.ptr == start.ptr) {
-                        is_start_changed = is_changed;
-                    }
-                }
-                for (kept.items) |entry| {
-                    const child = try std.fs.path.join(arena, &.{ path, entry.name });
-                    if (entry.is_directory) {
-                        try pending.append(arena, child);
-                        continue;
-                    }
-                    if (!Backend.watches_files) {
-                        continue;
-                    }
-                    if (try self.watch_one(index, child, false) == .quota) {
-                        return is_start_changed;
-                    }
-                }
-            }
-            return is_start_changed;
-        }
-
-        //
-        // Lists the entries of the directory at `path` that are not excluded into `kept`, and
-        // returns a sum of their names and kinds. Returns null when the directory could not be
-        // listed: a directory that went away is skipped quietly, as its parent's events report
-        // it, and any other failure is reported.
-        //
-        fn list_kept(
-            self: *Self,
-            path: []const u8,
-            arena: Allocator,
-            kept: *std.ArrayList(Kept),
-        ) !?u64 {
-            var dir = Dir.cwd().openDir(self.io, path, .{
-                .iterate = true,
-                .follow_symlinks = false,
-            }) catch |err| switch (err) {
-                error.Canceled => return error.Canceled,
-                error.FileNotFound, error.NotDir => return null,
-                else => {
-                    try self.list.append_problem(path, err, .skipped);
-                    return null;
-                },
-            };
-            defer dir.close(self.io);
-            var sum: u64 = 0;
-            var iterator = dir.iterate();
-            while (true) {
-                const entry = iterator.next(self.io) catch |err| switch (err) {
+                var dir = Dir.cwd().openDir(self.io, path, .{
+                    .iterate = true,
+                    .follow_symlinks = false,
+                }) catch |err| switch (err) {
                     error.Canceled => return error.Canceled,
+                    // The directory went away, which its parent's events report.
+                    error.FileNotFound, error.NotDir => continue,
                     else => {
                         try self.list.append_problem(path, err, .skipped);
-                        return null;
+                        continue;
                     },
-                } orelse break;
-                const is_directory = entry.kind == .directory;
-                const is_excluded = if (is_directory)
-                    filter.is_excluded_directory(&self.options, entry.name)
-                else
-                    filter.is_excluded_file(&self.options, entry.name);
-                if (is_excluded) {
-                    continue;
-                }
-                var hasher = std.hash.Wyhash.init(0);
-                hasher.update(entry.name);
-                hasher.update(&.{@intFromBool(is_directory)});
-                sum +%= hasher.final();
-                try kept.append(arena, .{
-                    .name = try arena.dupe(u8, entry.name),
-                    .is_directory = is_directory,
-                });
-            }
-            return sum;
-        }
-
-        //
-        // Records `sum` as the names in the directory at `path`, and returns whether it differs
-        // from the sum recorded before, or there was none.
-        //
-        fn store_names(self: *Self, path: []const u8, sum: u64) !bool {
-            assert(Backend.watches_files);
-            const result = try self.names.getOrPut(self.gpa, path);
-            if (result.found_existing) {
-                const is_changed = result.value_ptr.* != sum;
-                result.value_ptr.* = sum;
-                return is_changed;
-            }
-            result.key_ptr.* = self.gpa.dupe(u8, path) catch |err| {
-                assert(self.names.remove(path));
-                return err;
-            };
-            result.value_ptr.* = sum;
-            return true;
-        }
-
-        //
-        // Whether the names in the directory at `path` changed since they were last recorded,
-        // recording them again. A directory that cannot be listed counts as changed.
-        //
-        fn names_changed(self: *Self, path: []const u8) !bool {
-            assert(Backend.watches_files);
-            var arena_state: std.heap.ArenaAllocator = .init(self.gpa);
-            defer arena_state.deinit();
-            var kept: std.ArrayList(Kept) = .empty;
-            const sum = try self.list_kept(path, arena_state.allocator(), &kept) orelse return true;
-            return self.store_names(path, sum);
-        }
-
-        //
-        // Forgets the recorded names of the directory at `path` and every directory under it.
-        //
-        fn drop_names(self: *Self, path: []const u8) void {
-            var removed: u32 = 0;
-            while (removed < std.math.maxInt(u32)) : (removed += 1) {
-                var keys = self.names.keyIterator();
-                const key = while (keys.next()) |key| {
-                    if (paths.is_within(key.*, path)) {
-                        break key.*;
+                };
+                defer dir.close(self.io);
+                var iterator = dir.iterate();
+                while (true) {
+                    const entry = iterator.next(self.io) catch |err| switch (err) {
+                        error.Canceled => return error.Canceled,
+                        else => {
+                            try self.list.append_problem(path, err, .skipped);
+                            break;
+                        },
+                    } orelse break;
+                    if (entry.kind != .directory) {
+                        continue;
                     }
-                } else return;
-                assert(self.names.remove(key));
-                self.gpa.free(key);
+                    if (filter.is_excluded_directory(&self.options, entry.name)) {
+                        continue;
+                    }
+                    const child = try std.fs.path.join(arena, &.{ path, entry.name });
+                    try pending.append(arena, child);
+                }
             }
         }
 
@@ -663,14 +540,14 @@ pub fn GenericWatcher(comptime Backend: type) type {
         // Watches `path` natively when the quota allows. When it is used up, or the platform
         // refuses for lack of resources, root `index` is polled instead.
         //
-        fn watch_one(self: *Self, index: usize, path: []const u8, is_directory: bool) !WatchResult {
+        fn watch_one(self: *Self, index: usize, path: []const u8) !WatchResult {
             assert(self.is_native_active);
             assert(path.len > 0);
             if (self.backend.watch_count() >= self.watch_budget) {
                 try self.quota_reached(index, path);
                 return .quota;
             }
-            const is_new = self.backend.watch(path, is_directory) catch |err| switch (err) {
+            const is_new = self.backend.watch(path, true) catch |err| switch (err) {
                 error.OutOfMemory => return error.OutOfMemory,
                 error.LimitReached => {
                     self.watch_budget = self.backend.watch_count();
@@ -809,55 +686,22 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 if (filter.is_excluded_path(&self.options, root.path, path)) {
                     continue;
                 }
-                const is_change = try self.keep_watches(index, path, checks);
-                if (is_change) {
-                    try self.mark_changed(&self.roots.items[index]);
+                try self.mark_changed(&self.roots.items[index]);
+                if (comptime Backend.is_recursive) {
+                    continue;
+                }
+                if (!self.is_native_active or root.is_polled) {
+                    continue;
+                }
+                if (checks.gone) {
+                    try self.backend.unwatch_tree(path);
+                }
+                if (checks.tree) {
+                    try self.sync_watches(index, path, true);
+                } else if (checks.directory) {
+                    try self.sync_watches(index, path, false);
                 }
             }
-        }
-
-        //
-        // Adds and drops the watches a hint calls for, for backends that watch each directory,
-        // and returns whether the hint shows a change. A backend that watches files learns only
-        // that a directory's entries changed, not which, so a hint with nothing else is a change
-        // only when the names that are not excluded changed; creating an excluded file is not.
-        //
-        fn keep_watches(
-            self: *Self,
-            index: usize,
-            path: []const u8,
-            checks: hints_module.Checks,
-        ) !bool {
-            if (comptime Backend.is_recursive) {
-                return true;
-            }
-            // Hints come only from a running backend: falling back to polling drops them.
-            assert(self.is_native_active);
-            const is_directory_only = checks.directory and !checks.entry and !checks.gone and
-                !checks.tree;
-            if (checks.gone) {
-                try self.backend.unwatch_tree(path);
-                if (Backend.watches_files) {
-                    self.drop_names(path);
-                }
-            }
-            if (self.roots.items[index].is_polled) {
-                if (Backend.watches_files and is_directory_only) {
-                    return self.names_changed(path);
-                }
-                return true;
-            }
-            if (checks.tree) {
-                _ = try self.sync_watches(index, path, true);
-                return true;
-            }
-            if (checks.directory) {
-                const is_names_changed = try self.sync_watches(index, path, false);
-                if (Backend.watches_files and is_directory_only) {
-                    return is_names_changed;
-                }
-            }
-            return true;
         }
 
         //

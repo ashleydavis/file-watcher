@@ -1,5 +1,5 @@
 //
-// The native backend for Linux and Android. inotify reports changes to the entries of each
+// The native backend for Linux. inotify reports changes to the entries of each
 // watched directory, by name, so one watch per directory covers every file in it.
 //
 
@@ -47,11 +47,6 @@ pub const Inotify = struct {
     // inotify watches one directory at a time, so the watcher adds every directory.
     //
     pub const is_recursive = false;
-
-    //
-    // A directory watch reports changes to the files in it, so files need no watch of their own.
-    //
-    pub const watches_files = false;
 
     //
     // Allocates the path maps.

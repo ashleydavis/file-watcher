@@ -22,11 +22,6 @@ pub const Config = struct {
     // Whether one watch covers a whole tree, like the Windows backend.
     //
     is_recursive: bool = false,
-
-    //
-    // Whether files need their own watch, like the kqueue backend.
-    //
-    watches_files: bool = false,
 };
 
 //
@@ -49,11 +44,6 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         // Whether one watch covers a whole tree, from the configuration.
         //
         pub const is_recursive = config.is_recursive;
-
-        //
-        // Whether files need their own watch, from the configuration.
-        //
-        pub const watches_files = config.watches_files;
 
         //
         // Allocates the watched paths and the queued steps.

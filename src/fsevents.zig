@@ -325,11 +325,6 @@ pub const FsEvents = struct {
     pub const is_recursive = true;
 
     //
-    // The stream reports file changes too.
-    //
-    pub const watches_files = false;
-
-    //
     // Allocates the roots and the pending events.
     //
     gpa: Allocator,

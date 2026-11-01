@@ -23,7 +23,6 @@ test {
     _ = @import("fsevents.zig");
     _ = @import("hints.zig");
     _ = @import("inotify.zig");
-    _ = @import("kqueue.zig");
     _ = @import("limit.zig");
     _ = @import("options.zig");
     _ = @import("read_directory_changes.zig");

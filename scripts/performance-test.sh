@@ -10,7 +10,7 @@
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <path-to-file-watcher> [file-count] [summary-file] [title] [launcher...]"
+    echo "Usage: $0 <path-to-file-watcher> [file-count] [summary-file] [title]"
     echo
     echo "Measures the given file-watcher binary. Build it with -Doptimize=ReleaseFast first:"
     echo "  zig build -Doptimize=ReleaseFast"
@@ -20,8 +20,6 @@ if [ $# -lt 1 ]; then
     echo "summary-file, when given, receives the results as a markdown table, for example"
     echo "\$GITHUB_STEP_SUMMARY in GitHub Actions. Pass - for none."
     echo "title heads the markdown summary, such as the platform measured (default Performance)."
-    echo "launcher, when given, is a command that runs the binary, such as"
-    echo "'xcrun simctl spawn booted' for a binary built for the iOS simulator."
     echo
     echo "Every test runs 5 times and the averages are reported. Set RUNS to change the count."
     echo
@@ -41,8 +39,6 @@ fi
 file_count="${2:-100000}"
 summary_file="${3:--}"
 summary_title="${4:-Performance}"
-shift $(( $# < 4 ? $# : 4 ))
-launcher=("$@")
 # How many times each test runs; the results are averaged.
 runs="${RUNS:-5}"
 if ! [[ "$runs" =~ ^[1-9][0-9]*$ ]]; then
@@ -169,11 +165,10 @@ memory_kib() {
 }
 
 # Waits until the watcher writing standard error to the given file is watching: with -s it
-# prints its counters once every directory is added. Starting can take seconds, for example in
-# the iOS simulator, so a fixed sleep would let changes land before the first scan. The whole
-# counters line is waited for, up to its last field, because a launcher such as the iOS
-# simulator's can pass output on in pieces, and a watcher stopped after only part of the line
-# arrived would leave it cut short.
+# prints its counters once every directory is added. Starting can take seconds on a slow
+# machine, so a fixed sleep would let changes land before the first scan. The whole counters
+# line is waited for, up to its last field, so a watcher is never stopped while it is still
+# writing it.
 wait_ready() {
     local attempt
     for attempt in $(seq 1 1200); do
@@ -186,41 +181,15 @@ wait_ready() {
     exit 1
 }
 
-# Runs the tool with the given arguments, through the launcher when there is one.
+# Runs the tool with the given arguments.
 run_tool() {
-    if [ ${#launcher[@]} -eq 0 ]; then
-        "$binary" "$@"
-    else
-        "${launcher[@]}" "$binary" "$@"
-    fi
+    "$binary" "$@"
 }
 
-# Replaces the current shell with the tool, through the launcher when there is one. Used for
-# background runs, so the background process ID is the tool's own rather than a subshell's.
+# Replaces the current shell with the tool. Used for background runs, so the background
+# process ID is the tool's own rather than a subshell's.
 exec_tool() {
-    if [ ${#launcher[@]} -eq 0 ]; then
-        exec "$binary" "$@"
-    else
-        exec "${launcher[@]}" "$binary" "$@"
-    fi
-}
-
-# Prints the process ID of the tool started last in the background. With a launcher, the
-# background process is the launcher, so the tool is found by its path.
-tool_pid() {
-    if [ ${#launcher[@]} -eq 0 ]; then
-        echo "$1"
-        return
-    fi
-    local attempt
-    for attempt in $(seq 1 100); do
-        if pgrep -n -f "$binary" 2> /dev/null; then
-            return
-        fi
-        sleep 0.05
-    done
-    echo "error: The tool started through '${launcher[*]}' was not found among the running processes." >&2
-    exit 1
+    exec "$binary" "$@"
 }
 
 echo "Generating $file_count files in $(( (file_count + files_per_directory - 1) / files_per_directory )) directories..."
@@ -410,15 +379,10 @@ measure() {
 
     # Idle and load: the watcher writes events to a file.
     local out="$work/out-$label.txt"
-    # Append mode, because through the iOS simulator's launcher the tool and the launcher each
-    # write to these files with their own position, and the launcher's exit message would
-    # otherwise overwrite the start of the tool's output. The files are new for each run.
-    rm -f "$out" "$work/err-$label.txt"
-    exec_tool -s "$@" "${roots[@]}" >> "$out" 2>> "$work/err-$label.txt" &
+    exec_tool -s "$@" "${roots[@]}" > "$out" 2> "$work/err-$label.txt" &
     watcher_pid=$!
     wait_ready "$work/err-$label.txt"
-    local pid
-    pid=$(tool_pid "$watcher_pid")
+    local pid="$watcher_pid"
     sleep 1
 
     # Idle: watch an unchanging tree and measure CPU use.
@@ -561,9 +525,6 @@ write_summary() {
     echo "## $summary_title"
     echo
     local where="on $(uname -sm)"
-    if [ ${#launcher[@]} -gt 0 ]; then
-        where="$where through '${launcher[*]}'"
-    fi
     echo "A tree of $file_count files in $directory_count directories, measured $where. Each figure is the average of $runs runs; the latency's worst case is the slowest of every run."
     echo
     echo "The tree is watched as two roots, the files and the load test directory, and the tool reports which of them changed. The mixed mode allows $mixed_watches native watch, so the load root is polled. Each load test makes $load_count changes, waits until the reports stop, then times the report of one more change, which shows the watcher kept up."

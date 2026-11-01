@@ -18,7 +18,6 @@ scripts/performance-test.sh zig-out/bin/file-watcher 100000
 - `[file-count]`: the number of files in the generated tree, spread over directories of 100 files. Default 100000.
 - `[summary-file]`: a file that receives the results as a markdown table, appended to its end, or `-` for none. CI passes `$GITHUB_STEP_SUMMARY`, so the table shows on the job's summary page.
 - `[title]`: the heading of the markdown table, such as the platform measured. Default `Performance`.
-- `[launcher...]`: a command that runs the binary, such as `xcrun simctl spawn booted` for a binary built for the iOS simulator. The tool's process is then found by its path to read its CPU time and memory.
 
 Set the `RUNS` environment variable to change how many times each test runs. Default 5.
 

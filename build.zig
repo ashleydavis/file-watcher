@@ -16,7 +16,7 @@ pub fn build(builder: *std.Build) void {
     // kcov reads only LLVM's debug information, so coverage runs build the tests with LLVM.
     const use_llvm = builder.option(bool, "llvm", "Build with the LLVM backend, for kcov");
 
-    // kqueue is reached through the C library on Apple platforms.
+    // The macOS backend reaches kqueue and loads FSEvents through the C library.
     const library = builder.addModule("file_watcher", .{
         .root_source_file = builder.path("src/root.zig"),
         .target = target,
@@ -44,7 +44,7 @@ pub fn build(builder: *std.Build) void {
     });
 
     // Analysing the CLI tool without emitting a binary checks that the library compiles for a
-    // target. It is the only way to check iOS, where the linker needs Apple's SDK.
+    // target.
     const check_step = builder.step("check", "Compile the library and CLI tool without linking");
     const check = builder.addExecutable(.{
         .name = "file-watcher",
@@ -52,34 +52,19 @@ pub fn build(builder: *std.Build) void {
     });
     check_step.dependOn(&check.step);
 
-    // Linking for iOS needs Apple's SDK, given with `--sysroot`. Zig looks in the SDK's `/usr/lib`
-    // only when told to, and prefixes the path with the sysroot itself. Without an SDK the iOS
-    // install step checks that the code compiles instead.
-    const can_link = if (os == .ios) builder.sysroot != null else true;
-    if (os == .ios) {
-        if (builder.sysroot != null) {
-            cli.addLibraryPath(.{
-                .cwd_relative = "/usr/lib",
-            });
-        }
-    }
-    if (!can_link) {
-        builder.getInstallStep().dependOn(&check.step);
-    } else {
-        const exe = builder.addExecutable(.{
-            .name = "file-watcher",
-            .root_module = cli,
-        });
-        builder.installArtifact(exe);
+    const exe = builder.addExecutable(.{
+        .name = "file-watcher",
+        .root_module = cli,
+    });
+    builder.installArtifact(exe);
 
-        const run_step = builder.step("run", "Run the CLI tool");
-        const run = builder.addRunArtifact(exe);
-        run.step.dependOn(builder.getInstallStep());
-        if (builder.args) |args| {
-            run.addArgs(args);
-        }
-        run_step.dependOn(&run.step);
+    const run_step = builder.step("run", "Run the CLI tool");
+    const run = builder.addRunArtifact(exe);
+    run.step.dependOn(builder.getInstallStep());
+    if (builder.args) |args| {
+        run.addArgs(args);
     }
+    run_step.dependOn(&run.step);
 
     // The test helpers are modules of their own, imported by name, because Zig allows a file in
     // one module only and both the library tests and the CLI tests use them. The library
@@ -136,25 +121,6 @@ pub fn build(builder: *std.Build) void {
         },
     });
 
-    // The iOS tests link against the SDK the same way as the CLI tool.
-    if (os == .ios) {
-        if (builder.sysroot != null) {
-            for ([_]*std.Build.Module{ library_test_module, cli_test_module }) |module| {
-                module.addLibraryPath(.{
-                    .cwd_relative = "/usr/lib",
-                });
-            }
-        }
-    }
-
-    // Zig's stack traces on Apple platforms call a dyld function that the iOS SDK leaves out,
-    // so iOS builds strip debug information, which turns stack tracing off.
-    if (os == .ios) {
-        for ([_]*std.Build.Module{ library, cli, library_test_module, cli_test_module }) |module| {
-            module.strip = true;
-        }
-    }
-
     const library_tests = builder.addTest(.{
         .name = "library-tests",
         .root_module = library_test_module,
@@ -170,7 +136,7 @@ pub fn build(builder: *std.Build) void {
     test_step.dependOn(&builder.addRunArtifact(cli_tests).step);
 
     // Installing the test binaries lets them run without Zig: in CI jobs that reuse one build,
-    // under kcov and in the iOS simulator.
+    // and under kcov.
     const install_tests_step = builder.step("install-tests", "Install the unit test binaries");
     for ([_]*std.Build.Step.Compile{ library_tests, cli_tests }) |tests| {
         const install = builder.addInstallArtifact(tests, .{

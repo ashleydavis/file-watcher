@@ -19,11 +19,6 @@ pub const Unsupported = struct {
     pub const is_recursive = false;
 
     //
-    // Unused, because no file is ever watched natively.
-    //
-    pub const watches_files = false;
-
-    //
     // Always fails, which sends the watcher to polling.
     //
     pub fn init(self: *Unsupported, gpa: Allocator) !void {

@@ -163,11 +163,6 @@ pub const ReadDirectoryChanges = struct {
     pub const is_recursive = true;
 
     //
-    // The tree watch reports file changes too.
-    //
-    pub const watches_files = false;
-
-    //
     // Lists each directory with its entries' metadata in one query, which polling needs on
     // Windows, where reading each entry's metadata on its own opens a handle per entry.
     //

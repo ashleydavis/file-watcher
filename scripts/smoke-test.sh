@@ -8,13 +8,10 @@
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <path-to-file-watcher> [launcher...]"
+    echo "Usage: $0 <path-to-file-watcher>"
     echo
     echo "Runs smoke tests against the given file-watcher binary, for example:"
     echo "  $0 zig-out/bin/file-watcher"
-    echo
-    echo "A launcher, when given, is a command that runs the binary, such as"
-    echo "'xcrun simctl spawn booted' for a binary built for the iOS simulator."
     exit 2
 fi
 
@@ -23,18 +20,10 @@ if [ ! -x "$binary" ]; then
     echo "error: $1 is not an executable file. Build it with 'zig build' first."
     exit 2
 fi
-shift
-# The count is kept apart from the array because bash 3.2 rejects an empty array under set -u.
-launcher_count=$#
-launcher=("$@")
 
-# Runs the tool with the given arguments, through the launcher when there is one.
+# Runs the tool with the given arguments.
 run_tool() {
-    if [ "$launcher_count" -eq 0 ]; then
-        "$binary" "$@"
-    else
-        "${launcher[@]}" "$binary" "$@"
-    fi
+    "$binary" "$@"
 }
 
 work="$(mktemp -d)"
@@ -51,11 +40,11 @@ case "$(uname -s)" in
 esac
 
 # Windows and macOS watch a whole tree with one watch per root; the other platforms use one
-# watch per directory. iOS runs through a launcher and uses one watch per directory.
+# watch per directory.
 is_tree_backend=0
 if [ "$is_windows" -eq 1 ]; then
     is_tree_backend=1
-elif [ "$(uname -s)" = "Darwin" ] && [ "$launcher_count" -eq 0 ]; then
+elif [ "$(uname -s)" = "Darwin" ]; then
     is_tree_backend=1
 fi
 
@@ -99,22 +88,17 @@ lacks_text() {
     ! grep -qF -- "$2" "$1"
 }
 
-# Replaces the current shell with the tool, through the launcher when there is one. Used for
-# background runs, so the background process ID is the tool's own and signals reach it.
+# Replaces the current shell with the tool. Used for background runs, so the background
+# process ID is the tool's own and signals reach it.
 exec_tool() {
-    if [ "$launcher_count" -eq 0 ]; then
-        exec "$binary" "$@"
-    else
-        exec "${launcher[@]}" "$binary" "$@"
-    fi
+    exec "$binary" "$@"
 }
 
 # Waits until the watcher writing standard error to the given file is watching: with -s it
-# prints its counters once every directory is added. Starting can take seconds, for example in
-# the iOS simulator, so a fixed sleep would let changes land before the first scan. The whole
-# counters line is waited for, up to its last field, because a launcher such as the iOS
-# simulator's can pass output on in pieces, and a watcher stopped after only part of the line
-# arrived would leave it cut short.
+# prints its counters once every directory is added. Starting can take seconds on a slow
+# machine, so a fixed sleep would let changes land before the first scan. The whole counters
+# line is waited for, up to its last field, so a watcher is never stopped while it is still
+# writing it.
 wait_ready() {
     local err="$1"
     local attempt
@@ -136,9 +120,6 @@ wait_ready() {
 start_watcher() {
     local case_dir="$1"
     shift
-    # Append mode, because through the iOS simulator's launcher the tool and the launcher each
-    # write to these files with their own position, and the launcher's exit message would
-    # otherwise overwrite the start of the tool's output.
     exec_tool -s "$@" >> "$case_dir/out.txt" 2>> "$case_dir/err.txt" &
     watcher_pid=$!
     watcher_case_dir="$case_dir"
@@ -177,7 +158,7 @@ slashed() {
 
 # Waits until the output file holds every given line, up to $event_timeout_seconds. Changes are
 # printed as soon as they are found, so the wait ends as soon as the last one is reported. A
-# fixed duration instead fails when the machine is slow, as the iOS simulator in CI can be.
+# fixed duration instead fails when the machine is slow.
 wait_lines() {
     local out="$1"
     shift
@@ -269,12 +250,8 @@ no_changes() {
     [ "$(count_changes "$out" "$root")" -eq "$before" ]
 }
 
-# Stops the watcher started last and waits for it to exit. Through a launcher, the tool runs as
-# its own process, found by its path, and is stopped as well as the launcher.
+# Stops the watcher started last and waits for it to exit.
 stop_watcher() {
-    if [ "$launcher_count" -gt 0 ]; then
-        pkill -TERM -f "$binary" 2> /dev/null || true
-    fi
     kill -TERM "$watcher_pid" 2> /dev/null || true
     wait "$watcher_pid" 2> /dev/null || true
     if [ "$is_windows" -eq 1 ]; then
@@ -343,8 +320,8 @@ check "text: every line names the watched directory" lacks_text "$out" "$tree/"
 check "text: no warnings" has_no_warnings "$case_dir/err.txt"
 
 # The throttle: a second change soon after the first is held back and reported once the
-# throttle time has passed, not at once. The throttle is long, because through a launcher such
-# as the iOS simulator's, output can reach the file seconds after the tool wrote it.
+# throttle time has passed, not at once. The throttle is long, so a slow machine cannot make
+# the held-back report look immediate.
 case_dir="$(new_case throttle)"
 tree="$case_dir/tree"
 start_watcher "$case_dir" -t 10000 -d "$event_duration_ms" "$tree"
@@ -471,9 +448,8 @@ check "roots: overlapping roots refused" test "$overlap_code" -eq 1
 check "roots: overlap explained" grep -q "overlaps another watched directory" "$case_dir/overlap.txt"
 
 # Ctrl+C stops the tool at once with exit code 130. Git Bash cannot send Ctrl+C to a Windows
-# program, and a launcher would receive the signal instead of the tool, so the case runs only
-# where the tool is a plain local process.
-if [ "$is_windows" -eq 0 ] && [ "$launcher_count" -eq 0 ]; then
+# program, so the case is skipped there.
+if [ "$is_windows" -eq 0 ]; then
     case_dir="$(new_case interrupt)"
     tree="$case_dir/tree"
     start_watcher "$case_dir" -i 60000 "$tree"
@@ -493,7 +469,7 @@ else
 fi
 
 # The duration ends the run on time.
-# Starting the tool can take seconds through a launcher, so that time is measured first and
+# Starting the tool can take seconds on a slow machine, so that time is measured first and
 # allowed for.
 mkdir -p "$work/empty"
 SECONDS=0

@@ -2,7 +2,7 @@
 
 A fast file watcher written in Zig: a library for Zig projects and a CLI tool built on it.
 
-- Uses the native watch method of each platform: inotify on Linux and Android, FSEvents on macOS, kqueue on iOS, and `ReadDirectoryChangesW` on Windows.
+- Uses the native watch method of each platform: inotify on Linux, FSEvents on macOS and `ReadDirectoryChangesW` on Windows. Other platforms are polled.
 - Knows the platform's limit on native watches, uses a configurable percentage of it and polls every directory beyond that, or every directory when native watching fails.
 - Leaves out `node_modules`, `.git` and other well known heavy directories by default. Excluded directories and file extensions are configurable.
 - Reports which watched directory changed whenever a file or directory under it is created, modified, deleted or renamed. It keeps nothing per file, so memory stays around 1 MiB even for 100,000 files.
@@ -76,23 +76,7 @@ zig build -Dtarget=aarch64-macos -Doptimize=ReleaseFast
 zig build -Dtarget=x86_64-macos -Doptimize=ReleaseFast
 ```
 
-Android builds a static CLI tool that runs from `adb shell`, and checks the library for use in an Android app:
-
-```bash
-zig build -Dtarget=aarch64-linux-android -Doptimize=ReleaseFast
-```
-
-On iOS the library is embedded in apps, and linking needs Apple's SDK. Without the SDK the iOS build compiles the library and CLI code and stops before linking; with `--sysroot` pointing at the SDK it links, which CI uses to run the tests in the iOS simulator. An iOS app links the library through its own Zig build, as the [library guide](docs/user-guide-library.md) shows.
-
-```bash
-zig build -Dtarget=aarch64-ios
-```
-
-```bash
-zig build -Dtarget=aarch64-ios-simulator
-```
-
-`zig build check -Dtarget=<target>` runs the same compile-only check for any target.
+`zig build check -Dtarget=<target>` compiles the library and CLI tool for a target without linking.
 
 ## Run the unit tests
 
@@ -140,14 +124,6 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 | macOS unit tests | macOS | The unit test binaries |
 | macOS smoke tests | macOS | `scripts/smoke-test.sh` |
 | macOS performance tests | macOS | `scripts/performance-test.sh`, with results in the job summary |
-| Android build | Ubuntu | The x86_64 unit test binaries and CLI tools, and builds for the other Android ABIs |
-| Android unit tests | Ubuntu | The x86_64 Android unit test binaries, which run on the Linux kernel |
-| Android smoke tests | Ubuntu | `scripts/smoke-test.sh` against the x86_64 Android build |
-| Android performance tests | Ubuntu | `scripts/performance-test.sh` against the x86_64 Android build, with results in the job summary |
-| iOS build | macOS | A device build, and the unit test binaries and CLI tools for the simulator |
-| iOS unit tests | macOS | The unit test binaries in the iOS simulator |
-| iOS smoke tests | macOS | `scripts/smoke-test.sh` with the CLI tool running in the iOS simulator |
-| iOS performance tests | macOS | `scripts/performance-test.sh` with the CLI tool running in the iOS simulator, with results in the job summary |
 
 ## Run the performance tests
 

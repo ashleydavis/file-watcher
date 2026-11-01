@@ -10,9 +10,8 @@ The watcher reports which watched directory changed, not which files changed. Th
 | `src/watcher.zig` | Ties the parts together: roots, the quota, the throttle, polling, falling back and batches. |
 | `src/fingerprint.zig` | Sums a directory tree into one number for polling. |
 | `src/hints.zig` | The set of paths a native backend reported in one batch. |
-| `src/inotify.zig` | The Linux and Android backend. |
+| `src/inotify.zig` | The Linux backend. |
 | `src/fsevents.zig` | The macOS backend. |
-| `src/kqueue.zig` | The iOS backend. |
 | `src/read_directory_changes.zig` | The Windows backend. |
 | `src/windows_listing.zig` | Lists a Windows directory with every entry's metadata in one query, for polling. |
 | `src/unsupported.zig` | The backend for other platforms, which always polls. |
@@ -39,9 +38,8 @@ For backends that need one watch per directory, the backend also says when a dir
 
 | Platform | Method | One watch covers | Limit |
 | --- | --- | --- | --- |
-| Linux, Android | inotify | One directory and the files in it | `max_user_watches`, per user |
+| Linux | inotify | One directory and the files in it | `max_user_watches`, per user |
 | macOS | FSEvents | A whole tree | 1024 trees per watcher |
-| iOS | kqueue | One directory or one file | The open file limit |
 | Windows | `ReadDirectoryChangesW` | A whole tree | 63 trees per watcher |
 
 ### inotify
@@ -54,10 +52,6 @@ Each root gets one FSEvents stream, which reports every changed file and directo
 
 CoreServices, which provides FSEvents, is loaded when the watcher starts rather than linked. That way macOS builds need no Apple SDK and cross compile from any machine. If it cannot be loaded, the watcher reports a problem and polls.
 
-### kqueue
-
-kqueue watches open descriptors. A directory's descriptor reports that its entries changed but not which, so the watcher keeps one number per watched directory: a sum of the names in it that are not excluded. A directory event counts as a change only when that sum moves, so creating an excluded file does not, and the watcher then watches any new entries. A file's descriptor reports writes to that file. Files need their own descriptors, so on iOS the quota covers files as well as directories. FSEvents is unavailable to iOS apps, so iOS uses kqueue.
-
 ### ReadDirectoryChangesW
 
 Each root gets one directory handle and one asynchronous read covering its whole tree, with a 64 KiB buffer. Windows reports the relative path of each change. When the buffer overflows, the root is reported changed. One `WaitForMultipleObjects` call waits on every root at once, plus the event `wake` sets. One call covers 64 handles, which limits a watcher to 63 roots.
@@ -66,9 +60,8 @@ Each root gets one directory handle and one asynchronous read covering its whole
 
 At start the watcher reads the platform limit:
 
-- Linux and Android: `/proc/sys/fs/inotify/max_user_watches`. When it cannot be read, as in Android apps, the kernel default of 8192 is used.
+- Linux: `/proc/sys/fs/inotify/max_user_watches`. When it cannot be read, the kernel default of 8192 is used.
 - macOS: 1024 streams, one per root.
-- iOS: the limit on open files. The watcher first raises the soft limit to the hard limit, capped at `OPEN_MAX` (10240), as the Go runtime does, so the quota counts every descriptor the app may open.
 - Windows: 63.
 
 The budget is `quota_percent` of the limit, rounded down, and `native_watches_max` caps it further. When a root needs more watches than the budget has left, it keeps the watches it got and is polled as well, so changes in the directories that missed out are still found. When the platform refuses a watch for lack of resources before the budget is used up, the budget drops to the number in use. The first time either happens, a `LimitReached` problem is reported.
@@ -100,13 +93,13 @@ The batch lives in an arena that is reset at the start of the next batch.
 
 ## Waking a waiting watcher
 
-`wake` lets another thread, or a signal handler, end a `next` that is waiting. Each backend waits on one extra signal beside its watches: an eventfd on Linux and Android, a kqueue user event on macOS and iOS, and an event handle on Windows. Polled waits sleep on a futex holding a wake count. `wake` raises the count, signals the backend and wakes the futex, and `next` returns as soon as it sees the count move. A wake made while no `next` is waiting is kept, so the next call returns at once.
+`wake` lets another thread, or a signal handler, end a `next` that is waiting. Each backend waits on one extra signal beside its watches: an eventfd on Linux, a kqueue user event on macOS and an event handle on Windows. Polled waits sleep on a futex holding a wake count. `wake` raises the count, signals the backend and wakes the futex, and `next` returns as soon as it sees the count move. A wake made while no `next` is waiting is kept, so the next call returns at once.
 
 The CLI tool calls `wake` from its Ctrl+C and SIGTERM handlers, so it waits for changes with no timeout and still stops at once.
 
 ## Memory
 
-Nothing is kept per file. Native watching keeps the path of each watch the backend holds, and on iOS one number per watched directory. On Linux that is one per directory, on macOS and Windows one per root, and on iOS one per directory and file. Polling keeps one number per root. On a tree of 100,000 files in 1,011 directories, the CLI tool's peak memory was 1.1 MiB watching natively and 1.0 MiB polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
+Nothing is kept per file. Native watching keeps the path of each watch the backend holds: one per directory on Linux, and one per root on macOS and Windows. Polling keeps one number per root. On a tree of 100,000 files in 1,011 directories, the CLI tool's peak memory was 1.1 MiB watching natively and 1.0 MiB polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
 
 ## Tests
 

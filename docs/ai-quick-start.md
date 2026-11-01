@@ -5,7 +5,7 @@ Facts an AI agent needs to work in this repository.
 ## Project
 
 - A file watcher written in Zig 0.16.0: a library (`src/root.zig`, module `file_watcher`) and a CLI tool (`src/main.zig`, binary `file-watcher`) built on it.
-- Native backends: inotify (Linux, Android), FSEvents (macOS, loaded at run time), kqueue (iOS), `ReadDirectoryChangesW` (Windows, which also lists directories with one query for polling). Other platforms poll.
+- Native backends: inotify (Linux), FSEvents (macOS, loaded at run time), `ReadDirectoryChangesW` (Windows, which also lists directories with one query for polling). Other platforms poll.
 - The watcher reports which watched directory (root) changed, never which file. Native backends report paths, which map to a root; polling compares one fingerprint per root (`src/fingerprint.zig`). Nothing is kept per file. Reports of each root are throttled (`throttle_ms`, default 1000).
 - [How it works](how-it-works.md) describes each file's job.
 
@@ -18,14 +18,14 @@ Facts an AI agent needs to work in this repository.
 | Coverage (needs kcov) | `scripts/coverage.sh run` |
 | Smoke tests | `zig build && scripts/smoke-test.sh zig-out/bin/file-watcher` |
 | Performance tests (Linux) | `zig build -Doptimize=ReleaseFast && scripts/performance-test.sh zig-out/bin/file-watcher 100000` |
-| Compile check for a target | `zig build check -Dtarget=aarch64-ios` |
+| Compile check for a target | `zig build check -Dtarget=aarch64-macos` |
 | Cross compile | `zig build -Dtarget=x86_64-windows` |
 | Install test binaries for another runner | `zig build install-tests -Dtarget=<target>` |
 | Windows unit tests under Wine (Linux) | `zig build test -Dtarget=x86_64-windows -fwine` |
 
 CI (`.github/workflows/ci.yml`) has one job per platform and kind of test, written out in full rather than as a matrix. Each platform's build job installs the CLI tool and the test binaries into `zig-out` and saves it to a cache keyed by the commit SHA; that platform's test jobs restore it and run the binaries without building. CI does not measure coverage; run `scripts/coverage.sh run` locally.
 
-Check that these targets compile after any change to a backend or the watcher: `x86_64-windows`, `aarch64-macos`, `aarch64-linux-android` and `aarch64-ios`.
+Check that these targets compile after any change to a backend or the watcher: `x86_64-windows`, `x86_64-macos` and `aarch64-macos`.
 
 ## Conventions
 
@@ -40,7 +40,7 @@ Check that these targets compile after any change to a backend or the watcher: `
 ## Test helpers
 
 - `src/mock_io.test.zig` (module `mock_io`): an in-memory file system and clock behind `std.Io`. Add files with `add_file`, change them with `write_file`, remove them with `remove`, inject failures with `set_faults` and run code during waits with `sleep_callback`.
-- `src/fake_backend.test.zig` (module `fake_backend`): a scripted backend. Queue hints with `queue`, fail watches with `failing_path` and `watch_error`, fail a wait with `wait_error`. Its `Config` makes it recursive like Windows or file-watching like kqueue.
+- `src/fake_backend.test.zig` (module `fake_backend`): a scripted backend. Queue hints with `queue`, fail watches with `failing_path` and `watch_error`, fail a wait with `wait_error`. Its `Config` makes it recursive like Windows and macOS.
 - Both are separate modules, imported by name, because Zig 0.16 allows a file in one module only. `build.zig` wires them into the test modules.
 
 ## Pitfalls
@@ -48,4 +48,4 @@ Check that these targets compile after any change to a backend or the watcher: `
 - A `Watcher` keeps a pointer into itself. Create it in place (`init(self: *Watcher, ...)`) and keep it at that address.
 - Zig 0.16 resolves every `@import` path eagerly, including in `test` blocks, so a test file must exist before the code that imports it compiles.
 - kcov reads LLVM debug information only, so `scripts/coverage.sh` builds the tests with `-Dllvm=true`.
-- The Windows, FSEvents and kqueue system calls are compiled only for their platforms. Their decoding functions are pure and tested on every platform, and each has a test against a real directory that runs only on its own platform.
+- The Windows and FSEvents system calls are compiled only for their platforms. Their decoding functions are pure and tested on every platform, and each has a test against a real directory that runs only on its own platform.

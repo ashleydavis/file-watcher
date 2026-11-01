@@ -1,6 +1,6 @@
 # User guide: CLI tool
 
-`file-watcher` watches directory trees and prints the name of each watched directory when anything in it changes: a file or directory created, modified, deleted or renamed. It does not say which file changed. It runs on Linux, Windows and macOS, and on Android from `adb shell`.
+`file-watcher` watches directory trees and prints the name of each watched directory when anything in it changes: a file or directory created, modified, deleted or renamed. It does not say which file changed. It runs on Linux, Windows and macOS.
 
 ## Usage
 
@@ -124,7 +124,7 @@ stats: roots=1 polled_roots=0 native_watches=1011 watch_budget=65006 native_limi
 
 Each platform limits native watches:
 
-- Linux and Android: the per-user inotify limit in `/proc/sys/fs/inotify/max_user_watches`. Each directory takes one watch.
+- Linux: the per-user inotify limit in `/proc/sys/fs/inotify/max_user_watches`. Each directory takes one watch.
 - macOS: 1024 directory trees. Each directory on the command line takes one FSEvents stream for its whole tree.
 - Windows: 63 directory trees: one wait covers 64 handles, and one of them is kept for stopping the wait. Each directory on the command line takes one watch for its whole tree.
 
