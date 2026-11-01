@@ -249,4 +249,44 @@ for (batch.changed) |path| {
 
 Changes then reach the UI on the next tick, so a 50 to 100 ms timer shows them without a visible delay.
 
-Both patterns were compiled and run against the library with real file changes.
+In polling mode a call to `next` can run a poll, which reads the time of every entry in the polled trees. On a large tree that takes long enough to stall the UI, so use a watcher thread instead.
+
+### Polling only while the CPU is idle
+
+The watcher does no work between calls to `next`: polls run only inside `next`, at most once per `poll_interval_ms`. An app that calls `next` only while the CPU is idle therefore polls only then, and costs nothing while the machine is busy.
+
+Native events are not lost while the app is not calling `next`. The operating system queues them, and the next call reports them. If the queue overflows during a long busy spell, the watcher reports every affected watched directory as changed.
+
+The library does not measure CPU use. The app decides when the CPU is idle, for example from the system's CPU load (`/proc/stat` on Linux, `host_statistics` on macOS, `GetSystemTimes` on Windows) or from its own idle state, and sets a flag the watcher thread reads:
+
+```zig
+const std = @import("std");
+const file_watcher = @import("file_watcher");
+
+// Set by the app: true while the CPU is idle, false while it is busy.
+var is_cpu_idle: std.atomic.Value(bool) = .init(false);
+
+// Runs on its own thread until `stop` is set. Calls `next` only while the CPU is idle, so polls
+// happen only then.
+fn watch(io: std.Io, watcher: *file_watcher.Watcher, stop: *std.atomic.Value(bool)) void {
+    while (!stop.load(.acquire)) {
+        if (!is_cpu_idle.load(.acquire)) {
+            // Busy: nothing is polled. Native events wait in the operating system meanwhile.
+            io.sleep(.fromMilliseconds(250), .awake) catch return;
+            continue;
+        }
+        const batch = watcher.next(250) catch |err| {
+            std.log.err("The file watcher stopped: {t}.", .{err});
+            return;
+        };
+        for (batch.changed) |path| {
+            // Hand a copy of the path to the UI thread, as in the watcher thread example.
+            _ = path;
+        }
+    }
+}
+```
+
+The 250 ms timeout makes the thread check the flag again soon after the CPU becomes busy. A poll that has started still runs to its end, and its length grows with the number of entries in the polled trees. Changes made while the CPU is busy are reported as soon as it is idle again. To stop the thread, set `stop`, call `wake` and join the thread, as above.
+
+All three patterns were compiled and run against the library with real file changes.
