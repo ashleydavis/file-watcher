@@ -103,6 +103,42 @@ test "polling reports a changed root on the poll interval" {
 }
 
 //
+// Goal: polling finds deletions, which leave no entry with a new time, through the time of the
+// directory they were in, and finds the root itself being deleted and made again.
+// Method: delete a file, then the root, then make the root again, polling after each.
+//
+test "polling reports deletions and the root coming and going" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .method = .polling,
+        .poll_interval_ms = 100,
+        .throttle_ms = 0,
+    });
+    defer watcher.deinit();
+    try watcher.add(native_path("/root"));
+
+    mock.clock_ns += std.time.ns_per_ms;
+    mock.remove(native_path("/root/sub/b.txt"));
+    const deleted = try watcher.next(1000);
+    try testing.expect(has_change(deleted, native_path("/root")));
+
+    mock.remove(native_path("/root"));
+    const gone = try watcher.next(1000);
+    try testing.expect(has_change(gone, native_path("/root")));
+    const still_gone = try watcher.next(500);
+    try testing.expectEqual(@as(usize, 0), still_gone.changed.len);
+
+    try mock.add_directory(native_path("/root"));
+    const back = try watcher.next(1000);
+    try testing.expect(has_change(back, native_path("/root")));
+}
+
+//
 // Goal: with a backend that watches each directory, every directory that is not excluded is
 // watched, hints become changed roots, and new, moved and deleted directories gain or lose
 // their watches.
@@ -240,6 +276,8 @@ test "running out of watches polls the root" {
     const first = try watcher.next(0);
     try testing.expect(has_problem(first, error.LimitReached));
 
+    // The change comes after polling began, as it always does on a real clock.
+    mock.clock_ns += std.time.ns_per_ms;
     try mock.add_file(native_path("/root/sub/new.txt"), 1);
     const polled = try watcher.next(1000);
     try testing.expect(has_change(polled, native_path("/root")));
@@ -377,6 +415,7 @@ test "backend failures fall back to polling" {
     try testing.expect(has_problem(failed, error.Unexpected));
     try testing.expect(!watcher.stats().is_native_active);
     try testing.expectEqual(@as(u32, 1), watcher.stats().polled_roots);
+    mock.clock_ns += std.time.ns_per_ms;
     try mock.add_file(native_path("/root/after.txt"), 1);
     const polled = try watcher.next(1000);
     try testing.expect(has_change(polled, native_path("/root")));

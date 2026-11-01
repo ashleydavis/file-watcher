@@ -131,7 +131,7 @@ The timeout only limits how long `next` waits when nothing changes. A change is 
 | `native_watches_max` | `null` | The most native watches to use, whatever the quota allows. A watched directory that needs more is polled as well. `null` means the quota alone sets the limit. |
 | `poll_interval_ms` | `1000` | How often polled directories are checked. Must be above 0. |
 | `throttle_ms` | `1000` | The shortest time between two reports of the same watched directory. The first change after a quiet spell is reported at once; changes within this time after a report are reported once when it ends, so none is lost. 0 reports every change at once. |
-| `method` | `.native` | `.native` uses native watches up to the quota. `.polling` polls every watched directory, which suits network file systems. |
+| `method` | `.native` | `.native` uses native watches up to the quota. `.polling` polls every watched directory, which suits network file systems whose clock agrees with this machine's to within 100 ms. |
 
 The slices in `Options` are borrowed, so keep them alive while the watcher runs. `is_valid(&options)` says whether every setting is in range; the watcher asserts it.
 

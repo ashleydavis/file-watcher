@@ -392,10 +392,12 @@ stop_watcher
 # Polling, the quota and the counters.
 case_dir="$(new_case poll)"
 tree="$case_dir/tree"
-mkdir -p "$tree/sub"
+# Polling sees a change by its time. Creating or deleting an entry changes its directory's
+# time, so node_modules exists before the watcher starts and only changes inside it are made.
+mkdir -p "$tree/sub" "$tree/node_modules"
 start_watcher "$case_dir" --poll -i 100 -d "$event_duration_ms" "$tree"
 check "poll: change found by polling" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/sub/polled.txt"'
-check "poll: excluded change left out" no_changes "$case_dir/out.txt" "$tree" eval 'mkdir -p "$tree/node_modules"; echo x > "$tree/node_modules/a.js"'
+check "poll: excluded change left out" no_changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/node_modules/a.js"; mkdir "$tree/node_modules/new"'
 stop_watcher
 check "poll: counters show polling only" grep -q "roots=1 polled_roots=1 native_watches=0 .* native_active=false" "$case_dir/err.txt"
 

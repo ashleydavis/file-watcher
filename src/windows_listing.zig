@@ -5,14 +5,13 @@
 //
 
 const std = @import("std");
-const fingerprint_module = @import("fingerprint.zig");
+const scan_module = @import("scan.zig");
 
 const assert = std.debug.assert;
-const Allocator = std.mem.Allocator;
 const Io = std.Io;
 const Dir = std.Io.Dir;
-const Listed = fingerprint_module.Listed;
-const Stamp = fingerprint_module.Stamp;
+const Stamp = scan_module.Stamp;
+const Visitor = scan_module.Visitor;
 
 //
 // The header of one `FILE_ID_FULL_DIR_INFORMATION` record written by `NtQueryDirectoryFile`.
@@ -54,9 +53,9 @@ const FILE_ATTRIBUTE_DIRECTORY: u32 = 0x10;
 const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
 
 //
-// The size of the buffer each `NtQueryDirectoryFile` call fills.
+// The longest file name, in UTF-16 code units, that NTFS allows.
 //
-const buffer_size: usize = 64 * 1024;
+const name_wide_max: usize = 255;
 
 //
 // The upper bound on `NtQueryDirectoryFile` calls for one listing. Each call returns at least one
@@ -65,32 +64,14 @@ const buffer_size: usize = 64 * 1024;
 const calls_max: u64 = 1 << 32;
 
 //
-// Lists the entries of `dir`, or only the entry called `name` when it is given, into `entries`.
-// Names and the buffer are allocated from `arena`. Follows the `Lister` signature;
-// `io` and `dir_path` are unused because the handle is enough on Windows.
+// Lists the entries of `dir`, handing each to `visitor` until it asks to stop. `buffer` holds the
+// records of one call at a time. Follows the `Lister` signature; `io` is unused because the
+// handle is enough on Windows.
 //
-pub fn list(
-    io: Io,
-    dir: Dir,
-    dir_path: []const u8,
-    name: ?[]const u8,
-    arena: Allocator,
-    entries: *std.ArrayList(Listed),
-) anyerror!void {
+pub fn list(io: Io, dir: Dir, buffer: []align(8) u8, visitor: Visitor) anyerror!void {
     _ = io;
-    _ = dir_path;
+    assert(buffer.len >= name_offset);
     const windows = std.os.windows;
-    const buffer = try arena.alignedAlloc(u8, .@"8", buffer_size);
-    var mask: windows.UNICODE_STRING = .empty;
-    if (name) |entry_name| {
-        assert(entry_name.len > 0);
-        const wide = try std.unicode.wtf8ToWtf16LeAlloc(arena, entry_name);
-        mask = .{
-            .Length = @intCast(wide.len * 2),
-            .MaximumLength = @intCast(wide.len * 2),
-            .Buffer = wide.ptr,
-        };
-    }
     var calls: u64 = 0;
     while (calls < calls_max) : (calls += 1) {
         var io_status_block: windows.IO_STATUS_BLOCK = undefined;
@@ -104,17 +85,17 @@ pub fn list(
             @intCast(buffer.len),
             .IdFullDirectory,
             .FALSE,
-            if (name != null) &mask else null,
+            null,
             .fromBool(calls == 0),
         );
         switch (status) {
-            .SUCCESS => try decode_records(buffer[0..io_status_block.Information], arena, entries),
-            .NO_MORE_FILES, .NO_SUCH_FILE => {
-                if (name) |entry_name| {
-                    keep_named(entries, entry_name);
+            .SUCCESS => {
+                const records = buffer[0..io_status_block.Information];
+                if (!try decode_records(records, visitor)) {
+                    return;
                 }
-                return;
             },
+            .NO_MORE_FILES, .NO_SUCH_FILE => return,
             .ACCESS_DENIED => return error.AccessDenied,
             else => return error.Unexpected,
         }
@@ -123,28 +104,16 @@ pub fn list(
 }
 
 //
-// Removes every entry not called `name`. Windows applies a name filter only on the first query
-// of a handle, so a handle that was listed before returns every entry.
+// Decodes the records `NtQueryDirectoryFile` wrote into `buffer` and hands an entry with a stamp
+// to `visitor` for each, leaving out `.` and `..`. The stamps match the ones `stamp_from_stat`
+// makes from `statFile`, which reads the same fields from the file itself. Returns false when the
+// visitor asked to stop.
 //
-pub fn keep_named(entries: *std.ArrayList(Listed), name: []const u8) void {
-    var kept: usize = 0;
-    for (entries.items) |entry| {
-        if (std.ascii.eqlIgnoreCase(entry.name, name)) {
-            entries.items[kept] = entry;
-            kept += 1;
-        }
-    }
-    entries.shrinkRetainingCapacity(kept);
-}
-
-//
-// Decodes the records `NtQueryDirectoryFile` wrote into `buffer` and appends an entry with a
-// stamp for each, leaving out `.` and `..`. The stamps match the ones `stamp_from_stat` makes from
-// `statFile`, which reads the same fields from the file itself.
-//
-pub fn decode_records(buffer: []const u8, arena: Allocator, entries: *std.ArrayList(Listed)) !void {
+pub fn decode_records(buffer: []const u8, visitor: Visitor) !bool {
     assert(buffer.len >= name_offset);
     const records_max = @divFloor(buffer.len, name_offset);
+    var name_wide: [name_wide_max]u16 = undefined;
+    var name: [name_wide_max * 3]u8 = undefined;
     var offset: usize = 0;
     var records: usize = 0;
     while (true) : (records += 1) {
@@ -156,18 +125,23 @@ pub fn decode_records(buffer: []const u8, arena: Allocator, entries: *std.ArrayL
             buffer[offset..][0..name_offset],
         );
         const name_bytes = buffer[offset + name_offset ..][0..header.FileNameLength];
-        const name_wide = try arena.alloc(u16, @divExact(name_bytes.len, 2));
-        @memcpy(std.mem.sliceAsBytes(name_wide), name_bytes);
-        const is_dot = std.mem.eql(u16, name_wide, &.{'.'});
-        const is_dot_dot = std.mem.eql(u16, name_wide, &.{ '.', '.' });
+        assert(name_bytes.len <= name_wide_max * 2);
+        const wide = name_wide[0..@divExact(name_bytes.len, 2)];
+        @memcpy(std.mem.sliceAsBytes(wide), name_bytes);
+        const is_dot = std.mem.eql(u16, wide, &.{'.'});
+        const is_dot_dot = std.mem.eql(u16, wide, &.{ '.', '.' });
         if (!is_dot and !is_dot_dot) {
-            try entries.append(arena, .{
-                .name = try std.unicode.wtf16LeToWtf8Alloc(arena, name_wide),
+            const name_len = std.unicode.wtf16LeToWtf8(&name, wide);
+            const is_going_on = try visitor.visit(.{
+                .name = name[0..name_len],
                 .stamp = stamp_from_record(&header),
             });
+            if (!is_going_on) {
+                return false;
+            }
         }
         if (header.NextEntryOffset == 0) {
-            return;
+            return true;
         }
         assert(header.NextEntryOffset >= name_offset);
         offset += header.NextEntryOffset;
@@ -180,7 +154,7 @@ pub fn decode_records(buffer: []const u8, arena: Allocator, entries: *std.ArrayL
 //
 fn stamp_from_record(header: *const FileIdFullDirInformation) Stamp {
     const attributes = header.FileAttributes;
-    const kind: fingerprint_module.EntryKind = if (attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0)
+    const kind: scan_module.EntryKind = if (attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0)
         .other
     else if (attributes & FILE_ATTRIBUTE_DIRECTORY != 0)
         .directory
@@ -189,9 +163,7 @@ fn stamp_from_record(header: *const FileIdFullDirInformation) Stamp {
     const mtime = std.os.windows.fromSysTime(header.LastWriteTime);
     return .{
         .kind = kind,
-        .size = @bitCast(header.EndOfFile),
-        .mtime_ns = @truncate(mtime.nanoseconds),
-        .inode = @bitCast(header.FileId),
+        .mtime_ns = mtime.nanoseconds,
     };
 }
 

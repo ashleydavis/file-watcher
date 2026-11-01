@@ -5,12 +5,37 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-const fingerprint_module = @import("fingerprint.zig");
+const scan_module = @import("scan.zig");
 const windows_listing = @import("windows_listing.zig");
 
 const testing = std.testing;
 const FileIdFullDirInformation = windows_listing.FileIdFullDirInformation;
-const Listed = fingerprint_module.Listed;
+const Listed = scan_module.Listed;
+
+//
+// Keeps a copy of every entry it is handed, and asks to stop after `limit` entries.
+//
+const Collector = struct {
+    arena: std.mem.Allocator,
+    entries: std.ArrayList(Listed) = .empty,
+    limit: usize = std.math.maxInt(usize),
+
+    fn visitor(self: *Collector) scan_module.Visitor {
+        return .{
+            .context = self,
+            .visit_fn = visit,
+        };
+    }
+
+    fn visit(context: *anyopaque, entry: Listed) anyerror!bool {
+        const self: *Collector = @ptrCast(@alignCast(context));
+        try self.entries.append(self.arena, .{
+            .name = try self.arena.dupe(u8, entry.name),
+            .stamp = entry.stamp,
+        });
+        return self.entries.items.len < self.limit;
+    }
+};
 
 //
 // Builds a buffer of directory records the way `NtQueryDirectoryFile` lays them out.
@@ -98,23 +123,22 @@ test "decode_records turns records into stamped entries" {
     buffer.add("link", 0x10 | 0x400, 0, 0, 79, 8);
     buffer.add("é.txt", 0x80, 3, 0, -1, 8);
 
-    var entries: std.ArrayList(Listed) = .empty;
-    try windows_listing.decode_records(buffer.slice(), arena, &entries);
+    var collector: Collector = .{
+        .arena = arena,
+    };
+    try testing.expect(try windows_listing.decode_records(buffer.slice(), collector.visitor()));
+    const entries = &collector.entries;
 
     try testing.expectEqual(@as(usize, 4), entries.items.len);
     const file = entries.items[0];
     try testing.expectEqualStrings("a.txt", file.name);
-    try testing.expectEqual(fingerprint_module.EntryKind.file, file.stamp.kind);
-    try testing.expectEqual(@as(u64, 12), file.stamp.size);
+    try testing.expectEqual(scan_module.EntryKind.file, file.stamp.kind);
     const expected_time = std.os.windows.fromSysTime(133_000_000_000_000_000);
-    try testing.expectEqual(@as(i64, @truncate(expected_time.nanoseconds)), file.stamp.mtime_ns);
-    try testing.expectEqual(@as(std.Io.File.INode, 77), file.stamp.inode);
-    try testing.expectEqual(fingerprint_module.EntryKind.directory, entries.items[1].stamp.kind);
+    try testing.expectEqual(expected_time.nanoseconds, file.stamp.mtime_ns);
+    try testing.expectEqual(scan_module.EntryKind.directory, entries.items[1].stamp.kind);
     try testing.expectEqualStrings("link", entries.items[2].name);
-    try testing.expectEqual(fingerprint_module.EntryKind.other, entries.items[2].stamp.kind);
+    try testing.expectEqual(scan_module.EntryKind.other, entries.items[2].stamp.kind);
     try testing.expectEqualStrings("é.txt", entries.items[3].name);
-    const all_ones: std.Io.File.INode = @bitCast(@as(i64, -1));
-    try testing.expectEqual(all_ones, entries.items[3].stamp.inode);
 }
 
 //
@@ -131,41 +155,27 @@ test "decode_records reads unaligned records" {
     buffer.add("abc", 0x20, 2, 6, 2, 2);
     buffer.add("d", 0x20, 3, 7, 3, 2);
 
-    var entries: std.ArrayList(Listed) = .empty;
-    try windows_listing.decode_records(buffer.slice(), arena, &entries);
-    try testing.expectEqual(@as(usize, 3), entries.items.len);
-    try testing.expectEqualStrings("abc", entries.items[1].name);
-    try testing.expectEqual(@as(u64, 3), entries.items[2].stamp.size);
+    var collector: Collector = .{
+        .arena = arena,
+    };
+    try testing.expect(try windows_listing.decode_records(buffer.slice(), collector.visitor()));
+    try testing.expectEqual(@as(usize, 3), collector.entries.items.len);
+    try testing.expectEqualStrings("abc", collector.entries.items[1].name);
+    try testing.expectEqualStrings("d", collector.entries.items[2].name);
+
+    // A visitor that asks to stop gets no more entries.
+    var stopping: Collector = .{
+        .arena = arena,
+        .limit = 2,
+    };
+    try testing.expect(!try windows_listing.decode_records(buffer.slice(), stopping.visitor()));
+    try testing.expectEqual(@as(usize, 2), stopping.entries.items.len);
 }
 
 //
-// Goal: only entries with the asked-for name are kept, in any letter case.
-// Method: filter a list holding the name in another case and other names.
-//
-test "keep_named keeps only the named entry" {
-    const stamp: fingerprint_module.Stamp = .{
-        .kind = .file,
-        .size = 0,
-        .mtime_ns = 0,
-        .inode = 0,
-    };
-    var items = [_]Listed{
-        .{ .name = "a.txt", .stamp = stamp },
-        .{ .name = "File.TXT", .stamp = stamp },
-        .{ .name = "b.txt", .stamp = stamp },
-    };
-    var entries: std.ArrayList(Listed) = .initBuffer(&items);
-    entries.items.len = items.len;
-    windows_listing.keep_named(&entries, "file.txt");
-    try testing.expectEqual(@as(usize, 1), entries.items.len);
-    try testing.expectEqualStrings("File.TXT", entries.items[0].name);
-}
-
-//
-// Goal: on Windows, listing a real directory gives the same stamps as `statFile`, and asking
-// for one name gives that entry alone or nothing.
-// Method: make a temporary directory with a file and a subdirectory, list it both ways and
-// compare with `statFile`.
+// Goal: on Windows, listing a real directory gives the same stamps as `statFile`.
+// Method: make a temporary directory with a file and a subdirectory, list it and compare with
+// `statFile`.
 //
 test "list matches statFile on Windows" {
     if (builtin.os.tag != .windows) {
@@ -186,39 +196,18 @@ test "list matches statFile on Windows" {
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
-    var entries: std.ArrayList(Listed) = .empty;
-    try windows_listing.list(io, tmp.dir, "tmp", null, arena, &entries);
-    try testing.expectEqual(@as(usize, 2), entries.items.len);
-    for (entries.items) |entry| {
+    const buffer = try arena.alignedAlloc(u8, .@"8", scan_module.lister_buffer_size);
+    var collector: Collector = .{
+        .arena = arena,
+    };
+    try windows_listing.list(io, tmp.dir, buffer, collector.visitor());
+    try testing.expectEqual(@as(usize, 2), collector.entries.items.len);
+    for (collector.entries.items) |entry| {
         const stat = try tmp.dir.statFile(io, entry.name, .{
             .follow_symlinks = false,
         });
-        const stamp = fingerprint_module.stamp_from_stat(&stat);
+        const stamp = scan_module.stamp_from_stat(&stat);
         try testing.expectEqual(stamp.kind, entry.stamp.kind);
-        try testing.expectEqual(stamp.inode, entry.stamp.inode);
         try testing.expectEqual(stamp.mtime_ns, entry.stamp.mtime_ns);
-        if (stamp.kind == .file) {
-            try testing.expectEqual(stamp.size, entry.stamp.size);
-        }
     }
-
-    // A name filter applies to a handle's first query only, so each named listing gets a fresh
-    // handle, as the snapshot does.
-    var fresh = try tmp.dir.openDir(io, ".", .{
-        .iterate = true,
-    });
-    defer fresh.close(io);
-    var one: std.ArrayList(Listed) = .empty;
-    try windows_listing.list(io, fresh, "tmp", "file.txt", arena, &one);
-    try testing.expectEqual(@as(usize, 1), one.items.len);
-    try testing.expectEqualStrings("file.txt", one.items[0].name);
-    try testing.expectEqual(@as(u64, 5), one.items[0].stamp.size);
-
-    var other = try tmp.dir.openDir(io, ".", .{
-        .iterate = true,
-    });
-    defer other.close(io);
-    var none: std.ArrayList(Listed) = .empty;
-    try windows_listing.list(io, other, "tmp", "missing.txt", arena, &none);
-    try testing.expectEqual(@as(usize, 0), none.items.len);
 }

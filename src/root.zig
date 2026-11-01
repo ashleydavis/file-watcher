@@ -27,7 +27,7 @@ test {
     _ = @import("options.zig");
     _ = @import("read_directory_changes.zig");
     _ = @import("windows_listing.zig");
-    _ = @import("fingerprint.zig");
+    _ = @import("scan.zig");
     _ = @import("paths.zig");
     _ = @import("watcher.zig");
 }

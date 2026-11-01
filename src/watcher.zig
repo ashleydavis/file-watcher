@@ -1,15 +1,16 @@
 //
 // Watches directory trees and reports which of them changed. It uses the platform's native watch
 // method within a quota of the platform limit, and polls a tree the native method cannot fully
-// cover by comparing a fingerprint of the tree. Nothing is kept per file: native events say
-// directly that a tree changed, and polling keeps one number per tree.
+// cover by looking for modification times newer than its last check. Nothing is kept per file:
+// native events say directly that a tree changed, and polling keeps the time of the last check
+// per tree.
 //
 
 const std = @import("std");
 const builtin = @import("builtin");
 const event_module = @import("event.zig");
 const filter = @import("filter.zig");
-const fingerprint_module = @import("fingerprint.zig");
+const scan_module = @import("scan.zig");
 const fsevents = @import("fsevents.zig");
 const hints_module = @import("hints.zig");
 const inotify = @import("inotify.zig");
@@ -94,6 +95,15 @@ pub const Stats = struct {
 };
 
 //
+// How far behind the wall clock a file's modification time can be when it is written. File
+// systems take the time from a clock that ticks every few milliseconds (up to about 16 ms on
+// Windows), so a file written just after a check began can carry a time just before it. A check
+// covers times up to this much before it began, so such a write is left to the next check
+// instead of falling between two checks.
+//
+const mtime_lag_ns: i96 = 100 * std.time.ns_per_ms;
+
+//
 // One watched directory.
 //
 const Root = struct {
@@ -108,9 +118,15 @@ const Root = struct {
     is_polled: bool,
 
     //
-    // The tree's fingerprint at the last poll, while it is polled.
+    // The time of the last check, while the tree is polled, in nanoseconds since 1970. The next
+    // check looks for modification times after it.
     //
-    fingerprint: u64,
+    checked_ns: i96,
+
+    //
+    // Whether the tree existed at the last check, so its deletion and creation are changes.
+    //
+    is_present: bool,
 
     //
     // When the root was last reported changed, in nanoseconds on the awake clock, or null
@@ -162,7 +178,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
         // Lists directories with their entries' metadata for polling, when the backend has a
         // faster way than reading each entry's metadata.
         //
-        const lister: ?fingerprint_module.Lister = if (@hasDecl(Backend, "lister"))
+        const lister: ?scan_module.Lister = if (@hasDecl(Backend, "lister"))
             Backend.lister
         else
             null;
@@ -323,7 +339,8 @@ pub fn GenericWatcher(comptime Backend: type) type {
             self.roots.appendAssumeCapacity(.{
                 .path = owned,
                 .is_polled = false,
-                .fingerprint = 0,
+                .checked_ns = 0,
+                .is_present = false,
                 .reported_ns = null,
                 .is_pending = false,
             });
@@ -480,9 +497,10 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Watches what is under `start` in root `index`, for backends that watch each directory. The start directory is always listed. Below it, a
-        // directory is listed when it got a new watch, or always when `is_full`, so a check after
-        // dropped events reaches everything while a new directory costs only its own tree.
+        // Watches what is under `start` in root `index`, for backends that watch each directory.
+        // The start directory is always listed. Below it, a directory is listed when it got a new
+        // watch, or always when `is_full`, so a check after dropped events reaches everything
+        // while a new directory costs only its own tree.
         //
         fn sync_watches(self: *Self, index: usize, start: []const u8, is_full: bool) !void {
             assert(!Backend.is_recursive);
@@ -586,14 +604,22 @@ pub fn GenericWatcher(comptime Backend: type) type {
             if (root.is_polled) {
                 return;
             }
-            root.fingerprint = try fingerprint_module.fingerprint(
+            // The window is empty, so the walk only finds whether the tree exists and what in it
+            // cannot be read. The next check looks for times after now, so entries written
+            // before polling began do not count.
+            const start_ns = Io.Timestamp.now(self.io, .real).nanoseconds;
+            const result = try scan_module.scan(
                 self.gpa,
                 self.io,
                 root.path,
                 &self.options,
                 lister,
+                start_ns,
+                start_ns,
                 &self.list,
             );
+            root.checked_ns = start_ns;
+            root.is_present = result != .missing;
             root.is_polled = true;
         }
 
@@ -613,16 +639,22 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 if (!root.is_polled) {
                     continue;
                 }
-                const current = try fingerprint_module.fingerprint(
+                const until_ns = self.check_time_ns();
+                const result = try scan_module.scan(
                     self.gpa,
                     self.io,
                     root.path,
                     &self.options,
                     lister,
+                    root.checked_ns,
+                    until_ns,
                     null,
                 );
-                if (current != root.fingerprint) {
-                    root.fingerprint = current;
+                root.checked_ns = until_ns;
+                const is_present = result != .missing;
+                const is_changed = result == .changed or is_present != root.is_present;
+                root.is_present = is_present;
+                if (is_changed) {
                     try self.mark_changed(root);
                 }
             }
@@ -783,6 +815,15 @@ pub fn GenericWatcher(comptime Backend: type) type {
         //
         fn now_ns(self: *const Self) i96 {
             return Io.Timestamp.now(self.io, .awake).nanoseconds;
+        }
+
+        //
+        // The end of the window a check starting now covers, in nanoseconds since 1970: the wall
+        // clock, as file times are, less `mtime_lag_ns`. A time later than that is left to the
+        // next check.
+        //
+        fn check_time_ns(self: *const Self) i96 {
+            return Io.Timestamp.now(self.io, .real).nanoseconds - mtime_lag_ns;
         }
 
         //

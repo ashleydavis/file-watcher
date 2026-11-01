@@ -1,6 +1,6 @@
 # How it works
 
-The watcher reports which watched directory changed, not which files changed. That lets it keep almost nothing per file. Native events name a path, and the watcher only has to find the watched directory the path is in. Polling sums each watched tree into one 64-bit fingerprint and compares that number, with no per-file record. Reports are throttled per directory, so a burst of changes gives one report a second, not thousands.
+The watcher reports which watched directory changed, not which files changed. That lets it keep almost nothing per file. Native events name a path, and the watcher only has to find the watched directory the path is in. Polling keeps only the time of each watched tree's last check, and looks for any modification time after it. Reports are throttled per directory, so a burst of changes gives one report a second, not thousands.
 
 ## Parts
 
@@ -8,7 +8,7 @@ The watcher reports which watched directory changed, not which files changed. Th
 | --- | --- |
 | `src/root.zig` | The library's public interface. |
 | `src/watcher.zig` | Ties the parts together: roots, the quota, the throttle, polling, falling back and batches. |
-| `src/fingerprint.zig` | Sums a directory tree into one number for polling. |
+| `src/scan.zig` | Checks a directory tree for modification times after the last check, for polling. |
 | `src/hints.zig` | The set of paths a native backend reported in one batch. |
 | `src/inotify.zig` | The Linux backend. |
 | `src/fsevents.zig` | The macOS backend. |
@@ -68,11 +68,15 @@ The budget is `quota_percent` of the limit, rounded down, and `native_watches_ma
 
 ## Polling
 
-A polled root is checked every `poll_interval_ms` by walking its tree and summing a hash of every entry that is not excluded. A file's hash covers its path, size, modification time and file number. A directory's covers its path alone, because a directory's own time changes when excluded entries inside it change. The sum changes when any entry that counts is created, deleted, renamed or changed, and the watcher keeps only that one number per root. The file number catches an editor that saves by writing a new file and renaming it over the old one, even when size and time match.
+A polled root keeps one thing: the time of its last check. Every `poll_interval_ms` the watcher walks the tree and reports the root changed when any entry that is not excluded, or the root itself, has a modification time after the last check. Creating, writing or renaming a file gives it a new time, and creating, deleting or renaming an entry gives the directory it is in a new time, so every kind of change shows up. The walk stops at the first new time it finds. The root being deleted or made again is a change too, so each root also keeps whether it existed at the last check.
 
-The walk lists one directory at a time and frees each listing once it is summed. Its memory therefore grows with the number of directories waiting to be walked, not with the number of files.
+Entries in excluded directories, such as `node_modules`, are never read. Writing an excluded file, such as a `.log` file, does not count. Creating or deleting an excluded entry still changes the time of the directory holding it, so polling reports that, where native watching does not.
 
-On Windows, reading one entry's metadata opens a handle to it, which made polling a large tree cost most of a CPU core. The Windows backend therefore gives the walk a lister instead: one `NtQueryDirectoryFile` call returns the size, write time, attributes and file ID of every entry in a directory. A directory the lister cannot read is listed the generic way.
+File systems take modification times from a clock that ticks every few milliseconds, so a file written just after a check began can carry a time just before it. Each check therefore covers times up to 100 ms before it began, and leaves later ones to the next check, so no change falls between two checks. A file system whose times come from another machine's clock, such as a network share, can miss changes when that clock is behind this one by more than that. A file with a time in the future is reported once, when its time comes.
+
+Entries are checked as they are read, one at a time, and nothing is collected. Memory grows only with the number of directories waiting to be walked, not with the number of files.
+
+On Windows, reading one entry's metadata opens a handle to it, which made polling a large tree cost most of a CPU core. The Windows backend therefore gives the walk a lister instead: one `NtQueryDirectoryFile` call returns the write time and attributes of every entry in a directory, up to 64 KiB of records at a time. A directory the lister cannot read is listed the generic way.
 
 When native watching fails to start, or fails while waiting for events, the watcher reports a problem with an empty path and polls every root.
 
@@ -99,7 +103,7 @@ The CLI tool calls `wake` from its Ctrl+C and SIGTERM handlers, so it waits for 
 
 ## Memory
 
-Nothing is kept per file. Native watching keeps the path of each watch the backend holds: one per directory on Linux, and one per root on macOS and Windows. Polling keeps one number per root. On a tree of 100,000 files in 1,011 directories, the CLI tool's peak memory was 1.1 MiB watching natively and 1.0 MiB polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
+Nothing is kept per file. Native watching keeps the path of each watch the backend holds: one per directory on Linux, and one per root on macOS and Windows. Polling keeps the time of the last check per root. On a tree of 100,000 files in 1,001 directories, the CLI tool's peak memory was 1.3 MiB both watching natively and polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
 
 ## Tests
 

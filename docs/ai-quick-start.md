@@ -6,7 +6,7 @@ Facts an AI agent needs to work in this repository.
 
 - A file watcher written in Zig 0.16.0: a library (`src/root.zig`, module `file_watcher`) and a CLI tool (`src/main.zig`, binary `file-watcher`) built on it.
 - Native backends: inotify (Linux), FSEvents (macOS, loaded at run time), `ReadDirectoryChangesW` (Windows, which also lists directories with one query for polling). Other platforms poll.
-- The watcher reports which watched directory (root) changed, never which file. Native backends report paths, which map to a root; polling compares one fingerprint per root (`src/fingerprint.zig`). Nothing is kept per file. Reports of each root are throttled (`throttle_ms`, default 1000).
+- The watcher reports which watched directory (root) changed, never which file. Native backends report paths, which map to a root; polling keeps only the time of each root's last check and looks for newer modification times (`src/scan.zig`). Nothing is kept per file. Reports of each root are throttled (`throttle_ms`, default 1000).
 - [How it works](how-it-works.md) describes each file's job.
 
 ## Commands
@@ -31,7 +31,7 @@ Check that these targets compile after any change to a backend or the watcher: `
 
 - Coding rules: https://github.com/ashleydavis/agent-config/blob/HEAD/rules/general.md and https://github.com/ashleydavis/agent-config/blob/HEAD/rules/zig.md.
 - `snake_case` for functions, variables and files. Every file, type, function and field has a `//` comment block with an empty `//` line above and below.
-- Tests live beside the code: `fingerprint.zig` is tested by `fingerprint.test.zig`, imported from a `test` block at the bottom of the code file.
+- Tests live beside the code: `scan.zig` is tested by `scan.test.zig`, imported from a `test` block at the bottom of the code file.
 - Unit tests use `std.testing.allocator` and a `checkAllAllocationFailures` test wherever code allocates.
 - Line coverage stays at 100%: `scripts/coverage.sh run` fails otherwise.
 - Lines stay within 100 columns.

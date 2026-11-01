@@ -8,7 +8,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const hints_module = @import("hints.zig");
 const limit = @import("limit.zig");
-const fingerprint_module = @import("fingerprint.zig");
+const scan_module = @import("scan.zig");
 const windows_listing = @import("windows_listing.zig");
 
 const assert = std.debug.assert;
@@ -166,7 +166,7 @@ pub const ReadDirectoryChanges = struct {
     // Lists each directory with its entries' metadata in one query, which polling needs on
     // Windows, where reading each entry's metadata on its own opens a handle per entry.
     //
-    pub const lister: fingerprint_module.Lister = windows_listing.list;
+    pub const lister: scan_module.Lister = windows_listing.list;
 
     //
     // Allocates the roots.

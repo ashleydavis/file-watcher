@@ -34,7 +34,7 @@ The tool runs until Ctrl+C, a termination request (SIGTERM) or the end of the du
 | `-m`, `--max-watches <count>` | The most native watches to use, whatever the quota allows. A watched directory that needs more is polled as well. |
 | `-i`, `--poll-interval <ms>` | How often polled directories are checked, in milliseconds. Default 1000. |
 | `-t`, `--throttle <ms>` | The shortest time between two reports of the same directory, in milliseconds. Changes inside it are reported once when it ends. 0 reports every change at once. Default 1000. |
-| `--poll` | Poll every directory instead of using native watches. Use it on network file systems, where native events are unreliable. |
+| `--poll` | Poll every directory instead of using native watches. Use it on network file systems, where native events are unreliable. Polling compares modification times with this machine's clock, so the server's clock must agree with it to within 100 ms. |
 | `-d`, `--duration <ms>` | Exit after this many milliseconds. |
 | `-s`, `--stats` | Print the watch counters to standard error once the directories are added. |
 | `-h`, `--help` | Print the usage. |

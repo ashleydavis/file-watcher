@@ -78,6 +78,11 @@ pub const Faults = struct {
     open: bool = false,
 
     //
+    // Opening the directory fails as not found, as when it is deleted after it was listed.
+    //
+    open_missing: bool = false,
+
+    //
     // Reading the directory's entries fails with access denied.
     //
     read: bool = false,
@@ -224,6 +229,7 @@ pub const MockIo = struct {
             .inode = self.inode_next,
         };
         self.inode_next += 1;
+        self.touch_parent(path);
     }
 
     //
@@ -252,6 +258,18 @@ pub const MockIo = struct {
             } else {
                 index += 1;
             }
+        }
+        self.touch_parent(path);
+    }
+
+    //
+    // Sets the time of the directory holding `path` to now, as creating, deleting or renaming an
+    // entry does on a real file system.
+    //
+    fn touch_parent(self: *MockIo, path: []const u8) void {
+        const parent = std.fs.path.dirname(path) orelse return;
+        if (self.nodes.getPtr(parent)) |node| {
+            node.mtime_ns = self.clock_ns;
         }
     }
 
@@ -366,6 +384,9 @@ fn dir_open_dir(
         return error.NotDir;
     }
     const faults = self.faults_of(path);
+    if (faults.open_missing) {
+        return error.FileNotFound;
+    }
     if (faults.open) {
         return if (faults.is_canceled) error.Canceled else error.AccessDenied;
     }
