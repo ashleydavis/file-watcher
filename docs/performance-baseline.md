@@ -2,6 +2,29 @@
 
 The baseline measured on 2026-11-01 by `scripts/performance-test.sh` in CI, at commit `daf68ef`. The run is [CI run 45](https://github.com/ashleydavis/file-watcher/actions/runs/41281798960). Compare later runs against these figures.
 
+## Leader board
+
+Platforms ranked from best (1st) to worst (3rd) on each measure, from the tables below. Lower is better for every measure.
+
+| Measure | 1st | 2nd | 3rd |
+| --- | --- | --- | --- |
+| Speed: native change latency, median | Linux, 0.23 ms | Windows, 2.7 ms | macOS, 12 ms |
+| Speed: native startup | Linux, 15 ms | Windows, 26 ms | macOS, 34 ms |
+| Speed: next change after a native burst, average | Linux, 2 ms | Windows, 35 ms | macOS, 52 ms |
+| Memory: native | Linux, 0.9 MiB | Windows, 3.8 MiB | macOS, 6.1 MiB |
+| Memory: polling | Linux, 1.0 MiB | macOS, 1.8 MiB | Windows, 3.9 MiB |
+| CPU: idle while polling, over 5 s | Windows, 78 ms | Linux, 280 ms | macOS, 390 ms |
+
+Two measures are left out because every platform ties on them: native idle CPU is 0 ms everywhere, and polling latency is about one poll interval (931 to 948 ms) everywhere.
+
+Overall, adding up the places above (fewest points is best):
+
+| Place | Platform | Points | Best at | Worst at |
+| --- | --- | --- | --- | --- |
+| 1st | Linux | 7 | Native speed and memory, polling memory | Nothing |
+| 2nd | Windows | 12 | Polling CPU | Polling memory |
+| 3rd | macOS | 17 | Nothing | Native speed and memory, polling CPU |
+
 ## How it was measured
 
 - The ReleaseFast CLI tool, on GitHub's hosted runners: Ubuntu 24.04, Windows Server 2025 and macOS 15.
