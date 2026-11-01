@@ -15,6 +15,8 @@ Platforms ranked from best (1st) to worst (3rd) on each measure, from the tables
 | Memory: polling | Linux, 1.0 MiB | macOS, 1.8 MiB | Windows, 3.9 MiB |
 | CPU: idle while polling, over 5 s | Windows, 78 ms | Linux, 280 ms | macOS, 390 ms |
 
+The memory rows mostly rank memory the operating system adds to every process, not memory the watcher keeps; see [Reading the figures](#reading-the-figures).
+
 Two measures are left out because every platform ties on them: native idle CPU is 0 ms everywhere, and polling latency is about one poll interval (931 to 948 ms) everywhere.
 
 Overall, adding up the places above (fewest points is best):
@@ -103,4 +105,9 @@ Each load test makes 10,000 changes, waits until the reports stop, then times th
 - Polling latency is about one poll interval, a second, on every platform.
 - Polling keeps only the time of the last check per root and checks each entry as it is read, so its memory is close to native watching's. On macOS polling fell from 20 MiB in the previous baseline to 1.8 MiB, and on Linux from 2.9 MiB to 1.0 MiB.
 - Memory is the peak on Linux and Windows. On macOS it is the memory in use after the load tests, because macOS keeps no peak for another process.
+- Most of the memory on Windows and macOS is the operating system's, not the watcher's. What the watcher itself keeps is under 1 MiB, as Linux shows:
+  - **Windows:** about 3.8 MiB in every mode, polling included, so watching does not add to it. It is the system libraries every Windows process loads, which Windows counts in each process's memory although they are shared between processes.
+  - **macOS:** 1.8 MiB polling, but about 6 MiB in native and mixed modes. The 4 MiB difference is Apple's CoreServices framework, which native watching loads to use FSEvents and polling does not.
+  - These causes are inferred from how the figures differ between modes, not from a memory profile.
+  - The leader board's memory places therefore mostly rank each platform's own overhead.
 - Windows fits one run per mode in the time budget, because making 10,000 changes takes 2 to 5 seconds there, so its figures come from a single run.
