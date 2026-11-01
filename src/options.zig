@@ -91,6 +91,14 @@ pub const Options = struct {
     poll_interval_ms: u32 = 1000,
 
     //
+    // The shortest time between two reports of the same watched directory. The first change
+    // after a quiet spell is reported at once; further changes within this time are reported
+    // once when it ends, so a burst of changes gives one report a second instead of hundreds.
+    // 0 reports every batch at once.
+    //
+    throttle_ms: u32 = 1000,
+
+    //
     // How the watcher finds changes.
     //
     method: Method = .native,

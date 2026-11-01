@@ -29,6 +29,23 @@ var relative_root: Root = .{
 const roots = [_]*Root{ &linked_root, &relative_root };
 
 //
+// Checks that `event_path` maps to `expected`, or to nothing when `expected` is null.
+//
+fn expect_mapped(
+    arena: std.mem.Allocator,
+    mapped_roots: []const *Root,
+    event_path: []const u8,
+    expected: ?[]const u8,
+) !void {
+    const mapped = try fsevents.map_path(arena, event_path, mapped_roots);
+    if (expected) |path| {
+        try testing.expectEqualStrings(path, mapped.?);
+    } else {
+        try testing.expectEqual(@as(?[]const u8, null), mapped);
+    }
+}
+
+//
 // Goal: event paths are rewritten to start with the root as the watcher knows it, and paths
 // outside every root, or only sharing a prefix with one, are ignored.
 // Method: map the root itself, nested paths, a trailing separator and near misses.
@@ -38,12 +55,12 @@ test "map_path rewrites canonical paths to watched paths" {
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
-    try testing.expectEqualStrings("/tmp/watched", (try fsevents.map_path(arena, "/private/tmp/watched", &roots)).?);
-    try testing.expectEqualStrings("/tmp/watched/a/b.txt", (try fsevents.map_path(arena, "/private/tmp/watched/a/b.txt", &roots)).?);
-    try testing.expectEqualStrings("/tmp/watched/dir", (try fsevents.map_path(arena, "/private/tmp/watched/dir/", &roots)).?);
-    try testing.expectEqualStrings("src/main.zig", (try fsevents.map_path(arena, "/Users/me/project/src/main.zig", &roots)).?);
-    try testing.expectEqual(@as(?[]const u8, null), try fsevents.map_path(arena, "/private/tmp/watched-other/x", &roots));
-    try testing.expectEqual(@as(?[]const u8, null), try fsevents.map_path(arena, "/elsewhere", &roots));
+    try expect_mapped(arena, &roots, "/private/tmp/watched", "/tmp/watched");
+    try expect_mapped(arena, &roots, "/private/tmp/watched/a/b.txt", "/tmp/watched/a/b.txt");
+    try expect_mapped(arena, &roots, "/private/tmp/watched/dir/", "/tmp/watched/dir");
+    try expect_mapped(arena, &roots, "/Users/me/project/src/main.zig", "src/main.zig");
+    try expect_mapped(arena, &roots, "/private/tmp/watched-other/x", null);
+    try expect_mapped(arena, &roots, "/elsewhere", null);
 
     var top: Root = .{
         .path = "/",
@@ -51,8 +68,8 @@ test "map_path rewrites canonical paths to watched paths" {
         .stream = null,
     };
     const top_roots = [_]*Root{&top};
-    try testing.expectEqualStrings("/", (try fsevents.map_path(arena, "/", &top_roots)).?);
-    try testing.expectEqualStrings("/etc/hosts", (try fsevents.map_path(arena, "/etc/hosts", &top_roots)).?);
+    try expect_mapped(arena, &top_roots, "/", "/");
+    try expect_mapped(arena, &top_roots, "/etc/hosts", "/etc/hosts");
 }
 
 //
@@ -66,7 +83,8 @@ test "add_event chooses the hint for each flag" {
     try fsevents.add_event("/private/tmp/watched/a.txt", 0x00010000, &roots, &hints);
     try testing.expect(hints.paths.get("/tmp/watched/a.txt").?.entry);
 
-    try fsevents.add_event("/private/tmp/watched/deep", fsevents.flag_must_scan_sub_dirs, &roots, &hints);
+    const rescan = fsevents.flag_must_scan_sub_dirs;
+    try fsevents.add_event("/private/tmp/watched/deep", rescan, &roots, &hints);
     try testing.expect(hints.paths.get("/tmp/watched/deep").?.tree);
 
     try fsevents.add_event("/private/tmp/watched", fsevents.flag_root_changed, &roots, &hints);
@@ -90,8 +108,10 @@ test "queue_event and decode_pending carry events between threads" {
     var bytes: std.ArrayList(u8) = .empty;
     defer bytes.deinit(testing.allocator);
     var is_overflowed = false;
-    fsevents.queue_event(testing.allocator, &bytes, &is_overflowed, "/private/tmp/watched/a.txt", 0);
-    fsevents.queue_event(testing.allocator, &bytes, &is_overflowed, "/Users/me/project/src", fsevents.flag_must_scan_sub_dirs);
+    const gpa = testing.allocator;
+    const rescan = fsevents.flag_must_scan_sub_dirs;
+    fsevents.queue_event(gpa, &bytes, &is_overflowed, "/private/tmp/watched/a.txt", 0);
+    fsevents.queue_event(gpa, &bytes, &is_overflowed, "/Users/me/project/src", rescan);
     try testing.expect(!is_overflowed);
 
     var hints = HintSet.init(testing.allocator);
@@ -105,7 +125,7 @@ test "queue_event and decode_pending carry events between threads" {
     @memset(big, 'x');
     fsevents.queue_event(testing.allocator, &bytes, &is_overflowed, big, 0);
     try testing.expect(is_overflowed);
-    fsevents.queue_event(testing.allocator, &bytes, &is_overflowed, "/private/tmp/watched/b.txt", 0);
+    fsevents.queue_event(gpa, &bytes, &is_overflowed, "/private/tmp/watched/b.txt", 0);
 
     hints.clear();
     try fsevents.decode_pending(bytes.items, is_overflowed, &roots, &hints);

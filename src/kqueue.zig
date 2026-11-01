@@ -8,6 +8,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const hints_module = @import("hints.zig");
+const paths_module = @import("paths.zig");
 
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
@@ -58,12 +59,14 @@ const events_per_wait_max: u32 = 256;
 const wake_ident: usize = 1;
 
 //
-// Which checks a kqueue event calls for. Pure, so it is tested on every platform.
+// Which hints a kqueue event gives. A watched path deleted, renamed or revoked is `gone`, so its
+// watches are dropped. A directory whose entries changed is a `directory` hint, so new entries
+// get watches. A file written to is an `entry` hint. Pure, so it is tested on every platform.
 //
 pub fn checks_for(fflags: u32, is_directory: bool) Checks {
     var checks: Checks = .{};
     if (fflags & (note_delete | note_rename | note_revoke) != 0) {
-        checks.entry = true;
+        checks.gone = true;
     }
     if (is_directory) {
         if (fflags & (note_write | note_link) != 0) {
@@ -256,6 +259,32 @@ pub const Kqueue = struct {
     }
 
     //
+    // The number of paths watched.
+    //
+    pub fn watch_count(self: *const Kqueue) u32 {
+        return @intCast(self.watches.count());
+    }
+
+    //
+    // Stops watching `path` and every path under it.
+    //
+    pub fn unwatch_tree(self: *Kqueue, path: []const u8) !void {
+        assert(path.len > 0);
+        var under: std.ArrayList([]const u8) = .empty;
+        defer under.deinit(self.gpa);
+        var keys = self.watches.keyIterator();
+        while (keys.next()) |key| {
+            if (paths_module.is_within(key.*, path)) {
+                try under.append(self.gpa, key.*);
+            }
+        }
+        // `unwatch` frees each path after looking it up, and no path is used after its removal.
+        for (under.items) |watched| {
+            assert(self.unwatch(watched));
+        }
+    }
+
+    //
     // Stops watching `path`. Closing the descriptor removes its kqueue registration. Returns
     // false when the path was not watched.
     //
@@ -295,6 +324,9 @@ pub const Kqueue = struct {
             const fd: i32 = @intCast(event.ident);
             const path = self.paths.get(fd) orelse continue;
             const checks = checks_for(event.fflags, self.watches.get(path).?.is_directory);
+            if (checks.gone) {
+                try hints.add(path, .gone);
+            }
             if (checks.entry) {
                 try hints.add(path, .entry);
             }

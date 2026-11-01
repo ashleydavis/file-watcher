@@ -1,5 +1,5 @@
 //
-// Writes events, problems and counters in the CLI tool's output formats.
+// Writes changes, problems and counters in the CLI tool's output formats.
 //
 
 const std = @import("std");
@@ -7,32 +7,26 @@ const arguments = @import("arguments.zig");
 const file_watcher = @import("file_watcher");
 
 const assert = std.debug.assert;
-const Event = file_watcher.Event;
 const Format = arguments.Format;
 const Problem = file_watcher.Problem;
 const Stats = file_watcher.Stats;
 const Writer = std.Io.Writer;
 
 //
-// Writes one event in `format`.
+// Writes that the watched directory `path` changed, in `format`.
 //
-pub fn write_event(writer: *Writer, format: Format, event: *const Event) Writer.Error!void {
-    assert(event.path.len > 0);
-    const kind = @tagName(event.kind);
-    const entry_type = if (event.is_directory) "directory" else "file";
+pub fn write_change(writer: *Writer, format: Format, path: []const u8) Writer.Error!void {
+    assert(path.len > 0);
     switch (format) {
-        .text => try writer.print("{s} {s} {s}\n", .{ kind, entry_type, event.path }),
+        .text => try writer.print("changed {s}\n", .{path}),
         .json => {
-            try writer.print(
-                "{{\"kind\":\"{s}\",\"type\":\"{s}\",\"path\":",
-                .{ kind, entry_type },
-            );
-            try write_quoted(writer, event.path);
+            try writer.writeAll("{\"changed\":");
+            try write_quoted(writer, path);
             try writer.writeAll("}\n");
         },
         .yaml => {
-            try writer.print("- kind: {s}\n  type: {s}\n  path: ", .{ kind, entry_type });
-            try write_quoted(writer, event.path);
+            try writer.writeAll("- changed: ");
+            try write_quoted(writer, path);
             try writer.writeAll("\n");
         },
     }
@@ -93,12 +87,12 @@ pub fn write_quoted(writer: *Writer, text: []const u8) Writer.Error!void {
 pub fn write_problem(writer: *Writer, problem: *const Problem) Writer.Error!void {
     const action = switch (problem.action) {
         .skipped => "It is left out of the watch. Check that it is readable.",
-        .polled => "It is watched by polling instead.",
+        .polled => "Its watched directory is polled instead.",
     };
     if (problem.path.len == 0) {
         try writer.print(
             "warning: Native watching stopped: {s}. " ++
-                "Every directory is watched by polling instead.\n",
+                "Every watched directory is polled instead.\n",
             .{describe_error(problem.reason)},
         );
         return;
@@ -134,12 +128,12 @@ pub fn describe_error(err: anyerror) []const u8 {
 pub fn write_stats(writer: *Writer, stats: *const Stats) Writer.Error!void {
     assert(stats.native_watches <= stats.watch_budget);
     try writer.print(
-        "stats: directories={d} native_watches={d} polled_directories={d} " ++
+        "stats: roots={d} polled_roots={d} native_watches={d} " ++
             "watch_budget={d} native_limit={d} native_active={}\n",
         .{
-            stats.directories,
+            stats.roots,
+            stats.polled_roots,
             stats.native_watches,
-            stats.polled_directories,
             stats.watch_budget,
             stats.native_limit,
             stats.is_native_active,

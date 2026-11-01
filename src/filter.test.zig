@@ -43,3 +43,22 @@ test "is_excluded_file matches the last extension" {
     try testing.expect(!filter.is_excluded_file(&options, "log"));
     try testing.expect(!filter.is_excluded_file(&.{}, "server.log"));
 }
+
+//
+// Goal: a path is left out when a directory between the root and it is excluded, or its own
+// name is an excluded directory or has an excluded extension.
+// Method: check paths at each position against a root.
+//
+test "is_excluded_path checks every name below the root" {
+    const options: options_module.Options = .{
+        .excluded_directories = &.{"node_modules"},
+        .excluded_extensions = &.{".log"},
+    };
+    try testing.expect(!filter.is_excluded_path(&options, "/root", "/root"));
+    try testing.expect(!filter.is_excluded_path(&options, "/root", "/root/src/a.txt"));
+    try testing.expect(filter.is_excluded_path(&options, "/root", "/root/node_modules/pkg/a.js"));
+    try testing.expect(filter.is_excluded_path(&options, "/root", "/root/node_modules"));
+    try testing.expect(filter.is_excluded_path(&options, "/root", "/root/src/trace.log"));
+    const inside = "/root/node_modules/a.js";
+    try testing.expect(!filter.is_excluded_path(&options, "/root/node_modules", inside));
+}

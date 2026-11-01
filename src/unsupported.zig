@@ -53,7 +53,15 @@ pub const Unsupported = struct {
     //
     // Never called, because `init` always fails.
     //
-    pub fn unwatch(self: *Unsupported, path: []const u8) bool {
+    pub fn watch_count(self: *const Unsupported) u32 {
+        _ = self;
+        unreachable;
+    }
+
+    //
+    // Never called, because `init` always fails.
+    //
+    pub fn unwatch_tree(self: *Unsupported, path: []const u8) !void {
         _ = self;
         _ = path;
         unreachable;

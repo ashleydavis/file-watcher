@@ -290,52 +290,77 @@ modify_in_sequence() {
     done < <(find "$1" -type f -print0)
 }
 
-# Prints the number of distinct files reported with the given kind since the given line of the
-# output, among paths containing the marker.
-count_reported() {
-    local out="$1" from="$2" kind="$3" marker="$4"
-    # grep finds no line until the first change is reported, which is not an error here.
-    tail -n +"$(( from + 1 ))" "$out" | { grep "^$kind file .*$marker" || true; } | sort -u |
-        wc -l | tr -d ' '
+# Prints the number of change lines in the output so far.
+count_changes() {
+    # grep counts no line before the first change is reported, which is not an error here.
+    { grep -c "^changed " "$1" || true; } | tr -d ' '
 }
 
-# Runs one load test: makes the changes with the action, then waits until every changed file is
-# reported. Sets load_made_ms and load_done_ms to the time taken to make the changes and to have
-# them all reported, both counted from the first change, so they include the time the system took
-# to make them, and load_reported to the number of changes reported.
+# Waits until no change line has arrived for $quiet_ms. Sets settle_last_us to when the last
+# new line was seen, or 0 when none came after `before`.
+settle() {
+    local out="$1" before="$2"
+    local seen=$before
+    settle_last_us=0
+    local quiet_since=${EPOCHREALTIME/./}
+    local deadline=$(( quiet_since + load_timeout_seconds * 1000000 ))
+    while true; do
+        local now=${EPOCHREALTIME/./}
+        local count
+        count=$(count_changes "$out")
+        if [ "$count" -gt "$seen" ]; then
+            seen=$count
+            settle_last_us=$now
+            quiet_since=$now
+        fi
+        if [ $(( now - quiet_since )) -ge $(( quiet_ms * 1000 )) ] || [ "$now" -gt "$deadline" ]; then
+            return
+        fi
+        sleep 0.02
+    done
+}
+
+# Runs one load test: makes $load_count changes with the action, then waits until the reports
+# stop, then makes one more change and times its report, which shows the watcher is still in
+# step after the burst, including in directories the burst created. Sets load_made_ms to the
+# time taken to make the changes, load_settled_ms to how long after the last change the reports
+# stopped, and load_follow_ms to how long the later change took to be reported, or -1 when the
+# burst or the later change went unreported.
 load_case() {
-    local label="$1" kind="$2" out="$3" marker="$4" action="$5" target="$6"
-    if [ "$action" = create_at_once ] || [ "$action" = create_in_sequence ]; then
-        # The new directory is made first and given time to be watched, so the test measures
-        # the files inside it.
-        mkdir -p "$target"
-        sleep 1.2
-    fi
+    local label="$1" out="$2" action="$3" target="$4"
     local before
-    before=$(wc -l < "$out")
+    before=$(count_changes "$out")
     local start=${EPOCHREALTIME/./}
     "$action" "$target"
-    local made_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
-    local deadline=$(( start + load_timeout_seconds * 1000000 ))
-    local reported
-    reported=$(count_reported "$out" "$before" "$kind" "$marker")
-    while [ "$reported" -lt "$load_count" ]; do
-        if [ "${EPOCHREALTIME/./}" -gt "$deadline" ]; then
-            break
-        fi
-        sleep 0.05
-        reported=$(count_reported "$out" "$before" "$kind" "$marker")
-    done
-    load_done_ms=$(( (${EPOCHREALTIME/./} - start) / 1000 ))
-    load_made_ms=$made_ms
-    load_reported=$reported
-    if [ "$reported" -lt "$load_count" ]; then
+    local made_end=${EPOCHREALTIME/./}
+    load_made_ms=$(( (made_end - start) / 1000 ))
+    settle "$out" "$before"
+    load_settled_ms=$(( settle_last_us > made_end ? (settle_last_us - made_end) / 1000 : 0 ))
+    load_follow_ms=-1
+    if [ "$(count_changes "$out")" -le "$before" ]; then
         failed=1
-        echo "FAIL $label: $action reported $reported of $load_count changes"
+        echo "FAIL $label: $action was not reported"
+        return
     fi
+    local follow_before
+    follow_before=$(count_changes "$out")
+    local follow_start=${EPOCHREALTIME/./}
+    echo "after" >> "$target/follow-up.txt"
+    local deadline=$(( follow_start + load_timeout_seconds * 1000000 ))
+    while [ "$(count_changes "$out")" -le "$follow_before" ]; do
+        if [ "${EPOCHREALTIME/./}" -gt "$deadline" ]; then
+            failed=1
+            echo "FAIL $label: a change after $action was not reported"
+            return
+        fi
+        sleep 0.01
+    done
+    load_follow_ms=$(( (${EPOCHREALTIME/./} - follow_start) / 1000 ))
+    rm -f "$target/follow-up.txt"
+    settle "$out" "$(count_changes "$out")"
 }
 
-# The load tests, in the order they run: name, kind of change, action and label.
+# The load tests, in the order they run.
 load_names=(created_at_once created_in_sequence modified_at_once modified_in_sequence deleted_at_once deleted_in_sequence)
 declare -A load_labels=(
     [created_at_once]="created at once"
@@ -347,8 +372,8 @@ declare -A load_labels=(
 )
 
 # Totals over every run, keyed by mode, or by mode and load test, averaged at the end.
-declare -A total_startup total_memory total_idle total_median total_load_done total_load_made
-declare -A worst_latency fewest_reported counters
+declare -A total_startup total_memory total_idle total_median total_load_made
+declare -A total_load_settled total_load_follow load_failed worst_latency counters
 
 # Runs one load test and adds its results to the totals.
 record_load() {
@@ -356,12 +381,15 @@ record_load() {
     shift 2
     load_case "$label" "$@"
     local key="$label:$name"
-    total_load_done[$key]=$(( ${total_load_done[$key]:-0} + load_done_ms ))
-    total_load_made[$key]=$(( ${total_load_made[$key]:-0} + load_made_ms ))
-    if [ "$load_reported" -lt "${fewest_reported[$key]:-$load_count}" ]; then
-        fewest_reported[$key]=$load_reported
+    if [ "$load_follow_ms" -lt 0 ]; then
+        load_failed[$key]=1
+        echo "  $load_count ${load_labels[$name]}: FAILED"
+        return
     fi
-    echo "  $load_count ${load_labels[$name]}: $load_reported reported after ${load_done_ms} ms; changes made in ${load_made_ms} ms"
+    total_load_made[$key]=$(( ${total_load_made[$key]:-0} + load_made_ms ))
+    total_load_settled[$key]=$(( ${total_load_settled[$key]:-0} + load_settled_ms ))
+    total_load_follow[$key]=$(( ${total_load_follow[$key]:-0} + load_follow_ms ))
+    echo "  $load_count ${load_labels[$name]}: made in ${load_made_ms} ms; reports stopped ${load_settled_ms} ms after; next change reported in ${load_follow_ms} ms"
 }
 
 # Measures one watch method. The arguments after the label are passed to the watcher.
@@ -382,7 +410,11 @@ measure() {
 
     # Idle and load: the watcher writes events to a file.
     local out="$work/out-$label.txt"
-    exec_tool -s "$@" "${roots[@]}" > "$out" 2> "$work/err-$label.txt" &
+    # Append mode, because through the iOS simulator's launcher the tool and the launcher each
+    # write to these files with their own position, and the launcher's exit message would
+    # otherwise overwrite the start of the tool's output. The files are new for each run.
+    rm -f "$out" "$work/err-$label.txt"
+    exec_tool -s "$@" "${roots[@]}" >> "$out" 2>> "$work/err-$label.txt" &
     watcher_pid=$!
     wait_ready "$work/err-$label.txt"
     local pid
@@ -395,16 +427,20 @@ measure() {
     sleep "$idle_seconds"
     local idle_cpu=$(( $(cpu_ms "$pid") - idle_start_cpu ))
 
-    # Load: ten thousand files created, modified and deleted, each at once and in sequence.
+    # Load: ten thousand files created, modified and deleted, each at once and in sequence. The
+    # created files go into directories the burst itself creates.
     local new_dir="$load_root/load-new-$label"
     local sequence_dir="$load_root/load-sequence-$label"
+    # Reports stop once no line arrives for longer than the one second throttle and the one
+    # second poll interval.
+    quiet_ms=1500
     echo "== $label, run $run of $runs"
-    record_load "$label" created_at_once created "$out" "load-new-$label" create_at_once "$new_dir"
-    record_load "$label" created_in_sequence created "$out" "load-sequence-$label" create_in_sequence "$sequence_dir"
-    record_load "$label" modified_at_once modified "$out" "load-files-$label" modify_at_once "$load_dir"
-    record_load "$label" modified_in_sequence modified "$out" "load-files-$label" modify_in_sequence "$load_dir"
-    record_load "$label" deleted_at_once deleted "$out" "load-new-$label" delete_at_once "$new_dir"
-    record_load "$label" deleted_in_sequence deleted "$out" "load-sequence-$label" delete_in_sequence "$sequence_dir"
+    record_load "$label" created_at_once "$out" create_at_once "$new_dir"
+    record_load "$label" created_in_sequence "$out" create_in_sequence "$sequence_dir"
+    record_load "$label" modified_at_once "$out" modify_at_once "$load_dir"
+    record_load "$label" modified_in_sequence "$out" modify_in_sequence "$load_dir"
+    record_load "$label" deleted_at_once "$out" delete_at_once "$new_dir"
+    record_load "$label" deleted_in_sequence "$out" delete_in_sequence "$sequence_dir"
     local peak
     peak=$(memory_kib "$pid")
     stop_watcher
@@ -413,7 +449,10 @@ measure() {
     # Latency: a second watcher prints through a pipe, so the script wakes the moment an event
     # is printed. The clock is read with bash's own variable, so no process is started.
     local watch_fd
-    exec {watch_fd}< <(exec_tool -s "$@" "${roots[@]}" 2> "$work/latency-err-$label.txt")
+    rm -f "$work/latency-err-$label.txt"
+    # Without the throttle, so each sample measures how fast a change is found rather than the
+    # throttle holding back reports that come less than a second apart.
+    exec {watch_fd}< <(exec_tool -s -t 0 "$@" "${roots[@]}" 2>> "$work/latency-err-$label.txt")
     watcher_pid=$!
     wait_ready "$work/latency-err-$label.txt"
     sleep 1
@@ -458,7 +497,7 @@ measure() {
 
     echo "  watch counters:          ${stats#stats: }"
     echo "  startup (scan + watch):  ${startup_ms} ms"
-    echo "  memory:                  $(( peak / 1024 )) MiB"
+    echo "  memory:                  ${peak} KiB"
     echo "  idle CPU over ${idle_seconds} s:      ${idle_cpu} ms"
     echo "  single change latency:   median ${median_us} us, max ${max_us} us (${#latencies[@]} samples)"
     echo
@@ -480,19 +519,20 @@ entries=$(( file_count + directory_count + load_count * 3 ))
 for mode in "${modes[@]}"; do
     average[startup:$mode]="$(( total_startup[$mode] / runs )) ms"
     memory_average=$(( total_memory[$mode] / runs ))
-    average[memory:$mode]="$(( memory_average / 1024 )) MiB ($(( memory_average * 1024 / entries )) bytes per entry)"
+    average[memory:$mode]="${memory_average} KiB ($(( memory_average * 1024 / entries )) bytes per entry)"
     average[idle:$mode]="$(( total_idle[$mode] / runs )) ms"
     average[latency:$mode]="median $(( total_median[$mode] / runs )) us, worst ${worst_latency[$mode]:-0} us"
     average[counters:$mode]="${counters[$mode]}"
     for name in "${load_names[@]}"; do
         key="$mode:$name"
-        done_ms=$(( total_load_done[$key] / runs ))
-        made_ms=$(( total_load_made[$key] / runs ))
-        if [ "${fewest_reported[$key]:-$load_count}" -lt "$load_count" ]; then
-            average[$name:$mode]="FAILED: as few as ${fewest_reported[$key]} of $load_count reported"
-        else
-            average[$name:$mode]="all reported after ${done_ms} ms ($(( load_count * 1000 / (done_ms > 0 ? done_ms : 1) )) events/s); changes made in ${made_ms} ms"
+        if [ -n "${load_failed[$key]:-}" ]; then
+            average[$name:$mode]="FAILED: a change went unreported"
+            continue
         fi
+        made_ms=$(( total_load_made[$key] / runs ))
+        settled_ms=$(( total_load_settled[$key] / runs ))
+        follow_ms=$(( total_load_follow[$key] / runs ))
+        average[$name:$mode]="made in ${made_ms} ms; reports stopped ${settled_ms} ms after; next change reported in ${follow_ms} ms"
     done
 done
 
@@ -526,7 +566,7 @@ write_summary() {
     fi
     echo "A tree of $file_count files in $directory_count directories, measured $where. Each figure is the average of $runs runs; the latency's worst case is the slowest of every run."
     echo
-    echo "The tree is watched as two roots, the files and the load test directory. The mixed mode allows $mixed_watches native watch, so the load tests run in polled directories while the files root stays native."
+    echo "The tree is watched as two roots, the files and the load test directory, and the tool reports which of them changed. The mixed mode allows $mixed_watches native watch, so the load root is polled. Each load test makes $load_count changes, waits until the reports stop, then times the report of one more change, which shows the watcher kept up."
     echo
     echo "| Measure | Native | Mixed ($mixed_watches native watch, rest polled) | Polling (1 s interval) |"
     echo "| --- | --- | --- | --- |"
@@ -542,7 +582,7 @@ write_summary() {
     if [ "$failed" -ne 0 ]; then
         echo "**Some changes were not reported.**"
     else
-        echo "Every change was reported."
+        echo "Every burst and every later change was reported."
     fi
 }
 if [ "$summary_file" != "-" ]; then
@@ -553,4 +593,4 @@ if [ "$failed" -ne 0 ]; then
     echo "Some changes were not reported."
     exit 1
 fi
-echo "Every change was reported."
+echo "Every burst and every later change was reported."

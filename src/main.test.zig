@@ -138,11 +138,8 @@ test "run prints changes until the duration ends" {
     );
     defer result.deinit();
     try testing.expectEqual(@as(u8, 0), result.code);
-    try testing.expectEqualStrings(
-        "{\"kind\":\"created\",\"type\":\"file\",\"path\":\"/root/new.txt\"}\n",
-        result.stdout.written(),
-    );
-    try testing.expect(std.mem.startsWith(u8, result.stderr.written(), "stats: directories=1"));
+    try testing.expectEqualStrings("{\"changed\":\"/root\"}\n", result.stdout.written());
+    try testing.expect(std.mem.startsWith(u8, result.stderr.written(), "stats: roots=1"));
     try testing.expect(mock.clock_ns >= 2500 * std.time.ns_per_ms);
 }
 

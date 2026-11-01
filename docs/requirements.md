@@ -1,6 +1,6 @@
 # Requirements
 
-This checklist records every requirement of the project. Each item is ticked once it is built and checked, with how it was checked. Checks were run on 2026-10-31 on Linux x86_64.
+This checklist records every requirement of the project. Each item is ticked once it is built and checked, with how it was checked. Checks were run on 2026-11-01 on Linux x86_64.
 
 ## Language and coding rules
 
@@ -16,11 +16,13 @@ This checklist records every requirement of the project. Each item is ticked onc
 - [x] Uses the most efficient native watch method on each platform: inotify on Linux and Android, FSEvents on macOS, kqueue on iOS, `ReadDirectoryChangesW` on Windows. [How it works](how-it-works.md) explains each.
 - [x] Knows the platform's limit on the number of files and directories that can be watched (`src/limit.zig`).
 - [x] Uses a configurable quota percentage of that limit (`quota_percent`, `--quota`).
-- [x] Falls back to polling once the quota is used up. Checked by unit tests and by the smoke test that overflows a 1% quota of the real inotify limit.
+- [x] Falls back to polling once the quota is used up. Checked by unit tests and by the smoke test that caps native watches below what a tree needs.
 - [x] Falls back to polling when native watching fails, at start or while waiting. Checked by unit tests.
 - [x] Excludes configurable file types (extensions).
 - [x] Excludes configurable directories.
 - [x] By default excludes `node_modules` and other well known hefty directories.
+- [x] Reports only which watched directory changed, not which file, and keeps nothing per file (changed on 2026-11-01 at the owner's request). Checked by unit tests and by the smoke tests for every kind of change.
+- [x] Throttles reports of each watched directory, with the throttle configurable (`throttle_ms`, `--throttle`) and one second by default. Checked by unit tests on the mock clock and by a smoke test.
 
 ## CLI tool
 
@@ -28,7 +30,7 @@ This checklist records every requirement of the project. Each item is ticked onc
 - [x] Text output.
 - [x] YAML output.
 - [x] JSON output (JSON Lines).
-- [x] Exposes the library's options: excluded directories, excluded extensions, quota percentage, poll interval and forced polling.
+- [x] Exposes the library's options: excluded directories, excluded extensions, quota percentage, native watch cap, poll interval, throttle and forced polling.
 
 ## Build
 
@@ -41,7 +43,7 @@ This checklist records every requirement of the project. Each item is ticked onc
 ## Tests
 
 - [x] Unit tests with 100% coverage of the code, measured with kcov by `scripts/coverage.sh run` over the code compiled into the Linux test binaries.
-- [x] Unit tests use mocks where possible and keep file system use to a minimum: an in-memory `std.Io` file system and clock and a scripted backend. Only the inotify system call tests and one end-to-end watcher test use a temporary directory.
+- [x] Unit tests use mocks where possible and keep file system use to a minimum: an in-memory `std.Io` file system and clock and a scripted backend. Only the tests of each backend's system calls and the end-to-end watcher tests use a temporary directory.
 - [x] Smoke tests (shell script) that cover the features of the CLI tool (`scripts/smoke-test.sh`).
 - [x] Performance tests (shell script) that print stats (`scripts/performance-test.sh`).
 - [x] The CLI tool has been tested.

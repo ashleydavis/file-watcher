@@ -57,6 +57,7 @@ pub fn main(init: std.process.Init) !void {
         .excluded_extensions = &.{".log"},
         .quota_percent = 50,
         .poll_interval_ms = 1000,
+        .throttle_ms = 1000,
     });
     defer watcher.deinit();
 
@@ -69,8 +70,8 @@ pub fn main(init: std.process.Init) !void {
         for (batch.problems) |problem| {
             std.log.warn("{s}: {t} ({t})", .{ problem.path, problem.reason, problem.action });
         }
-        for (batch.events) |event| {
-            std.log.info("{t} {s}", .{ event.kind, event.path });
+        for (batch.changed) |path| {
+            std.log.info("{s} changed", .{path});
         }
     }
 }
@@ -109,10 +110,12 @@ The watcher for the platform being built for.
 
 - `init(self: *Watcher, gpa: Allocator, io: std.Io, options: *const Options) !void`: creates a watcher in place. The watcher keeps a pointer into itself, so it stays at the address given to `init`. Problems found here, such as the native method being unavailable, come back in the first batch.
 - `deinit(self: *Watcher) void`: stops every watch and frees every record.
-- `add(self: *Watcher, path: []const u8) !void`: starts watching the tree at `path`. The current contents are recorded without events. Fails with `error.FileNotFound` when the path is missing, `error.NotDir` when it is a file and `error.OverlappingRoot` when it is inside, or contains, a path added before. Trailing separators are removed.
-- `next(self: *Watcher, timeout_ms: u32) !Batch`: blocks the calling thread until a change arrives or `timeout_ms` passes, then returns the batch: at least one event or problem, or an empty batch when the time runs out. With native watching it waits in the operating system (`poll`, `kevent` or `WaitForMultipleObjects`), so a waiting thread uses no CPU and wakes as soon as a change arrives. A timeout of 0 never blocks: it returns the changes already queued. The batch stays valid until the next call to `next` or `add`.
+- `add(self: *Watcher, path: []const u8) !void`: starts watching the tree at `path`. Changes before this call are not reported. Fails with `error.FileNotFound` when the path is missing, `error.NotDir` when it is a file and `error.OverlappingRoot` when it is inside, or contains, a path added before. Trailing separators are removed.
+- `next(self: *Watcher, timeout_ms: u32) !Batch`: blocks the calling thread until a change arrives or `timeout_ms` passes, then returns the batch: at least one changed directory or problem, or an empty batch when the time runs out. With native watching it waits in the operating system (`poll`, `kevent` or `WaitForMultipleObjects`), so a waiting thread uses no CPU and wakes as soon as a change arrives. A timeout of 0 never blocks: it returns the changes already queued. The batch stays valid until the next call to `next` or `add`.
 - `wake(self: *Watcher) void`: makes a `next` that is waiting on another thread return at once with the changes found so far, or, when no `next` is waiting, makes the next call to `next` return at once. Safe to call from any thread and from a signal handler. Use it to stop a watcher thread without waiting for its timeout, for example when an app quits.
 - `stats(self: *const Watcher) Stats`: counters that show how the watcher spends its quota.
+
+The watcher keeps nothing per file. It does not say which file changed, only which watched directory did, and it reports the same directory at most once per `throttle_ms`.
 
 The timeout only limits how long `next` waits when nothing changes. A change is reported as soon as it arrives, whatever the timeout, so a long timeout costs nothing in speed. Choose it by how often your loop needs to do something other than wait: an idle loop wakes once per timeout and gets an empty batch. To stop a waiting thread, call `wake` from another thread instead of relying on the timeout. Use 0 from a timer or event loop that must never block. The largest timeout, `std.math.maxInt(u32)`, is about 49.7 days. In polling mode `next` also wakes for each poll interval, whatever the timeout.
 
@@ -124,10 +127,11 @@ The timeout only limits how long `next` waits when nothing changes. A change is 
 | --- | --- | --- |
 | `excluded_directories` | `default_excluded_directories` | Directory names to leave out, matched exactly against each directory's own name. Everything inside is left out too. |
 | `excluded_extensions` | empty | File extensions to leave out, including the dot (`".log"`), matched against the text after the last dot of each file name. |
-| `quota_percent` | `50` | The share of the platform's native watch limit to use, from 0 to 100. With 0, every directory is polled. |
-| `native_watches_max` | `null` | The most native watches to use, whatever the quota allows. Directories past it are polled. `null` means the quota alone sets the limit. |
-| `poll_interval_ms` | `1000` | How often polled directories are rescanned. Must be above 0. |
-| `method` | `.native` | `.native` uses native watches up to the quota. `.polling` polls every directory, which suits network file systems. |
+| `quota_percent` | `50` | The share of the platform's native watch limit to use, from 0 to 100. With 0, every watched directory is polled. |
+| `native_watches_max` | `null` | The most native watches to use, whatever the quota allows. A watched directory that needs more is polled as well. `null` means the quota alone sets the limit. |
+| `poll_interval_ms` | `1000` | How often polled directories are checked. Must be above 0. |
+| `throttle_ms` | `1000` | The shortest time between two reports of the same watched directory. The first change after a quiet spell is reported at once; changes within this time after a report are reported once when it ends, so none is lost. 0 reports every change at once. |
+| `method` | `.native` | `.native` uses native watches up to the quota. `.polling` polls every watched directory, which suits network file systems. |
 
 The slices in `Options` are borrowed, so keep them alive while the watcher runs. `is_valid(&options)` says whether every setting is in range; the watcher asserts it.
 
@@ -135,22 +139,14 @@ The slices in `Options` are borrowed, so keep them alive while the watcher runs.
 
 ### `Batch`
 
-- `events: []const Event`: what changed, in the order it was found.
+- `changed: []const []const u8`: the watched directories that changed, each once, exactly as they were passed to `add` without trailing separators. Any file or directory under a watched directory being created, modified, deleted or renamed counts, unless it is excluded.
 - `problems: []const Problem`: paths that could not be read or watched natively.
-
-### `Event`
-
-- `kind: EventKind`: `.created`, `.modified` or `.deleted`.
-- `path: []const u8`: the full path, built from the root path given to `add`.
-- `is_directory: bool`: whether the path is a directory.
-
-A rename is reported as `.deleted` for the old path and `.created` for the new one. A new directory is reported with everything inside it, and a deleted directory with everything that was inside it. Directories get `.created` and `.deleted` events; changes to a directory's own metadata are left out.
 
 ### `Problem`
 
 - `path: []const u8`: the path concerned, or empty when the problem concerns the whole watcher, such as the native backend failing.
 - `reason: anyerror`: why, for example `error.AccessDenied` or `error.LimitReached`.
-- `action: ProblemAction`: `.skipped` when the path is left out, `.polled` when it is watched by polling instead.
+- `action: ProblemAction`: `.skipped` when the path is left out, `.polled` when its watched directory is polled instead.
 
 `error.LimitReached` is reported once, the first time the quota or the platform limit is reached.
 
@@ -159,8 +155,8 @@ A rename is reported as `.deleted` for the old path and `.created` for the new o
 - `native_limit`: the platform's native watch limit.
 - `watch_budget`: the share of the limit this watcher may use.
 - `native_watches`: native watches in use.
-- `polled_directories`: directories watched by polling.
-- `directories`: directories watched in total.
+- `roots`: watched directories.
+- `polled_roots`: watched directories that are polled, because native watching is off or could not cover all of them.
 - `is_native_active`: whether the native backend is running.
 
 ## Android and iOS
@@ -183,7 +179,7 @@ Run the watcher on its own thread and hand the changes to the UI thread. Copy ea
 const std = @import("std");
 const file_watcher = @import("file_watcher");
 
-// Changed paths found by the watcher thread, waiting for the UI thread to take them.
+// Watched directories that changed, found by the watcher thread, waiting for the UI thread.
 const Inbox = struct {
     mutex: std.Io.Mutex = .init,
     paths: std.ArrayList([]u8) = .empty,
@@ -205,9 +201,9 @@ fn watch(
         };
         inbox.mutex.lockUncancelable(io);
         defer inbox.mutex.unlock(io);
-        for (batch.events) |event| {
+        for (batch.changed) |changed| {
             // Copy each path, because the batch is reused by the next call to `next`.
-            const path = gpa.dupe(u8, event.path) catch |err| {
+            const path = gpa.dupe(u8, changed) catch |err| {
                 std.log.err("The file watcher stopped: {t}.", .{err});
                 return;
             };
@@ -254,7 +250,7 @@ If the app already has a timer or an idle callback on the UI thread, call `next(
 ```zig
 // On each timer tick, on the UI thread.
 const batch = try watcher.next(0);
-for (batch.events) |event| {
+for (batch.changed) |path| {
     // Update the UI.
 }
 ```

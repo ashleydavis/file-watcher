@@ -1,5 +1,7 @@
 # Performance baseline
 
+> These figures are from the earlier design, which reported each changed file and kept a record of every file. Since 2026-11-01 the watcher reports only which watched directory changed, keeps nothing per file and throttles reports, and the load tests measure that instead. The figures below stay as the record of the old design until they are replaced by the first CI run of the new one.
+
 The baseline measured on 2026-10-31 by `scripts/performance-test.sh` in CI, at commit `b5500d1`. The run is [CI run 26](https://github.com/ashleydavis/file-watcher/actions/runs/41247466747). Compare later runs against these figures.
 
 ## How it was measured

@@ -14,8 +14,6 @@ pub const Options = options.Options;
 pub const Method = options.Method;
 pub const default_excluded_directories = options.default_excluded_directories;
 pub const is_valid = options.is_valid;
-pub const Event = event.Event;
-pub const EventKind = event.EventKind;
 pub const Problem = event.Problem;
 pub const ProblemAction = event.ProblemAction;
 
@@ -30,6 +28,7 @@ test {
     _ = @import("options.zig");
     _ = @import("read_directory_changes.zig");
     _ = @import("windows_listing.zig");
-    _ = @import("snapshot.zig");
+    _ = @import("fingerprint.zig");
+    _ = @import("paths.zig");
     _ = @import("watcher.zig");
 }

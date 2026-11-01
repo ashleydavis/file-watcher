@@ -1,46 +1,41 @@
 # How it works
 
-The watcher keeps a record of every watched directory in memory and compares it with the file system. The native watch method of each platform says where to look, and polling covers every directory beyond the reach of the native method. Every change is found by the same comparison, so all platforms and both methods report changes the same way.
+The watcher reports which watched directory changed, not which files changed. That lets it keep almost nothing per file. Native events name a path, and the watcher only has to find the watched directory the path is in. Polling sums each watched tree into one 64-bit fingerprint and compares that number, with no per-file record. Reports are throttled per directory, so a burst of changes gives one report a second, not thousands.
 
 ## Parts
 
 | File | Job |
 | --- | --- |
 | `src/root.zig` | The library's public interface. |
-| `src/watcher.zig` | Ties the parts together: roots, the quota, polling, falling back and batches. |
-| `src/snapshot.zig` | The in-memory record of each directory's entries, and the comparison that produces events. |
-| `src/hints.zig` | The set of paths a native backend says may have changed in one batch. |
+| `src/watcher.zig` | Ties the parts together: roots, the quota, the throttle, polling, falling back and batches. |
+| `src/fingerprint.zig` | Sums a directory tree into one number for polling. |
+| `src/hints.zig` | The set of paths a native backend reported in one batch. |
 | `src/inotify.zig` | The Linux and Android backend. |
 | `src/fsevents.zig` | The macOS backend. |
 | `src/kqueue.zig` | The iOS backend. |
 | `src/read_directory_changes.zig` | The Windows backend. |
-| `src/windows_listing.zig` | Lists a Windows directory with every entry's metadata in one query. |
+| `src/windows_listing.zig` | Lists a Windows directory with every entry's metadata in one query, for polling. |
 | `src/unsupported.zig` | The backend for other platforms, which always polls. |
 | `src/limit.zig` | The platform's native watch limit and the quota arithmetic. |
 | `src/filter.zig` | Which directories and files are left out. |
+| `src/paths.zig` | Whether a path is inside a watched directory. |
 | `src/options.zig` | The watcher settings and their defaults. |
-| `src/event.zig` | Events, problems and the list that collects them for one batch. |
+| `src/event.zig` | The changed directories and problems of one batch. |
 | `src/main.zig` | The CLI tool. |
 | `src/arguments.zig` | The CLI tool's command line. |
 | `src/output.zig` | The CLI tool's text, JSON and YAML output. |
 
-## The snapshot
+## From a native event to a report
 
-For each watched directory the snapshot keeps a map from entry name to a stamp: kind, size, modification time and inode number. The snapshot records only entries that pass the exclusion rules, so the watcher reads and watches only the entries the caller wants.
+A backend reports the paths that changed. For each path, the watcher:
 
-The snapshot answers three kinds of question:
+1. Finds the watched directory (the root) the path is in. A path in none of them is ignored.
+2. Ignores the path when a directory between the root and it is excluded, such as `node_modules`, or the path's own name is an excluded directory or has an excluded extension.
+3. Reports the root as changed, unless the throttle holds the report back.
 
-- Check one path: read its metadata and compare it with the stamp in its parent's map. A new name is `created`, a missing one is `deleted`, and a file whose size, time or inode changed is `modified`. The inode catches editors that save by writing a new file and renaming it over the old one.
-- Rescan one directory: list it, check every entry and report every name in the record that is missing from the listing.
-- Rescan a tree: rescan every recorded directory under a path.
-
-A new directory is listed straight away and its contents reported as created, so files written into it before its watch started are reported too. A deleted directory is removed from the record together with everything under it, and each entry is reported as deleted.
-
-When a directory cannot be read, the snapshot reports a problem and keeps the directory's old record.
+For backends that need one watch per directory, the backend also says when a directory appeared (`directory`), disappeared (`gone`) or when events were dropped (`tree`). The watcher then adds watches for the new directory and everything under it, drops the watches under the removed one, or checks every watch under the path.
 
 ## Native backends
-
-A backend only says which paths may have changed. The watcher collects those paths for one batch, merging repeats, then asks the snapshot to check each one. A burst of raw events for one file costs one check.
 
 | Platform | Method | One watch covers | Limit |
 | --- | --- | --- | --- |
@@ -51,21 +46,21 @@ A backend only says which paths may have changed. The watcher collects those pat
 
 ### inotify
 
-Each directory gets one watch. inotify reports the name of each entry that is created, deleted, moved, written or changed, and the watcher checks that path. When the kernel's event queue overflows, every watched directory is rescanned. Events are read in batches of up to 64 KiB.
+Each directory that is not excluded gets one watch. inotify names each entry that is created, deleted, moved, written or changed. A directory created or moved in gets watches for itself and everything under it. One deleted or moved away loses its watches. When the kernel's event queue overflows, every watched tree is reported changed and its watches are checked. Events are read in batches of up to 64 KiB.
 
 ### FSEvents
 
-Each root gets one FSEvents stream, which reports every created, changed or deleted file and directory under it by path, with no open descriptor per entry. Streams deliver their events on a dispatch queue thread, which queues them and triggers a kqueue user event; `next` waits on that kqueue, which `wake` triggers too. FSEvents reports paths with symbolic links resolved, such as `/private/tmp` for `/tmp`, so each event path is rewritten to start with the root as it was added. When FSEvents drops events, or more than 4 MiB of event paths queue up between batches, every root is rescanned.
+Each root gets one FSEvents stream, which reports every changed file and directory under it by path, with no open descriptor per entry. Streams deliver their events on a dispatch queue thread. That thread queues them and triggers a kqueue user event, and `next` waits on that kqueue, which `wake` triggers too. FSEvents resolves symbolic links in the paths it reports, such as `/private/tmp` for `/tmp`, so each path is rewritten to start with the root as it was added. When FSEvents drops events, or more than 4 MiB of paths queue up between batches, every root is reported changed.
 
-CoreServices, which provides FSEvents, is loaded when the watcher starts rather than linked, so macOS builds need no Apple SDK and cross compile from any machine. If it cannot be loaded, the watcher reports a problem and polls.
+CoreServices, which provides FSEvents, is loaded when the watcher starts rather than linked. That way macOS builds need no Apple SDK and cross compile from any machine. If it cannot be loaded, the watcher reports a problem and polls.
 
 ### kqueue
 
-kqueue watches open descriptors. A directory's descriptor reports that its entries changed, without names, so the watcher rescans that directory. A file's descriptor reports writes to that file. Files need their own descriptors, so on iOS the quota covers files as well as directories. FSEvents is unavailable to iOS apps, so iOS uses kqueue.
+kqueue watches open descriptors. A directory's descriptor reports that its entries changed, and the watcher then watches any new entries. A file's descriptor reports writes to that file. Files need their own descriptors, so on iOS the quota covers files as well as directories. FSEvents is unavailable to iOS apps, so iOS uses kqueue.
 
 ### ReadDirectoryChangesW
 
-Each root gets one directory handle and one asynchronous read covering its whole tree, with a 64 KiB buffer. Windows reports the relative path of each change, and the watcher checks that path. When the buffer overflows, the whole tree is rescanned. One `WaitForMultipleObjects` call waits on every root at once, plus the event `wake` sets. One call covers 64 handles, which limits a watcher to 63 roots.
+Each root gets one directory handle and one asynchronous read covering its whole tree, with a 64 KiB buffer. Windows reports the relative path of each change. When the buffer overflows, the root is reported changed. One `WaitForMultipleObjects` call waits on every root at once, plus the event `wake` sets. One call covers 64 handles, which limits a watcher to 63 roots.
 
 ## The quota
 
@@ -76,23 +71,32 @@ At start the watcher reads the platform limit:
 - iOS: the limit on open files. The watcher first raises the soft limit to the hard limit, capped at `OPEN_MAX` (10240), as the Go runtime does, so the quota counts every descriptor the app may open.
 - Windows: 63.
 
-The budget is `quota_percent` of the limit, rounded down. Each native watch takes one from the budget, and each removed watch gives one back. When the budget is used up, the next directory is polled instead, and a file's directory is polled when the file cannot get its own watch. On Windows and macOS, where one watch covers a whole tree, a root that cannot get its watch has every directory under it polled, including directories created later. When the platform refuses a watch for lack of resources before the budget is used up, the budget drops to the number in use. The first time either happens, a `LimitReached` problem is reported.
+The budget is `quota_percent` of the limit, rounded down, and `native_watches_max` caps it further. When a root needs more watches than the budget has left, it keeps the watches it got and is polled as well, so changes in the directories that missed out are still found. When the platform refuses a watch for lack of resources before the budget is used up, the budget drops to the number in use. The first time either happens, a `LimitReached` problem is reported.
 
 ## Polling
 
-Polled directories are rescanned every `poll_interval_ms`. A rescan lists the directory and reads the metadata of each entry, so its cost grows with the number of entries. On Windows, reading one entry's metadata opens a handle to it, so the Windows backend gives the snapshot a lister instead: one `NtQueryDirectoryFile` call returns the size, write time, attributes and file ID of every entry in a directory. Single paths are checked through the same query, limited to one name, so every stamp on Windows comes from the same source. New directories found by polling get a native watch when the budget allows.
+A polled root is checked every `poll_interval_ms` by walking its tree and summing a hash of every entry that is not excluded. A file's hash covers its path, size, modification time and file number. A directory's covers its path alone, because a directory's own time changes when excluded entries inside it change. The sum changes when any entry that counts is created, deleted, renamed or changed, and the watcher keeps only that one number per root. The file number catches an editor that saves by writing a new file and renaming it over the old one, even when size and time match.
 
-When native watching fails to start, or fails while waiting for events, the watcher reports a problem with an empty path, stops the backend and polls every directory.
+The walk lists one directory at a time and frees each listing once it is summed. Its memory therefore grows with the number of directories waiting to be walked, not with the number of files.
+
+On Windows, reading one entry's metadata opens a handle to it, which made polling a large tree cost most of a CPU core. The Windows backend therefore gives the walk a lister instead: one `NtQueryDirectoryFile` call returns the size, write time, attributes and file ID of every entry in a directory. A directory the lister cannot read is listed the generic way.
+
+When native watching fails to start, or fails while waiting for events, the watcher reports a problem with an empty path and polls every root.
+
+## The throttle
+
+`throttle_ms`, one second by default, is the shortest time between two reports of the same root. The first change after a quiet spell is reported at once. Changes within the throttle time after a report are held back, and the root is reported once when the time ends. Nothing is lost: a held-back change is always reported. A throttle of 0 reports every batch at once.
 
 ## Batches
 
-`next` runs one loop until it has events or problems, or the timeout ends:
+`next` runs one loop until a root changed, a problem was found or the timeout ends:
 
-1. Rescan polled directories when the poll interval has passed.
-2. Wait for native events until the next poll or the timeout, whichever is first. With no native watches, sleep instead.
-3. Check every path the backend reported and record the events.
+1. Report roots whose held-back change has waited out the throttle.
+2. Check polled roots when the poll interval has passed.
+3. Wait for native events until the next poll, the next held-back report or the timeout, whichever is first. With no native watches, sleep instead.
+4. Turn every path the backend reported into a changed root, and keep watches in step.
 
-New directories in the events get watches and deleted ones lose them, before the batch is returned. Event paths live in an arena that is reset at the start of the next batch, so a steady stream of batches stops allocating once the arena fits a typical batch.
+The batch lives in an arena that is reset at the start of the next batch.
 
 ## Waking a waiting watcher
 
@@ -102,11 +106,11 @@ The CLI tool calls `wake` from its Ctrl+C and SIGTERM handlers, so it waits for 
 
 ## Memory
 
-Each recorded entry costs its stamp, its name and its slot in its directory's hash map. On a tree of 100000 files in 1011 directories, peak memory was 12 MiB, about 127 bytes per entry (measured 2026-10-31 with a ReleaseFast build on Linux x86_64).
+Nothing is kept per file. Native watching keeps the path of each watch the backend holds. On Linux that is one per directory, on macOS and Windows one per root, and on iOS one per directory and file. Polling keeps one number per root. On a tree of 100,000 files in 1,011 directories, the CLI tool's peak memory was 1.1 MiB watching natively and 1.0 MiB polling (measured on 2026-11-01 with a ReleaseFast build on Linux x86_64).
 
 ## Tests
 
-- Unit tests run the real code against an in-memory file system and clock, behind the standard `std.Io` interface, and a scripted backend that can report any hint or fail on demand. The inotify backend is also tested against the kernel in a temporary directory.
+- Unit tests run the real code against an in-memory file system and clock, behind the standard `std.Io` interface, and a scripted backend that can report any hint or fail on demand. Each native backend is also tested against a real directory on its own platform.
 - `scripts/coverage.sh run` measures line coverage with kcov and fails below 100%. Coverage counts the code compiled into the test binaries on the machine running it.
 - `scripts/smoke-test.sh` drives the built CLI tool against real directories.
-- `scripts/performance-test.sh` measures startup, memory, idle CPU, latency and load: ten thousand files created, modified and deleted, each at once and in sequence, in three modes: native, mixed (some directories native, the rest polled) and polling.
+- `scripts/performance-test.sh` measures startup, memory, idle CPU, latency and load in three modes: native, mixed (native watches run out, so roots are polled) and polling. Each load test makes ten thousand changes (created, modified and deleted, each at once and in sequence), waits for the reports to stop, then checks that one more change is reported.

@@ -5,8 +5,9 @@ A fast file watcher written in Zig: a library for Zig projects and a CLI tool bu
 - Uses the native watch method of each platform: inotify on Linux and Android, FSEvents on macOS, kqueue on iOS, and `ReadDirectoryChangesW` on Windows.
 - Knows the platform's limit on native watches, uses a configurable percentage of it and polls every directory beyond that, or every directory when native watching fails.
 - Leaves out `node_modules`, `.git` and other well known heavy directories by default. Excluded directories and file extensions are configurable.
-- Reports created, modified and deleted files and directories in batches.
-- The CLI tool prints events as text, JSON Lines or YAML.
+- Reports which watched directory changed whenever a file or directory under it is created, modified, deleted or renamed. It keeps nothing per file, so memory stays around 1 MiB even for 100,000 files.
+- Throttles reports of each directory to one a second by default, with the throttle configurable.
+- The CLI tool prints changes as text, JSON Lines or YAML.
 
 ## Docs
 
@@ -150,7 +151,7 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Run the performance tests
 
-The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and load results (ten thousand files created, modified and deleted, each at once and in sequence) in three modes: native (every directory watched natively), mixed (native watches run out, so most directories are polled) and polling (every directory polled). CI runs the same test on every platform. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
+The performance tests generate a tree of files and print startup time, memory, idle CPU, change latency and load results in three modes: native, mixed (native watches run out, so the watched directories are polled) and polling. Each load test makes ten thousand changes (created, modified and deleted, each at once and in sequence), waits until the reports stop, then checks that one more change is reported. CI runs the same test on every platform. They run on Linux, macOS and Windows (Git Bash) with bash 5 or later.
 
 ```bash
 zig build -Doptimize=ReleaseFast

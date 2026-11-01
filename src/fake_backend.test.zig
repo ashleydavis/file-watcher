@@ -148,12 +148,28 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         }
 
         //
-        // Drops a watch. Returns false for a path that was not watched.
+        // The number of paths watched.
         //
-        pub fn unwatch(self: *Self, path: []const u8) bool {
-            const removed = self.watched.fetchSwapRemove(path) orelse return false;
-            self.gpa.free(removed.key);
-            return true;
+        pub fn watch_count(self: *const Self) u32 {
+            return @intCast(self.watched.count());
+        }
+
+        //
+        // Drops the watch of `path` and of every path under it.
+        //
+        pub fn unwatch_tree(self: *Self, path: []const u8) !void {
+            var index: usize = 0;
+            while (index < self.watched.count()) {
+                const key = self.watched.keys()[index];
+                const is_under = std.mem.eql(u8, key, path) or
+                    (std.mem.startsWith(u8, key, path) and std.fs.path.isSep(key[path.len]));
+                if (is_under) {
+                    self.watched.swapRemoveAt(index);
+                    self.gpa.free(key);
+                } else {
+                    index += 1;
+                }
+            }
         }
 
         //

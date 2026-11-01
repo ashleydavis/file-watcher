@@ -1,31 +1,33 @@
 //
-// Watches directory trees for changes. It picks the platform's native watch method, keeps the
-// number of native watches within a quota of the platform limit and polls every directory the
-// native method cannot cover. Changes come back in batches from `next`.
+// Watches directory trees and reports which of them changed. It uses the platform's native watch
+// method within a quota of the platform limit, and polls a tree the native method cannot fully
+// cover by comparing a fingerprint of the tree. Nothing is kept per file: native events say
+// directly that a tree changed, and polling keeps one number per tree.
 //
 
 const std = @import("std");
 const builtin = @import("builtin");
 const event_module = @import("event.zig");
+const filter = @import("filter.zig");
+const fingerprint_module = @import("fingerprint.zig");
+const fsevents = @import("fsevents.zig");
 const hints_module = @import("hints.zig");
 const inotify = @import("inotify.zig");
-const fsevents = @import("fsevents.zig");
 const kqueue = @import("kqueue.zig");
 const limit = @import("limit.zig");
 const options_module = @import("options.zig");
+const paths = @import("paths.zig");
 const read_directory_changes = @import("read_directory_changes.zig");
-const snapshot_module = @import("snapshot.zig");
 const unsupported = @import("unsupported.zig");
 
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
-const Event = event_module.Event;
+const Dir = std.Io.Dir;
 const EventList = event_module.EventList;
 const HintSet = hints_module.HintSet;
 const Options = options_module.Options;
 const Problem = event_module.Problem;
-const Snapshot = snapshot_module.Snapshot;
 
 //
 // The native backend of the platform being built for.
@@ -44,14 +46,13 @@ pub const NativeBackend = switch (builtin.os.tag) {
 pub const Watcher = GenericWatcher(NativeBackend);
 
 //
-// The changes found in one call to `next`. The slices stay valid until the next call to `next`
-// or `add`.
+// What one call to `next` found. The slices stay valid until the next call to `next` or `add`.
 //
 pub const Batch = struct {
     //
-    // What changed, in the order it was found.
+    // The watched directories that changed, each once, exactly as they were passed to `add`.
     //
-    events: []const Event,
+    changed: []const []const u8,
 
     //
     // Paths that could not be read or watched natively, so the caller can tell the user.
@@ -79,19 +80,76 @@ pub const Stats = struct {
     native_watches: u32,
 
     //
-    // Directories watched by polling.
+    // Watched directories.
     //
-    polled_directories: u32,
+    roots: u32,
 
     //
-    // Directories watched in total.
+    // Watched directories that are polled, because native watching cannot cover them fully.
     //
-    directories: u32,
+    polled_roots: u32,
 
     //
     // Whether the native backend is running.
     //
     is_native_active: bool,
+};
+
+//
+// One watched directory.
+//
+const Root = struct {
+    //
+    // The directory as it was passed to `add`, without trailing separators. Owned by the watcher.
+    //
+    path: []const u8,
+
+    //
+    // Whether the tree is polled, because native watching is off or could not cover all of it.
+    //
+    is_polled: bool,
+
+    //
+    // The tree's fingerprint at the last poll, while it is polled.
+    //
+    fingerprint: u64,
+
+    //
+    // When the root was last reported changed, in nanoseconds on the awake clock, or null
+    // before its first report.
+    //
+    reported_ns: ?i96,
+
+    //
+    // Whether the root changed while its throttle held the report back. It is reported when the
+    // throttle time has passed.
+    //
+    is_pending: bool,
+};
+
+//
+// How an attempt to watch one path ended.
+//
+const WatchResult = enum {
+    //
+    // The path got a new native watch.
+    //
+    new,
+
+    //
+    // The path was watched already.
+    //
+    existing,
+
+    //
+    // The path could not be watched, and the reason was reported where it matters.
+    //
+    failed,
+
+    //
+    // The quota is used up, so the root is now polled and its walk can stop.
+    //
+    quota,
 };
 
 //
@@ -101,6 +159,15 @@ pub const Stats = struct {
 pub fn GenericWatcher(comptime Backend: type) type {
     return struct {
         const Self = @This();
+
+        //
+        // Lists directories with their entries' metadata for polling, when the backend has a
+        // faster way than reading each entry's metadata.
+        //
+        const lister: ?fingerprint_module.Lister = if (@hasDecl(Backend, "lister"))
+            Backend.lister
+        else
+            null;
 
         //
         // Allocates every record the watcher keeps.
@@ -113,15 +180,9 @@ pub fn GenericWatcher(comptime Backend: type) type {
         io: Io,
 
         //
-        // The caller's settings. The snapshot points at this copy, which is why the watcher is
-        // created in place and must not move.
+        // The caller's settings.
         //
         options: Options,
-
-        //
-        // The record of every watched directory.
-        //
-        snapshot: Snapshot,
 
         //
         // The native backend, valid while `is_backend_started` is set.
@@ -163,34 +224,28 @@ pub fn GenericWatcher(comptime Backend: type) type {
         watch_budget: u32,
 
         //
-        // Native watches in use.
-        //
-        watch_count: u32,
-
-        //
-        // Whether the platform limit has been reported, so it is reported once rather than once
-        // per directory that falls back to polling.
+        // Whether the quota being used up has been reported, so it is reported once.
         //
         is_limit_reported: bool,
 
         //
-        // Directories watched by polling. Keys are owned by this map.
+        // The watched directories.
         //
-        polled: std.StringArrayHashMapUnmanaged(void),
+        roots: std.ArrayList(Root),
 
         //
-        // When the polled directories are next rescanned, in nanoseconds on the awake clock.
+        // When polled roots are next checked, in nanoseconds on the awake clock.
         //
         poll_due_ns: i96,
 
         //
-        // The current batch of events and problems.
+        // The current batch.
         //
         list: EventList,
 
         //
-        // Whether `list` holds a batch already handed to the caller, which is cleared before any
-        // new event is recorded.
+        // Whether `list` holds a batch already handed to the caller, which is cleared before
+        // anything new is recorded.
         //
         is_list_returned: bool,
 
@@ -209,7 +264,6 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 .gpa = gpa,
                 .io = io,
                 .options = options.*,
-                .snapshot = undefined,
                 .backend = undefined,
                 .is_backend_started = false,
                 .is_native_active = false,
@@ -217,23 +271,17 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 .wake_count_handled = 0,
                 .native_limit = 0,
                 .watch_budget = 0,
-                .watch_count = 0,
                 .is_limit_reported = false,
-                .polled = .empty,
+                .roots = .empty,
                 .poll_due_ns = 0,
                 .list = EventList.init(gpa),
                 .is_list_returned = false,
                 .hints = HintSet.init(gpa),
             };
-            self.snapshot = Snapshot.init(gpa, io, &self.options);
-            if (@hasDecl(Backend, "lister")) {
-                self.snapshot.lister = Backend.lister;
-            }
             self.poll_due_ns = self.now_ns() + self.poll_interval_ns();
             if (self.options.method == .native) {
                 try self.start_native();
             }
-            assert(self.watch_count == 0);
         }
 
         //
@@ -243,42 +291,60 @@ pub fn GenericWatcher(comptime Backend: type) type {
             if (self.is_backend_started) {
                 self.backend.deinit();
             }
-            for (self.polled.keys()) |path| {
-                self.gpa.free(path);
+            for (self.roots.items) |root| {
+                self.gpa.free(root.path);
             }
-            self.polled.deinit(self.gpa);
-            self.snapshot.deinit();
+            self.roots.deinit(self.gpa);
             self.list.deinit();
             self.hints.deinit();
             self.* = undefined;
         }
 
         //
-        // Starts watching the directory tree at `path`. Fails when the path is not a directory
-        // or overlaps a tree added before.
+        // Starts watching the directory tree at `path`. Fails with `error.FileNotFound` when the
+        // path is missing, `error.NotDir` when it is not a directory and `error.OverlappingRoot`
+        // when it is inside, or contains, a directory added before.
         //
         pub fn add(self: *Self, path: []const u8) !void {
             assert(path.len > 0);
             self.clear_returned_batch();
-            try self.snapshot.add_root(path, &self.list);
-            const root = snapshot_module.trim_root(path);
-            assert(self.snapshot.contains_directory(root));
-            var directories = self.snapshot.directories.iterator();
-            while (directories.next()) |entry| {
-                const directory_path = entry.key_ptr.*;
-                if (!snapshot_module.is_within(directory_path, root)) {
-                    continue;
-                }
-                try self.watch_path(directory_path, true);
-                if (Backend.watches_files) {
-                    try self.watch_files(directory_path, &entry.value_ptr.children);
+            const trimmed = paths.trim_root(path);
+            const stat = try Dir.cwd().statFile(self.io, trimmed, .{
+                .follow_symlinks = true,
+            });
+            if (stat.kind != .directory) {
+                return error.NotDir;
+            }
+            for (self.roots.items) |root| {
+                if (paths.is_within(trimmed, root.path) or paths.is_within(root.path, trimmed)) {
+                    return error.OverlappingRoot;
                 }
             }
+            try self.roots.ensureUnusedCapacity(self.gpa, 1);
+            const owned = try self.gpa.dupe(u8, trimmed);
+            self.roots.appendAssumeCapacity(.{
+                .path = owned,
+                .is_polled = false,
+                .fingerprint = 0,
+                .reported_ns = null,
+                .is_pending = false,
+            });
+            const index = self.roots.items.len - 1;
+            if (!self.is_native_active) {
+                try self.poll_root(index);
+                return;
+            }
+            if (Backend.is_recursive) {
+                _ = try self.watch_one(index, owned, true);
+                return;
+            }
+            try self.sync_watches(index, owned, true);
         }
 
         //
-        // Waits up to `timeout_ms` for changes and returns them. Returns as soon as there is at
-        // least one event or problem, or an empty batch when the time runs out.
+        // Waits up to `timeout_ms` for changes and returns them. Returns as soon as a watched
+        // directory changed or a problem was found, or with an empty batch when the time runs
+        // out or `wake` is called.
         //
         pub fn next(self: *Self, timeout_ms: u32) !Batch {
             self.clear_returned_batch();
@@ -287,9 +353,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
             var rounds: u32 = 0;
             while (true) : (rounds += 1) {
                 assert(rounds < std.math.maxInt(u32));
-                if (self.has_batch()) {
-                    break;
-                }
+                try self.report_pending();
                 try self.poll_if_due();
                 if (self.has_batch()) {
                     break;
@@ -298,8 +362,11 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 // still collects the events already queued instead of skipping them.
                 const current_ns = self.now_ns();
                 var wait_ns = @max(deadline_ns - current_ns, 0);
-                if (self.polled.count() > 0) {
+                if (self.polled_count() > 0) {
                     wait_ns = @min(wait_ns, @max(self.poll_due_ns - current_ns, 0));
+                }
+                if (self.pending_due_ns()) |due_ns| {
+                    wait_ns = @min(wait_ns, @max(due_ns - current_ns, 0));
                 }
                 try self.wait_for_changes(wait_ns, wake_count);
                 try self.apply_hints();
@@ -317,22 +384,15 @@ pub fn GenericWatcher(comptime Backend: type) type {
             }
             self.is_list_returned = true;
             return .{
-                .events = self.list.events.items,
+                .changed = self.list.changed.items,
                 .problems = self.list.problems.items,
             };
         }
 
         //
-        // Whether the current batch holds anything to hand to the caller.
-        //
-        fn has_batch(self: *const Self) bool {
-            return self.list.events.items.len + self.list.problems.items.len > 0;
-        }
-
-        //
-        // Makes a call to `next` that is waiting, or the next call to start, return at once with
-        // the changes found so far. Safe to call from any thread, so another thread can stop a
-        // thread that waits in `next`, for example when an app quits.
+        // Makes a call to `next` that is waiting, or the next call to start, return at once.
+        // Safe to call from any thread, so another thread can stop a thread that waits in `next`,
+        // for example when an app quits.
         //
         pub fn wake(self: *Self) void {
             _ = self.wake_count.fetchAdd(1, .release);
@@ -346,15 +406,46 @@ pub fn GenericWatcher(comptime Backend: type) type {
         // Counters that show how the watcher is spending its quota.
         //
         pub fn stats(self: *const Self) Stats {
-            assert(self.watch_count <= self.watch_budget);
+            const watches = self.native_watch_count();
+            assert(watches <= self.watch_budget);
             return .{
                 .native_limit = self.native_limit,
                 .watch_budget = self.watch_budget,
-                .native_watches = self.watch_count,
-                .polled_directories = @intCast(self.polled.count()),
-                .directories = self.snapshot.directory_count(),
+                .native_watches = watches,
+                .roots = @intCast(self.roots.items.len),
+                .polled_roots = self.polled_count(),
                 .is_native_active = self.is_native_active,
             };
+        }
+
+        //
+        // Whether the current batch holds anything to hand to the caller.
+        //
+        fn has_batch(self: *const Self) bool {
+            return self.list.changed.items.len + self.list.problems.items.len > 0;
+        }
+
+        //
+        // The number of native watches in use.
+        //
+        fn native_watch_count(self: *const Self) u32 {
+            if (!self.is_native_active) {
+                return 0;
+            }
+            return self.backend.watch_count();
+        }
+
+        //
+        // The number of polled roots.
+        //
+        fn polled_count(self: *const Self) u32 {
+            var count: u32 = 0;
+            for (self.roots.items) |root| {
+                if (root.is_polled) {
+                    count += 1;
+                }
+            }
+            return count;
         }
 
         //
@@ -394,186 +485,139 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Watches every file in a directory, for backends that need a watch per file.
+        // Watches what is under `start` in root `index`, for backends that watch each directory
+        // (and, for some, each file). The start directory is always listed. Below it, a
+        // directory is listed when it got a new watch, or always when `is_full`, so a check after
+        // dropped events reaches everything while a new directory costs only its own tree.
         //
-        fn watch_files(
-            self: *Self,
-            directory_path: []const u8,
-            children: *const std.StringHashMapUnmanaged(snapshot_module.Stamp),
-        ) !void {
-            assert(Backend.watches_files);
-            var buffer: [std.fs.max_path_bytes]u8 = undefined;
-            var files = children.iterator();
-            while (files.next()) |child| {
-                if (child.value_ptr.kind == .directory) {
-                    continue;
-                }
-                var allocator = std.heap.FixedBufferAllocator.init(&buffer);
-                const file_path = try std.fs.path.join(allocator.allocator(), &.{
-                    directory_path,
-                    child.key_ptr.*,
-                });
-                try self.watch_path(file_path, false);
-            }
-        }
+        fn sync_watches(self: *Self, index: usize, start: []const u8, is_full: bool) !void {
+            assert(!Backend.is_recursive);
+            var arena_state: std.heap.ArenaAllocator = .init(self.gpa);
+            defer arena_state.deinit();
+            const arena = arena_state.allocator();
 
-        //
-        // Watches `path` natively when the backend needs a watch for it and the quota allows,
-        // and polls its directory otherwise.
-        //
-        fn watch_path(self: *Self, path: []const u8, is_directory: bool) !void {
-            assert(path.len > 0);
-            if (!self.is_native_active) {
-                if (is_directory) {
-                    try self.poll_directory(path);
+            var pending: std.ArrayList([]const u8) = .empty;
+            try pending.append(arena, start);
+            var walked: u32 = 0;
+            while (pending.pop()) |path| {
+                assert(walked < std.math.maxInt(u32));
+                walked += 1;
+                switch (try self.watch_one(index, path, true)) {
+                    .quota => return,
+                    .failed => continue,
+                    .existing => if (path.ptr != start.ptr and !is_full) continue,
+                    .new => {},
                 }
-                return;
-            }
-            if (Backend.is_recursive) {
-                // A directory below a root is covered by the root's tree watch, unless the root
-                // is polled, in which case every directory under it is polled.
-                // A path whose root was deleted earlier in the batch needs no watch.
-                const root = self.snapshot.root_of(path) orelse return;
-                if (!std.mem.eql(u8, root, path)) {
-                    if (is_directory) {
-                        if (self.polled.contains(root)) {
-                            try self.poll_directory(path);
-                        }
-                    }
-                    return;
-                }
-            }
-            if (!is_directory) {
-                if (!Backend.watches_files) {
-                    return;
-                }
-            }
-            if (self.watch_count < self.watch_budget) {
-                const is_new = self.backend.watch(path, is_directory) catch |err| {
-                    try self.record_watch_failure(path, err);
-                    try self.poll_instead(path, is_directory);
-                    return;
+                var dir = Dir.cwd().openDir(self.io, path, .{
+                    .iterate = true,
+                    .follow_symlinks = false,
+                }) catch |err| switch (err) {
+                    error.Canceled => return error.Canceled,
+                    // The directory went away, which its parent's events report.
+                    error.FileNotFound, error.NotDir => continue,
+                    else => {
+                        try self.list.append_problem(path, err, .skipped);
+                        continue;
+                    },
                 };
-                if (is_new) {
-                    self.watch_count += 1;
-                }
-            } else {
-                try self.record_quota_reached(path);
-                try self.poll_instead(path, is_directory);
-            }
-            assert(self.watch_count <= self.watch_budget);
-        }
-
-        //
-        // Polls what a refused native watch would have covered: the directory itself, the
-        // directory holding a file, or every directory under a root for a tree backend.
-        //
-        fn poll_instead(self: *Self, path: []const u8, is_directory: bool) !void {
-            if (!is_directory) {
-                try self.poll_directory(std.fs.path.dirname(path).?);
-                return;
-            }
-            if (!Backend.is_recursive) {
-                try self.poll_directory(path);
-                return;
-            }
-            assert(self.snapshot.is_root(path));
-            var directories = self.snapshot.directories.keyIterator();
-            while (directories.next()) |directory_path| {
-                if (snapshot_module.is_within(directory_path.*, path)) {
-                    try self.poll_directory(directory_path.*);
-                }
-            }
-            assert(self.polled.contains(path));
-        }
-
-        //
-        // Reports a native watch the backend refused. A refusal because the platform ran out of
-        // watches also lowers the budget to the number in use, so later paths go straight to
-        // polling instead of asking the platform again.
-        //
-        fn record_watch_failure(self: *Self, path: []const u8, err: anyerror) !void {
-            if (err == error.OutOfMemory) {
-                return error.OutOfMemory;
-            }
-            if (err == error.LimitReached) {
-                self.watch_budget = self.watch_count;
-                try self.record_quota_reached(path);
-                return;
-            }
-            try self.list.append_problem(path, err, .polled);
-        }
-
-        //
-        // Reports, once, that the quota is used up and further paths are polled.
-        //
-        fn record_quota_reached(self: *Self, path: []const u8) !void {
-            if (self.is_limit_reported) {
-                return;
-            }
-            self.is_limit_reported = true;
-            try self.list.append_problem(path, error.LimitReached, .polled);
-        }
-
-        //
-        // Stops the native watch on `path` and stops polling it.
-        //
-        fn unwatch_path(self: *Self, path: []const u8, is_directory: bool) void {
-            assert(path.len > 0);
-            const has_own_watch = if (is_directory) true else Backend.watches_files;
-            if (self.is_native_active) {
-                if (has_own_watch) {
-                    if (self.backend.unwatch(path)) {
-                        assert(self.watch_count > 0);
-                        self.watch_count -= 1;
+                defer dir.close(self.io);
+                var iterator = dir.iterate();
+                while (true) {
+                    const entry = iterator.next(self.io) catch |err| switch (err) {
+                        error.Canceled => return error.Canceled,
+                        else => {
+                            try self.list.append_problem(path, err, .skipped);
+                            break;
+                        },
+                    } orelse break;
+                    if (entry.kind == .directory) {
+                        if (filter.is_excluded_directory(&self.options, entry.name)) {
+                            continue;
+                        }
+                        const child = try std.fs.path.join(arena, &.{ path, entry.name });
+                        try pending.append(arena, child);
+                        continue;
+                    }
+                    if (!Backend.watches_files) {
+                        continue;
+                    }
+                    if (filter.is_excluded_file(&self.options, entry.name)) {
+                        continue;
+                    }
+                    const file_path = try std.fs.path.join(arena, &.{ path, entry.name });
+                    if (try self.watch_one(index, file_path, false) == .quota) {
+                        return;
                     }
                 }
             }
-            if (is_directory) {
-                if (self.polled.fetchSwapRemove(path)) |removed| {
-                    self.gpa.free(removed.key);
-                }
-            }
         }
 
         //
-        // Adds a directory to the polled set.
+        // Watches `path` natively when the quota allows. When it is used up, or the platform
+        // refuses for lack of resources, root `index` is polled instead.
         //
-        fn poll_directory(self: *Self, path: []const u8) !void {
+        fn watch_one(self: *Self, index: usize, path: []const u8, is_directory: bool) !WatchResult {
+            assert(self.is_native_active);
             assert(path.len > 0);
-            const result = try self.polled.getOrPut(self.gpa, path);
-            if (result.found_existing) {
+            if (self.backend.watch_count() >= self.watch_budget) {
+                try self.quota_reached(index, path);
+                return .quota;
+            }
+            const is_new = self.backend.watch(path, is_directory) catch |err| switch (err) {
+                error.OutOfMemory => return error.OutOfMemory,
+                error.LimitReached => {
+                    self.watch_budget = self.backend.watch_count();
+                    try self.quota_reached(index, path);
+                    return .quota;
+                },
+                // The path went away before it could be watched, which its parent's events report.
+                error.FileNotFound, error.NotDir => return .failed,
+                else => {
+                    try self.list.append_problem(path, err, .skipped);
+                    return .failed;
+                },
+            };
+            assert(self.backend.watch_count() <= self.watch_budget);
+            return if (is_new) .new else .existing;
+        }
+
+        //
+        // Polls root `index`, because native watches ran out while covering it. The quota being
+        // used up is reported once, for the first path that did not fit.
+        //
+        fn quota_reached(self: *Self, index: usize, path: []const u8) !void {
+            if (!self.is_limit_reported) {
+                self.is_limit_reported = true;
+                try self.list.append_problem(path, error.LimitReached, .polled);
+            }
+            try self.poll_root(index);
+        }
+
+        //
+        // Starts polling root `index` from its current state. Paths that cannot be read are
+        // reported now, once, rather than on every poll.
+        //
+        fn poll_root(self: *Self, index: usize) !void {
+            const root = &self.roots.items[index];
+            if (root.is_polled) {
                 return;
             }
-            result.key_ptr.* = self.gpa.dupe(u8, path) catch |err| {
-                self.polled.swapRemoveAt(self.polled.count() - 1);
-                return err;
-            };
-            assert(self.polled.contains(path));
+            root.fingerprint = try fingerprint_module.fingerprint(
+                self.gpa,
+                self.io,
+                root.path,
+                &self.options,
+                lister,
+                &self.list,
+            );
+            root.is_polled = true;
         }
 
         //
-        // Keeps native watches and the polled set in step with the events recorded since
-        // `first`: new paths are watched and deleted paths are dropped.
-        //
-        fn track_events(self: *Self, first: usize) !void {
-            var index = first;
-            while (index < self.list.events.items.len) : (index += 1) {
-                const item = self.list.events.items[index];
-                switch (item.kind) {
-                    .created => try self.watch_path(item.path, item.is_directory),
-                    .deleted => self.unwatch_path(item.path, item.is_directory),
-                    .modified => {},
-                }
-            }
-            assert(index == self.list.events.items.len);
-        }
-
-        //
-        // Rescans every polled directory when the poll interval has passed.
+        // Checks every polled root when the poll interval has passed.
         //
         fn poll_if_due(self: *Self) !void {
-            if (self.polled.count() == 0) {
+            if (self.polled_count() == 0) {
                 return;
             }
             const current_ns = self.now_ns();
@@ -581,43 +625,44 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 return;
             }
             self.poll_due_ns = current_ns + self.poll_interval_ns();
-
-            // Rescanning can add and remove polled directories, so it walks a copy of the set.
-            var arena = std.heap.ArenaAllocator.init(self.gpa);
-            defer arena.deinit();
-
-            const paths = try arena.allocator().alloc([]const u8, self.polled.count());
-            for (self.polled.keys(), paths) |key, *path| {
-                path.* = try arena.allocator().dupe(u8, key);
-            }
-            for (paths) |path| {
-                const first = self.list.events.items.len;
-                try self.snapshot.rescan_directory(path, &self.list);
-                try self.track_events(first);
+            for (self.roots.items) |*root| {
+                if (!root.is_polled) {
+                    continue;
+                }
+                const current = try fingerprint_module.fingerprint(
+                    self.gpa,
+                    self.io,
+                    root.path,
+                    &self.options,
+                    lister,
+                    null,
+                );
+                if (current != root.fingerprint) {
+                    root.fingerprint = current;
+                    try self.mark_changed(root);
+                }
             }
         }
 
         //
-        // Waits for native events, or sleeps when no directory is watched natively. A wait of zero
+        // Waits for native events, or sleeps when nothing is watched natively. A wait of zero
         // collects the events already queued without blocking. Either wait ends early when `wake`
         // moves the wake count away from `wake_count`.
         //
         fn wait_for_changes(self: *Self, wait_ns: i96, wake_count: u32) !void {
             assert(wait_ns >= 0);
-            if (self.is_native_active) {
-                if (self.watch_count > 0) {
-                    const wait_ms: u32 = @intCast(@min(
-                        std.math.divCeil(i96, wait_ns, std.time.ns_per_ms) catch unreachable,
-                        std.math.maxInt(u32),
-                    ));
-                    self.backend.wait(wait_ms, &self.hints) catch |err| {
-                        if (err == error.OutOfMemory) {
-                            return error.OutOfMemory;
-                        }
-                        try self.fall_back_to_polling(err);
-                    };
-                    return;
-                }
+            if (self.native_watch_count() > 0) {
+                const wait_ms: u32 = @intCast(@min(
+                    std.math.divCeil(i96, wait_ns, std.time.ns_per_ms) catch unreachable,
+                    std.math.maxInt(u32),
+                ));
+                self.backend.wait(wait_ms, &self.hints) catch |err| {
+                    if (err == error.OutOfMemory) {
+                        return error.OutOfMemory;
+                    }
+                    try self.fall_back_to_polling(err);
+                };
+                return;
             }
             if (wait_ns > 0) {
                 try self.io.futexWaitTimeout(u32, &self.wake_count.raw, wake_count, .{
@@ -630,7 +675,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Stops using the native backend after it failed and polls every directory instead. The
+        // Stops using the native backend after it failed and polls every root instead. The
         // backend stays allocated until `deinit`, so `wake` stays safe from other threads.
         //
         fn fall_back_to_polling(self: *Self, err: anyerror) !void {
@@ -638,33 +683,115 @@ pub fn GenericWatcher(comptime Backend: type) type {
             assert(self.is_backend_started);
             try self.list.append_problem("", err, .polled);
             self.is_native_active = false;
-            self.watch_count = 0;
             self.hints.clear();
-            var directories = self.snapshot.directories.keyIterator();
-            while (directories.next()) |path| {
-                try self.poll_directory(path.*);
+            for (0..self.roots.items.len) |index| {
+                try self.poll_root(index);
             }
-            assert(self.polled.count() == self.snapshot.directory_count());
+            assert(self.polled_count() == self.roots.items.len);
         }
 
         //
-        // Checks every path the backend reported and records the changes.
+        // Records the root of every path the backend reported as changed, unless the path is
+        // excluded, and keeps the watches of backends that watch each directory in step.
         //
         fn apply_hints(self: *Self) !void {
             defer self.hints.clear();
             for (self.hints.paths.keys(), self.hints.paths.values()) |path, checks| {
-                const first = self.list.events.items.len;
+                const index = self.root_of(path) orelse continue;
+                const root = self.roots.items[index];
+                if (filter.is_excluded_path(&self.options, root.path, path)) {
+                    continue;
+                }
+                try self.mark_changed(&self.roots.items[index]);
+                if (comptime Backend.is_recursive) {
+                    continue;
+                }
+                if (!self.is_native_active or root.is_polled) {
+                    continue;
+                }
+                if (checks.gone) {
+                    try self.backend.unwatch_tree(path);
+                }
                 if (checks.tree) {
-                    try self.snapshot.rescan_tree(path, &self.list);
+                    try self.sync_watches(index, path, true);
+                } else if (checks.directory) {
+                    try self.sync_watches(index, path, false);
                 }
-                if (checks.directory) {
-                    try self.snapshot.rescan_directory(path, &self.list);
-                }
-                if (checks.entry) {
-                    try self.snapshot.check_entry(path, &self.list);
-                }
-                try self.track_events(first);
             }
+        }
+
+        //
+        // Reports that `root` changed, unless it was reported less than the throttle time ago,
+        // in which case the report waits until that time has passed.
+        //
+        fn mark_changed(self: *Self, root: *Root) !void {
+            if (root.reported_ns) |reported_ns| {
+                if (self.now_ns() - reported_ns < self.throttle_ns()) {
+                    root.is_pending = true;
+                    return;
+                }
+            }
+            try self.report(root);
+        }
+
+        //
+        // Adds `root` to the batch and starts its throttle time.
+        //
+        fn report(self: *Self, root: *Root) !void {
+            try self.list.append_changed(root.path);
+            root.reported_ns = self.now_ns();
+            root.is_pending = false;
+        }
+
+        //
+        // Reports every root whose held-back change has waited out its throttle time.
+        //
+        fn report_pending(self: *Self) !void {
+            const current_ns = self.now_ns();
+            for (self.roots.items) |*root| {
+                if (!root.is_pending) {
+                    continue;
+                }
+                if (current_ns - root.reported_ns.? >= self.throttle_ns()) {
+                    try self.report(root);
+                }
+            }
+        }
+
+        //
+        // When the earliest held-back change is due, or null when none is held back.
+        //
+        fn pending_due_ns(self: *const Self) ?i96 {
+            var earliest: ?i96 = null;
+            for (self.roots.items) |root| {
+                if (!root.is_pending) {
+                    continue;
+                }
+                const due_ns = root.reported_ns.? + self.throttle_ns();
+                if (earliest == null or due_ns < earliest.?) {
+                    earliest = due_ns;
+                }
+            }
+            return earliest;
+        }
+
+        //
+        // The throttle time in nanoseconds, the unit of the clock.
+        //
+        fn throttle_ns(self: *const Self) i96 {
+            return @as(i96, self.options.throttle_ms) * std.time.ns_per_ms;
+        }
+
+        //
+        // The index of the root `path` is in, or null when it is in none of them.
+        //
+        fn root_of(self: *const Self, path: []const u8) ?usize {
+            for (self.roots.items, 0..) |root, index| {
+                if (paths.is_within(path, root.path)) {
+                    return index;
+                }
+            }
+            return null;
         }
 
         //

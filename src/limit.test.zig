@@ -60,7 +60,9 @@ test "native_watch_limit reads the platform limit" {
 //
 test "raised_open_file_limit reaches the hard limit within OPEN_MAX" {
     try testing.expectEqual(@as(u64, 4096), limit.raised_open_file_limit(256, 4096, true));
-    try testing.expectEqual(limit.darwin_open_max, limit.raised_open_file_limit(256, std.math.maxInt(u64), true));
+    const unlimited = std.math.maxInt(u64);
+    const raised = limit.raised_open_file_limit(256, unlimited, true);
+    try testing.expectEqual(limit.darwin_open_max, raised);
     try testing.expectEqual(@as(u64, 1 << 20), limit.raised_open_file_limit(1024, 1 << 20, false));
     try testing.expectEqual(@as(u64, 20000), limit.raised_open_file_limit(20000, 30000, true));
 }

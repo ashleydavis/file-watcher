@@ -7,35 +7,22 @@ const file_watcher = @import("file_watcher");
 const output = @import("output.zig");
 
 const testing = std.testing;
-const Event = file_watcher.Event;
 
 //
-// Goal: each format writes an event exactly as documented.
-// Method: write a file event and a directory event in every format and compare the text.
+// Goal: each format writes a change exactly as documented.
+// Method: write a change in every format and compare the text.
 //
-test "write_event writes every format" {
+test "write_change writes every format" {
     var buffer: std.Io.Writer.Allocating = .init(testing.allocator);
     defer buffer.deinit();
-    const file_event: Event = .{
-        .kind = .created,
-        .path = "/root/a \"b\".txt",
-        .is_directory = false,
-    };
-    const directory_event: Event = .{
-        .kind = .deleted,
-        .path = "/root/dir",
-        .is_directory = true,
-    };
 
-    try output.write_event(&buffer.writer, .text, &file_event);
-    try output.write_event(&buffer.writer, .text, &directory_event);
-    try output.write_event(&buffer.writer, .json, &file_event);
-    try output.write_event(&buffer.writer, .yaml, &directory_event);
+    try output.write_change(&buffer.writer, .text, "/root/a \"b\"");
+    try output.write_change(&buffer.writer, .json, "/root/a \"b\"");
+    try output.write_change(&buffer.writer, .yaml, "/root/dir");
     try testing.expectEqualStrings(
-        "created file /root/a \"b\".txt\n" ++
-            "deleted directory /root/dir\n" ++
-            "{\"kind\":\"created\",\"type\":\"file\",\"path\":\"/root/a \\\"b\\\".txt\"}\n" ++
-            "- kind: deleted\n  type: directory\n  path: \"/root/dir\"\n",
+        "changed /root/a \"b\"\n" ++
+            "{\"changed\":\"/root/a \\\"b\\\"\"}\n" ++
+            "- changed: \"/root/dir\"\n",
         buffer.written(),
     );
 }
@@ -95,9 +82,9 @@ test "write_problem explains each problem" {
         "warning: /root/locked: permission denied. " ++
             "It is left out of the watch. Check that it is readable.\n" ++
             "warning: /root/big: the native watch quota is used up. " ++
-            "It is watched by polling instead.\n" ++
+            "Its watched directory is polled instead.\n" ++
             "warning: Native watching stopped: this platform has no native watch method. " ++
-            "Every directory is watched by polling instead.\n",
+            "Every watched directory is polled instead.\n",
         buffer.written(),
     );
 }
@@ -138,12 +125,12 @@ test "write_stats writes the counters" {
         .native_limit = 100,
         .watch_budget = 50,
         .native_watches = 3,
-        .polled_directories = 1,
-        .directories = 4,
+        .roots = 4,
+        .polled_roots = 1,
         .is_native_active = true,
     });
     try testing.expectEqualStrings(
-        "stats: directories=4 native_watches=3 polled_directories=1 " ++
+        "stats: roots=4 polled_roots=1 native_watches=3 " ++
             "watch_budget=50 native_limit=100 native_active=true\n",
         buffer.written(),
     );

@@ -44,6 +44,7 @@ test "parse reads every option" {
         "-m",            "7",
         "-q",            "25",
         "-i",            "200",
+        "-t",            "250",
         "-d",            "1500",
         "--poll",        "-s",
         "src",           "--",
@@ -62,6 +63,7 @@ test "parse reads every option" {
     try testing.expectEqual(@as(u8, 25), config.options.quota_percent);
     try testing.expectEqual(@as(?u32, 7), config.options.native_watches_max);
     try testing.expectEqual(@as(u32, 200), config.options.poll_interval_ms);
+    try testing.expectEqual(@as(u32, 250), config.options.throttle_ms);
     try testing.expectEqual(@as(?u32, 1500), config.duration_ms);
     try testing.expect(config.is_stats_shown);
 
@@ -107,6 +109,7 @@ test "parse explains bad command lines" {
     try expect_failure(&.{ "-m", "many", "dir" }, "Max watches many");
     try expect_failure(&.{ "-i", "soon", "dir" }, "Poll interval soon");
     try expect_failure(&.{ "-d", "-5", "dir" }, "Duration -5");
+    try expect_failure(&.{ "-t", "later", "dir" }, "Throttle later");
 }
 
 //

@@ -1,5 +1,5 @@
 //
-// Tests for the event list: recording events and problems, and clearing between batches.
+// Tests for the batch list: recording changed roots and problems, and clearing between batches.
 //
 
 const std = @import("std");
@@ -9,23 +9,25 @@ const testing = std.testing;
 const EventList = event.EventList;
 
 //
-// Goal: events and problems are recorded with copies of their paths.
-// Method: append from a buffer, overwrite the buffer and check the recorded paths are intact.
+// Goal: changed roots and problems are recorded with copies of their paths, and a root is
+// recorded once however often it changes in a batch.
+// Method: append from a buffer twice, overwrite the buffer and check the recorded paths.
 //
-test "append_event and append_problem copy the path" {
+test "append_changed and append_problem copy the path" {
     var list = EventList.init(testing.allocator);
     defer list.deinit();
 
-    var buffer = "/root/a.txt".*;
-    try list.append_event(.created, &buffer, false);
+    var buffer = "/root".*;
+    try list.append_changed(&buffer);
+    try list.append_changed(&buffer);
+    try list.append_changed("/other");
     try list.append_problem(&buffer, error.AccessDenied, .skipped);
     buffer[1] = 'X';
 
-    try testing.expectEqual(@as(usize, 1), list.events.items.len);
-    try testing.expectEqualStrings("/root/a.txt", list.events.items[0].path);
-    try testing.expectEqual(event.EventKind.created, list.events.items[0].kind);
-    try testing.expect(!list.events.items[0].is_directory);
-    try testing.expectEqualStrings("/root/a.txt", list.problems.items[0].path);
+    try testing.expectEqual(@as(usize, 2), list.changed.items.len);
+    try testing.expectEqualStrings("/root", list.changed.items[0]);
+    try testing.expectEqualStrings("/other", list.changed.items[1]);
+    try testing.expectEqualStrings("/root", list.problems.items[0].path);
     try testing.expectEqual(error.AccessDenied, list.problems.items[0].reason);
     try testing.expectEqual(event.ProblemAction.skipped, list.problems.items[0].action);
 }
@@ -38,25 +40,24 @@ test "clear starts a new batch" {
     var list = EventList.init(testing.allocator);
     defer list.deinit();
 
-    try list.append_event(.deleted, "/root/old", true);
+    try list.append_changed("/root");
     try list.append_problem("/root/old", error.AccessDenied, .polled);
     list.clear();
-    try testing.expectEqual(@as(usize, 0), list.events.items.len);
+    try testing.expectEqual(@as(usize, 0), list.changed.items.len);
     try testing.expectEqual(@as(usize, 0), list.problems.items.len);
 
-    try list.append_event(.modified, "/root/new", false);
-    try testing.expectEqual(@as(usize, 1), list.events.items.len);
-    try testing.expectEqualStrings("/root/new", list.events.items[0].path);
+    try list.append_changed("/root");
+    try testing.expectEqual(@as(usize, 1), list.changed.items.len);
 }
 
 //
-// Appends one event and one problem, for the allocation failure test.
+// Appends one change and one problem, for the allocation failure test.
 //
 fn append_both(gpa: std.mem.Allocator) !void {
     var list = EventList.init(gpa);
     defer list.deinit();
 
-    try list.append_event(.created, "/root/a", false);
+    try list.append_changed("/root");
     try list.append_problem("/root/b", error.AccessDenied, .skipped);
 }
 

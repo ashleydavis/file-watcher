@@ -9,7 +9,7 @@ const kqueue = @import("kqueue.zig");
 const testing = std.testing;
 
 //
-// Goal: each vnode flag calls for the right checks on files and directories.
+// Goal: each vnode flag gives the right hints for files and directories.
 // Method: decode every flag combination that matters for both kinds of entry.
 //
 test "checks_for maps vnode flags to checks" {
@@ -32,9 +32,10 @@ test "checks_for maps vnode flags to checks" {
     try testing.expect(!directory_attrib.directory);
 
     const deleted = kqueue.checks_for(kqueue.note_delete, true);
-    try testing.expect(deleted.entry);
+    try testing.expect(deleted.gone);
+    try testing.expect(!deleted.entry);
     const renamed = kqueue.checks_for(kqueue.note_rename, false);
-    try testing.expect(renamed.entry);
+    try testing.expect(renamed.gone);
     const revoked = kqueue.checks_for(kqueue.note_revoke, false);
-    try testing.expect(revoked.entry);
+    try testing.expect(revoked.gone);
 }

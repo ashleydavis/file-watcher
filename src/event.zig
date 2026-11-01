@@ -1,52 +1,12 @@
 //
-// Defines the change events a watcher reports and the list that collects them for one batch.
+// Defines what a watcher reports for one batch: the watched directories that changed, and the
+// problems it ran into.
 //
 
 const std = @import("std");
 
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
-
-//
-// What happened to a path. A rename is reported as a deletion of the old path and a creation of
-// the new path, because that is the only form every platform can report reliably.
-//
-pub const EventKind = enum {
-    //
-    // The path appeared.
-    //
-    created,
-
-    //
-    // The contents, size or modification time of a file changed.
-    //
-    modified,
-
-    //
-    // The path disappeared.
-    //
-    deleted,
-};
-
-//
-// One change to one path.
-//
-pub const Event = struct {
-    //
-    // What happened.
-    //
-    kind: EventKind,
-
-    //
-    // The full path, built from the root path the caller added.
-    //
-    path: []const u8,
-
-    //
-    // Whether the path is a directory, so callers can tell a new folder from a new file.
-    //
-    is_directory: bool,
-};
 
 //
 // A path the watcher could not read or watch, with the reason. The watcher carries on without it,
@@ -86,19 +46,19 @@ pub const ProblemAction = enum {
 };
 
 //
-// The events and problems of one batch. Everything lives in one arena, so a batch is released
-// in one step when the next batch starts.
+// The changed roots and problems of one batch. Everything lives in one arena, so a batch is
+// released in one step when the next batch starts.
 //
 pub const EventList = struct {
     //
-    // Owns the event list, the problem list and every path in them.
+    // Owns the lists and every path in them.
     //
     arena: std.heap.ArenaAllocator,
 
     //
-    // The events of the batch, in the order they were found.
+    // The watched directories that changed, each once, in the order the changes were found.
     //
-    events: std.ArrayList(Event),
+    changed: std.ArrayList([]const u8),
 
     //
     // The problems of the batch, in the order they were found.
@@ -111,7 +71,7 @@ pub const EventList = struct {
     pub fn init(gpa: Allocator) EventList {
         return .{
             .arena = .init(gpa),
-            .events = .empty,
+            .changed = .empty,
             .problems = .empty,
         };
     }
@@ -130,30 +90,26 @@ pub const EventList = struct {
     //
     pub fn clear(self: *EventList) void {
         _ = self.arena.reset(.retain_capacity);
-        self.events = .empty;
+        self.changed = .empty;
         self.problems = .empty;
-        assert(self.events.items.len == 0);
+        assert(self.changed.items.len == 0);
         assert(self.problems.items.len == 0);
     }
 
     //
-    // Records an event. The path is copied, so the caller may reuse its buffer.
+    // Records that the watched directory `root` changed, once per batch however many changes it
+    // had. The path is copied, so the caller may reuse its buffer.
     //
-    pub fn append_event(
-        self: *EventList,
-        kind: EventKind,
-        path: []const u8,
-        is_directory: bool,
-    ) Allocator.Error!void {
-        assert(path.len > 0);
+    pub fn append_changed(self: *EventList, root: []const u8) Allocator.Error!void {
+        assert(root.len > 0);
+        for (self.changed.items) |existing| {
+            if (std.mem.eql(u8, existing, root)) {
+                return;
+            }
+        }
         const arena = self.arena.allocator();
-        const path_copy = try arena.dupe(u8, path);
-        try self.events.append(arena, .{
-            .kind = kind,
-            .path = path_copy,
-            .is_directory = is_directory,
-        });
-        assert(self.events.items.len > 0);
+        try self.changed.append(arena, try arena.dupe(u8, root));
+        assert(self.changed.items.len > 0);
     }
 
     //

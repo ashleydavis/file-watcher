@@ -144,10 +144,10 @@ fn watch(
         if (batch.problems.len > 0) {
             try stderr.flush();
         }
-        for (batch.events) |*event| {
-            try output.write_event(stdout, config.format, event);
+        for (batch.changed) |path| {
+            try output.write_change(stdout, config.format, path);
         }
-        if (batch.events.len > 0) {
+        if (batch.changed.len > 0) {
             try stdout.flush();
         }
     }

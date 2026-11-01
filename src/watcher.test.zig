@@ -1,11 +1,10 @@
 //
 // Tests for the watcher. Most run against the in-memory file system with a scripted backend, so
-// quota, fallback and polling behaviour is exact and fast. One test runs the real native backend
-// against a temporary directory to check the parts fit together on the machine running the tests.
+// quota, fallback and polling behaviour is exact and fast. Two tests run the real native backend
+// against a temporary directory to check the parts fit together on the machine running them.
 //
 
 const std = @import("std");
-const event_module = @import("event.zig");
 const fake_backend = @import("fake_backend");
 const hints_module = @import("hints.zig");
 const mock_io_module = @import("mock_io");
@@ -14,10 +13,8 @@ const watcher_module = @import("watcher.zig");
 
 const testing = std.testing;
 const Batch = watcher_module.Batch;
-const EventKind = event_module.EventKind;
 const MockIo = mock_io_module.MockIo;
 const native_path = mock_io_module.native_path;
-const Options = options_module.Options;
 
 //
 // A fake backend with the given behaviour, using the library's hint types.
@@ -27,14 +24,17 @@ fn FakeBackend(comptime config: fake_backend.Config) type {
 }
 
 //
-// Whether the batch holds an event of `kind` for `path`.
+// A watcher on a fake backend that watches each directory, the most common kind.
 //
-fn has_event(batch: Batch, kind: EventKind, path: []const u8) bool {
-    for (batch.events) |item| {
-        if (item.kind == kind) {
-            if (std.mem.eql(u8, item.path, path)) {
-                return true;
-            }
+const DirectoryWatcher = watcher_module.GenericWatcher(FakeBackend(.{}));
+
+//
+// Whether the batch says `root` changed.
+//
+fn has_change(batch: Batch, root: []const u8) bool {
+    for (batch.changed) |path| {
+        if (std.mem.eql(u8, path, root)) {
+            return true;
         }
     }
     return false;
@@ -53,7 +53,7 @@ fn has_problem(batch: Batch, reason: anyerror) bool {
 }
 
 //
-// Fills the mock file system with a small tree.
+// Fills the mock file system with a small tree, including a directory left out by default.
 //
 fn add_tree(mock: *MockIo) !void {
     try mock.add_directory(native_path("/root"));
@@ -64,182 +64,430 @@ fn add_tree(mock: *MockIo) !void {
 }
 
 //
-// Goal: in polling mode, changes are found on the next poll and a quiet tree times out empty.
-// Method: add a tree, wait with no changes, then change files and wait again.
+// Goal: in polling mode, a change is reported as its root changing on the next poll, a quiet
+// tree times out empty, and excluded changes are left out.
+// Method: add a tree, wait with no changes, then change a file, then an excluded file.
 //
-test "polling finds changes on the poll interval" {
+test "polling reports a changed root on the poll interval" {
     var mock: MockIo = undefined;
     mock.init(testing.allocator);
     defer mock.deinit();
     try add_tree(&mock);
 
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
+    var watcher: DirectoryWatcher = undefined;
     try watcher.init(testing.allocator, mock.io(), &.{
         .method = .polling,
         .poll_interval_ms = 100,
     });
     defer watcher.deinit();
-    try watcher.add(native_path("/root"));
+    try watcher.add(native_path("/root/"));
 
     const stats = watcher.stats();
-    try testing.expectEqual(@as(u32, 2), stats.polled_directories);
-    try testing.expectEqual(@as(u32, 2), stats.directories);
+    try testing.expectEqual(@as(u32, 1), stats.roots);
+    try testing.expectEqual(@as(u32, 1), stats.polled_roots);
+    try testing.expectEqual(@as(u32, 0), stats.native_watches);
     try testing.expect(!stats.is_native_active);
 
     const quiet = try watcher.next(250);
-    try testing.expectEqual(@as(usize, 0), quiet.events.len);
+    try testing.expectEqual(@as(usize, 0), quiet.changed.len);
     try testing.expectEqual(@as(i96, 250 * std.time.ns_per_ms), mock.clock_ns);
 
     try mock.add_file(native_path("/root/sub/new.txt"), 1);
-    try mock.add_directory(native_path("/root/sub/dir"));
     const batch = try watcher.next(1000);
-    try testing.expect(has_event(batch, .created, native_path("/root/sub/new.txt")));
-    try testing.expect(has_event(batch, .created, native_path("/root/sub/dir")));
-    try testing.expectEqual(@as(u32, 3), watcher.stats().polled_directories);
+    try testing.expectEqual(@as(usize, 1), batch.changed.len);
+    try testing.expectEqualStrings(native_path("/root"), batch.changed[0]);
 
-    mock.remove(native_path("/root/sub"));
-    const removed = try watcher.next(1000);
-    try testing.expect(has_event(removed, .deleted, native_path("/root/sub")));
-    try testing.expect(has_event(removed, .deleted, native_path("/root/sub/dir")));
-    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_directories);
+    try mock.add_file(native_path("/root/node_modules/x.js"), 1);
+    const excluded = try watcher.next(1000);
+    try testing.expectEqual(@as(usize, 0), excluded.changed.len);
 }
 
 //
-// Goal: with a native backend, every directory is watched, hints become events and new or
-// deleted directories gain or lose their watch.
-// Method: add a tree, script hints for created and deleted entries and check events and stats.
+// Goal: with a backend that watches each directory, every directory that is not excluded is
+// watched, hints become changed roots, and new, moved and deleted directories gain or lose
+// their watches.
+// Method: add a tree, script each kind of hint and check the batches and the watches.
 //
-test "native watching turns hints into events" {
+test "native watching reports roots and keeps watches in step" {
     var mock: MockIo = undefined;
     mock.init(testing.allocator);
     defer mock.deinit();
     try add_tree(&mock);
 
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{});
-    defer watcher.deinit();
-    watcher.backend.mock = &mock;
-    try watcher.add(native_path("/root/"));
-
-    try testing.expect(watcher.stats().is_native_active);
-    try testing.expectEqual(@as(u32, 2), watcher.stats().native_watches);
-    try testing.expect(watcher.backend.watched.contains(native_path("/root")));
-    try testing.expect(watcher.backend.watched.contains(native_path("/root/sub")));
-
-    try mock.add_directory(native_path("/root/new"));
-    try mock.add_file(native_path("/root/new/c.txt"), 1);
-    try watcher.backend.queue(&.{
-        .{
-            .path = native_path("/root/new"),
-            .scope = .entry,
-        },
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .throttle_ms = 0,
     });
-    const created = try watcher.next(1000);
-    try testing.expect(has_event(created, .created, native_path("/root/new")));
-    try testing.expect(has_event(created, .created, native_path("/root/new/c.txt")));
-    try testing.expect(watcher.backend.watched.contains(native_path("/root/new")));
-
-    mock.remove(native_path("/root/sub"));
-    try mock.add_file(native_path("/root/d.txt"), 1);
-    try watcher.backend.queue(&.{
-        .{
-            .path = native_path("/root"),
-            .scope = .directory,
-        },
-        .{
-            .path = native_path("/root"),
-            .scope = .tree,
-        },
-    });
-    const changed = try watcher.next(1000);
-    try testing.expect(has_event(changed, .deleted, native_path("/root/sub")));
-    try testing.expect(has_event(changed, .created, native_path("/root/d.txt")));
-    try testing.expect(!watcher.backend.watched.contains(native_path("/root/sub")));
-    try testing.expectEqual(@as(u32, 2), watcher.stats().native_watches);
-
-    const quiet = try watcher.next(10);
-    try testing.expectEqual(@as(usize, 0), quiet.events.len);
-}
-
-//
-// Goal: a zero timeout collects native events already queued without waiting, so a caller can
-// check for changes from a timer or an event loop.
-// Method: queue a hint, call next with a zero timeout and check the event arrives and the clock
-// did not move.
-//
-test "next with a zero timeout collects queued events" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{});
     defer watcher.deinit();
     watcher.backend.mock = &mock;
     try watcher.add(native_path("/root"));
+    try testing.expectEqual(@as(u32, 2), watcher.stats().native_watches);
+    try testing.expect(watcher.backend.watched.contains(native_path("/root/sub")));
+    try testing.expect(!watcher.backend.watched.contains(native_path("/root/node_modules")));
 
-    const empty = try watcher.next(0);
-    try testing.expectEqual(@as(usize, 0), empty.events.len);
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub/b.txt"), .scope = .entry }});
+    const entry = try watcher.next(1000);
+    try testing.expect(has_change(entry, native_path("/root")));
 
-    try mock.add_file(native_path("/root/queued.txt"), 1);
+    try mock.add_directory(native_path("/root/sub/new"));
+    try mock.add_directory(native_path("/root/sub/new/deeper"));
+    try mock.add_directory(native_path("/root/sub/new/node_modules"));
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub/new"), .scope = .directory }});
+    const created = try watcher.next(1000);
+    try testing.expect(has_change(created, native_path("/root")));
+    try testing.expectEqual(@as(u32, 4), watcher.stats().native_watches);
+
     try watcher.backend.queue(&.{
-        .{
-            .path = native_path("/root/queued.txt"),
-            .scope = .entry,
-        },
+        .{ .path = native_path("/root/sub"), .scope = .directory },
+        .{ .path = native_path("/root/sub/new"), .scope = .directory },
     });
-    const batch = try watcher.next(0);
-    try testing.expect(has_event(batch, .created, native_path("/root/queued.txt")));
-    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+    _ = try watcher.next(1000);
+    try testing.expectEqual(@as(u32, 4), watcher.stats().native_watches);
 
-    var polling: Watcher = undefined;
-    try polling.init(testing.allocator, mock.io(), &.{
-        .method = .polling,
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub"), .scope = .gone }});
+    const gone = try watcher.next(1000);
+    try testing.expect(has_change(gone, native_path("/root")));
+    try testing.expectEqual(@as(u32, 1), watcher.stats().native_watches);
+
+    try watcher.backend.queue(&.{.{ .path = native_path("/root"), .scope = .tree }});
+    _ = try watcher.next(1000);
+    try testing.expectEqual(@as(u32, 4), watcher.stats().native_watches);
+
+    try watcher.backend.queue(&.{
+        .{ .path = native_path("/root/node_modules/x.js"), .scope = .entry },
+        .{ .path = native_path("/root/sub/trace.log"), .scope = .entry },
+        .{ .path = native_path("/elsewhere/c.txt"), .scope = .entry },
     });
-    defer polling.deinit();
-    try polling.add(native_path("/root"));
-    const quiet = try polling.next(0);
-    try testing.expectEqual(@as(usize, 0), quiet.events.len);
-    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+    var options: options_module.Options = .{};
+    options.excluded_extensions = &.{".log"};
+    watcher.options = options;
+    const ignored = try watcher.next(1000);
+    try testing.expectEqual(@as(usize, 0), ignored.changed.len);
 }
 
 //
-// Goal: wake makes the next wait return at once, both for a native wait and for a polled sleep,
-// and later waits block again.
-// Method: wake each kind of watcher before calling next with a long timeout, and check the mock
-// clock did not move; then call next again and check it waited.
+// Goal: a backend that watches files watches every file that is not excluded, including files
+// in new directories, and runs out of quota on files like on directories.
+// Method: add a tree to a file-watching fake, add files, then lower the budget.
 //
-test "wake ends a wait at once" {
+test "file-watching backends watch files too" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+    try mock.add_file(native_path("/root/skip.log"), 1);
+
+    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{
+        .watches_files = true,
+    }));
+    var watcher: Watcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .excluded_extensions = &.{".log"},
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+    try testing.expectEqual(@as(u32, 4), watcher.stats().native_watches);
+    try testing.expect(watcher.backend.watched.contains(native_path("/root/sub/b.txt")));
+    try testing.expect(!watcher.backend.watched.contains(native_path("/root/skip.log")));
+
+    try mock.add_file(native_path("/root/sub/c.txt"), 1);
+    watcher.watch_budget = 4;
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub"), .scope = .directory }});
+    const batch = try watcher.next(1000);
+    try testing.expect(has_problem(batch, error.LimitReached));
+    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_roots);
+}
+
+//
+// Goal: a backend that watches whole trees uses one watch per root and reports changes anywhere
+// under it, and a root that does not fit in the quota is polled, with the quota reported once.
+// Method: add three roots to a recursive fake with room for one watch.
+//
+test "tree backends use one watch per root" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+    try mock.add_directory(native_path("/second"));
+    try mock.add_directory(native_path("/third"));
+
+    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{
+        .is_recursive = true,
+    }));
+    var watcher: Watcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .native_watches_max = 1,
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+    try watcher.add(native_path("/second"));
+    try watcher.add(native_path("/third"));
+    const stats = watcher.stats();
+    try testing.expectEqual(@as(u32, 1), stats.native_watches);
+    try testing.expectEqual(@as(u32, 2), stats.polled_roots);
+
+    // Problems found while adding come back in the first batch.
+    const first = try watcher.next(0);
+    var limit_problems: usize = 0;
+    for (first.problems) |problem| {
+        if (problem.reason == error.LimitReached) {
+            limit_problems += 1;
+        }
+    }
+    try testing.expectEqual(@as(usize, 1), limit_problems);
+
+    try watcher.backend.queue(&.{
+        .{ .path = native_path("/root/sub/b.txt"), .scope = .entry },
+        .{ .path = native_path("/root/sub"), .scope = .tree },
+    });
+    const batch = try watcher.next(1000);
+    try testing.expect(has_change(batch, native_path("/root")));
+}
+
+//
+// Goal: when native watches run out partway through a tree, the root is polled, keeps its
+// native watches, and still reports changes; hints for a polled root report it without adding
+// watches.
+// Method: cap native watches at one, add a tree, change it and send a directory hint.
+//
+test "running out of watches polls the root" {
     var mock: MockIo = undefined;
     mock.init(testing.allocator);
     defer mock.deinit();
     try add_tree(&mock);
 
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var native: Watcher = undefined;
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .native_watches_max = 1,
+        .poll_interval_ms = 100,
+        .throttle_ms = 0,
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+    const stats = watcher.stats();
+    try testing.expectEqual(@as(u32, 1), stats.native_watches);
+    try testing.expectEqual(@as(u32, 1), stats.polled_roots);
+
+    const first = try watcher.next(0);
+    try testing.expect(has_problem(first, error.LimitReached));
+
+    try mock.add_file(native_path("/root/sub/new.txt"), 1);
+    const polled = try watcher.next(1000);
+    try testing.expect(has_change(polled, native_path("/root")));
+
+    try mock.add_directory(native_path("/root/sub/dir"));
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub/dir"), .scope = .directory }});
+    const hinted = try watcher.next(1000);
+    try testing.expect(has_change(hinted, native_path("/root")));
+    try testing.expectEqual(@as(u32, 1), watcher.stats().native_watches);
+
+    // A root polled already stays as it is when the backend then fails.
+    watcher.backend.wait_error = error.Unexpected;
+    const failed = try watcher.next(1000);
+    try testing.expect(has_problem(failed, error.Unexpected));
+    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_roots);
+}
+
+//
+// Goal: a watch the platform refuses is reported, and the watcher carries on: a refused
+// directory is left out, a directory that vanished is skipped quietly, and running out of
+// platform watches lowers the budget and polls the root.
+// Method: make the fake refuse one path with each error.
+//
+test "refused watches are reported" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{});
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    watcher.backend.failing_path = native_path("/root/sub");
+    watcher.backend.watch_error = error.AccessDenied;
+    try watcher.add(native_path("/root"));
+    const denied = try watcher.next(0);
+    try testing.expect(has_problem(denied, error.AccessDenied));
+    try testing.expectEqual(@as(u32, 0), watcher.stats().polled_roots);
+
+    watcher.backend.watch_error = error.FileNotFound;
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub"), .scope = .directory }});
+    const vanished = try watcher.next(1000);
+    try testing.expectEqual(@as(usize, 0), vanished.problems.len);
+
+    watcher.backend.watch_error = error.LimitReached;
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub"), .scope = .directory }});
+    const full = try watcher.next(1000);
+    try testing.expect(has_problem(full, error.LimitReached));
+    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_roots);
+    try testing.expectEqual(@as(u32, 1), watcher.stats().watch_budget);
+}
+
+//
+// Goal: directories that cannot be listed while adding watches are reported, ones that vanished
+// are skipped, and cancellation is passed on.
+// Method: add a tree with an unopenable and an unreadable directory, then cancel each.
+//
+test "unreadable directories are reported while watching" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+    try mock.add_directory(native_path("/root/locked"));
+    try mock.set_faults(native_path("/root/locked"), .{
+        .open = true,
+    });
+    try mock.set_faults(native_path("/root/sub"), .{
+        .read = true,
+    });
+
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .throttle_ms = 0,
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+    const batch = try watcher.next(0);
+    try testing.expectEqual(@as(usize, 2), batch.problems.len);
+
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/gone"), .scope = .directory }});
+    const vanished = try watcher.next(1000);
+    try testing.expectEqual(@as(usize, 0), vanished.problems.len);
+
+    try mock.set_faults(native_path("/root/sub"), .{
+        .read = true,
+        .is_canceled = true,
+    });
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub"), .scope = .directory }});
+    try testing.expectError(error.Canceled, watcher.next(1000));
+    // The change recorded before the cancellation is not lost: the next call returns it.
+    const kept = try watcher.next(0);
+    try testing.expect(has_change(kept, native_path("/root")));
+    try mock.set_faults(native_path("/root/sub"), .{
+        .open = true,
+        .is_canceled = true,
+    });
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/sub"), .scope = .directory }});
+    try testing.expectError(error.Canceled, watcher.next(1000));
+}
+
+//
+// Goal: a backend that cannot start, or fails while waiting, is reported and every root is
+// polled; running out of memory while waiting is returned instead.
+// Method: use a fake that fails to start, then one whose wait fails.
+//
+test "backend failures fall back to polling" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    const Broken = watcher_module.GenericWatcher(FakeBackend(.{
+        .init_error = error.SystemResources,
+    }));
+    var broken: Broken = undefined;
+    try broken.init(testing.allocator, mock.io(), &.{});
+    defer broken.deinit();
+    try broken.add(native_path("/root"));
+    const refused = try broken.next(0);
+    try testing.expect(has_problem(refused, error.SystemResources));
+    try testing.expectEqual(@as(u32, 1), broken.stats().polled_roots);
+    broken.wake();
+
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .poll_interval_ms = 100,
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+    watcher.backend.wait_error = error.Unexpected;
+    const failed = try watcher.next(1000);
+    try testing.expect(has_problem(failed, error.Unexpected));
+    try testing.expect(!watcher.stats().is_native_active);
+    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_roots);
+    try mock.add_file(native_path("/root/after.txt"), 1);
+    const polled = try watcher.next(1000);
+    try testing.expect(has_change(polled, native_path("/root")));
+
+    var short: DirectoryWatcher = undefined;
+    try short.init(testing.allocator, mock.io(), &.{});
+    defer short.deinit();
+    short.backend.mock = &mock;
+    try short.add(native_path("/root"));
+    short.backend.wait_error = error.OutOfMemory;
+    try testing.expectError(error.OutOfMemory, short.next(1000));
+}
+
+//
+// Goal: a zero quota polls everything without a problem, and bad roots are refused with the
+// right error.
+// Method: watch with a zero quota, then add a missing path, a file and overlapping roots.
+//
+test "zero quota polls and bad roots are refused" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .quota_percent = 0,
+    });
+    defer watcher.deinit();
+    try watcher.add(native_path("/root/sub"));
+    try testing.expect(!watcher.stats().is_native_active);
+    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_roots);
+    try testing.expectError(error.FileNotFound, watcher.add(native_path("/missing")));
+    try testing.expectError(error.NotDir, watcher.add(native_path("/root/a.txt")));
+    try testing.expectError(error.OverlappingRoot, watcher.add(native_path("/root")));
+    try mock.add_directory(native_path("/root/sub/inner"));
+    try testing.expectError(error.OverlappingRoot, watcher.add(native_path("/root/sub/inner")));
+}
+
+//
+// Goal: a zero timeout collects queued hints at once, and wake makes a wait return at once with
+// later waits blocking again, both natively and when polling.
+// Method: queue a hint and call next(0); wake each kind of watcher before a long wait.
+//
+test "zero timeouts and wake return at once" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+
+    var native: DirectoryWatcher = undefined;
     try native.init(testing.allocator, mock.io(), &.{});
     defer native.deinit();
     native.backend.mock = &mock;
     try native.add(native_path("/root"));
 
+    try native.backend.queue(&.{.{ .path = native_path("/root/a.txt"), .scope = .entry }});
+    const queued = try native.next(0);
+    try testing.expect(has_change(queued, native_path("/root")));
+    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+
     native.wake();
     const woken = try native.next(60_000);
-    try testing.expectEqual(@as(usize, 0), woken.events.len);
+    try testing.expectEqual(@as(usize, 0), woken.changed.len);
     try testing.expectEqual(@as(i96, 0), mock.clock_ns);
     _ = try native.next(100);
     try testing.expectEqual(@as(i96, 100 * std.time.ns_per_ms), mock.clock_ns);
 
-    var polling: Watcher = undefined;
+    var polling: DirectoryWatcher = undefined;
     try polling.init(testing.allocator, mock.io(), &.{
         .method = .polling,
         .poll_interval_ms = 60_000,
     });
     defer polling.deinit();
     try polling.add(native_path("/root"));
+    const quiet = try polling.next(0);
+    try testing.expectEqual(@as(usize, 0), quiet.changed.len);
 
     const before_ns = mock.clock_ns;
     polling.wake();
@@ -291,309 +539,46 @@ fn wait_until_stopped(watcher: *watcher_module.Watcher, stop: *std.atomic.Value(
 }
 
 //
-// Goal: a recursive backend watches only roots, and a file-watching backend watches files and
-// drops their watches when they are deleted.
-// Method: add a tree to each kind of fake backend and check what is watched.
-//
-test "recursive and file-watching backends" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Recursive = watcher_module.GenericWatcher(FakeBackend(.{
-        .is_recursive = true,
-    }));
-    var recursive: Recursive = undefined;
-    try recursive.init(testing.allocator, mock.io(), &.{});
-    defer recursive.deinit();
-    try recursive.add(native_path("/root"));
-    try testing.expectEqual(@as(usize, 1), recursive.backend.watched.count());
-    try mock.add_directory(native_path("/root/new"));
-    try recursive.backend.queue(&.{
-        .{
-            .path = native_path("/root/new"),
-            .scope = .entry,
-        },
-    });
-    const batch = try recursive.next(1000);
-    try testing.expect(has_event(batch, .created, native_path("/root/new")));
-    try testing.expectEqual(@as(usize, 1), recursive.backend.watched.count());
-
-    const Files = watcher_module.GenericWatcher(FakeBackend(.{
-        .watches_files = true,
-    }));
-    var files: Files = undefined;
-    try files.init(testing.allocator, mock.io(), &.{});
-    defer files.deinit();
-    files.backend.mock = &mock;
-    try files.add(native_path("/root"));
-    try testing.expect(files.backend.watched.contains(native_path("/root/a.txt")));
-    try testing.expect(files.backend.watched.contains(native_path("/root/sub/b.txt")));
-
-    mock.remove(native_path("/root/a.txt"));
-    try files.backend.queue(&.{
-        .{
-            .path = native_path("/root/a.txt"),
-            .scope = .entry,
-        },
-    });
-    const deleted = try files.next(1000);
-    try testing.expect(has_event(deleted, .deleted, native_path("/root/a.txt")));
-    try testing.expect(!files.backend.watched.contains(native_path("/root/a.txt")));
-}
-
-//
-// Goal: with a tree backend, every directory under a root is polled when the root cannot be
-// watched natively or the watcher polls, including directories created later.
-// Method: refuse the root's watch, add a tree and create a directory; then repeat in polling
-// mode.
-//
-test "tree backends poll every directory of a refused root" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Recursive = watcher_module.GenericWatcher(FakeBackend(.{
-        .is_recursive = true,
-    }));
-    var refused: Recursive = undefined;
-    try refused.init(testing.allocator, mock.io(), &.{
-        .poll_interval_ms = 10,
-    });
-    defer refused.deinit();
-    refused.backend.mock = &mock;
-    refused.backend.failing_path = native_path("/root");
-    refused.backend.watch_error = error.AccessDenied;
-    try refused.add(native_path("/root"));
-    try testing.expectEqual(@as(u32, 2), refused.stats().polled_directories);
-    try testing.expectEqual(@as(u32, 0), refused.stats().native_watches);
-
-    try mock.add_directory(native_path("/root/sub/later"));
-    try mock.add_file(native_path("/root/sub/later/file.txt"), 1);
-    var found = false;
-    var attempts: u32 = 0;
-    while (attempts < 3) : (attempts += 1) {
-        const batch = try refused.next(100);
-        if (has_event(batch, .created, native_path("/root/sub/later/file.txt"))) {
-            found = true;
-        }
-    }
-    try testing.expect(found);
-    try testing.expectEqual(@as(u32, 3), refused.stats().polled_directories);
-
-    var polling: Recursive = undefined;
-    try polling.init(testing.allocator, mock.io(), &.{
-        .method = .polling,
-    });
-    defer polling.deinit();
-    try polling.add(native_path("/root"));
-    try testing.expectEqual(@as(u32, 3), polling.stats().polled_directories);
-}
-
-//
-// Goal: once the quota is used up, further paths are polled and the limit is reported once.
-// Method: lower the budget, add a tree and check what is watched, polled and reported.
-//
-test "quota overflow falls back to polling" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-    try mock.add_directory(native_path("/root/more"));
-
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{
-        .watches_files = true,
-    }));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{
-        .poll_interval_ms = 50,
-    });
-    defer watcher.deinit();
-    watcher.backend.mock = &mock;
-    watcher.watch_budget = 1;
-    try watcher.add(native_path("/root"));
-
-    const stats = watcher.stats();
-    try testing.expectEqual(@as(u32, 1), stats.native_watches);
-    try testing.expect(stats.polled_directories >= 2);
-    const batch = try watcher.next(0);
-    try testing.expectEqual(@as(usize, 1), batch.problems.len);
-    try testing.expect(has_problem(batch, error.LimitReached));
-
-    // Which directory got the one native watch depends on hash order, so the new file goes into
-    // a directory known to be polled.
-    const new_path = try std.fs.path.join(testing.allocator, &.{
-        watcher.polled.keys()[0],
-        "new.txt",
-    });
-    defer testing.allocator.free(new_path);
-    try mock.add_file(new_path, 1);
-    const polled = try watcher.next(1000);
-    try testing.expect(has_event(polled, .created, new_path));
-}
-
-//
-// Goal: a cap on native watches lowers the budget below the quota, so directories past the cap
-// fall back to polling.
-// Method: cap native watches at one, add a tree of two directories and check the counters.
-//
-test "native_watches_max caps the budget" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{
-        .native_watches_max = 1,
-    });
-    defer watcher.deinit();
-    watcher.backend.mock = &mock;
-    try watcher.add(native_path("/root"));
-
-    const stats = watcher.stats();
-    try testing.expectEqual(@as(u32, 1), stats.watch_budget);
-    try testing.expectEqual(@as(u32, 1), stats.native_watches);
-    try testing.expectEqual(@as(u32, 1), stats.polled_directories);
-}
-
-//
-// Goal: refused watches are reported and polled, and a platform limit hit before the quota
-// lowers the budget.
-// Method: make the fake refuse one path with access denied, then another with the limit error.
-//
-test "refused watches are reported and polled" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{});
-    defer watcher.deinit();
-    watcher.backend.mock = &mock;
-    watcher.backend.failing_path = native_path("/root/sub");
-    watcher.backend.watch_error = error.AccessDenied;
-    try watcher.add(native_path("/root"));
-
-    const batch = try watcher.next(0);
-    try testing.expect(has_problem(batch, error.AccessDenied));
-    try testing.expectEqualStrings(native_path("/root/sub"), batch.problems[0].path);
-    try testing.expectEqual(@as(u32, 1), watcher.stats().polled_directories);
-
-    try mock.add_directory(native_path("/root/limited"));
-    watcher.backend.failing_path = native_path("/root/limited");
-    watcher.backend.watch_error = error.LimitReached;
-    try watcher.backend.queue(&.{
-        .{
-            .path = native_path("/root/limited"),
-            .scope = .entry,
-        },
-    });
-    const limited = try watcher.next(1000);
-    try testing.expect(has_event(limited, .created, native_path("/root/limited")));
-    try testing.expect(has_problem(limited, error.LimitReached));
-    try testing.expectEqual(watcher.stats().native_watches, watcher.stats().watch_budget);
-}
-
-//
-// Goal: a backend that fails to start or breaks while waiting is reported and replaced by
-// polling, which keeps finding changes.
-// Method: use a fake that fails to start, and one whose wait fails.
-//
-test "backend failures fall back to polling" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Broken = watcher_module.GenericWatcher(FakeBackend(.{
-        .init_error = error.SystemResources,
-    }));
-    var broken: Broken = undefined;
-    try broken.init(testing.allocator, mock.io(), &.{});
-    defer broken.deinit();
-    try broken.add(native_path("/root"));
-    const start = try broken.next(0);
-    try testing.expect(has_problem(start, error.SystemResources));
-    try testing.expectEqualStrings("", start.problems[0].path);
-    try testing.expectEqual(@as(u32, 2), broken.stats().polled_directories);
-
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{
-        .poll_interval_ms = 10,
-    });
-    defer watcher.deinit();
-    watcher.backend.mock = &mock;
-    try watcher.add(native_path("/root"));
-    watcher.backend.wait_error = error.Unexpected;
-    const failed = try watcher.next(1000);
-    try testing.expect(has_problem(failed, error.Unexpected));
-    try testing.expect(!watcher.stats().is_native_active);
-    try testing.expectEqual(@as(u32, 2), watcher.stats().polled_directories);
-
-    try mock.add_file(native_path("/root/after.txt"), 1);
-    const polled = try watcher.next(1000);
-    try testing.expect(has_event(polled, .created, native_path("/root/after.txt")));
-}
-
-//
-// Goal: a zero quota polls everything without starting the backend, and bad roots are refused.
-// Method: init with a zero quota, add a tree and try to add a file and an overlapping root.
-//
-test "zero quota polls and bad roots are refused" {
-    var mock: MockIo = undefined;
-    mock.init(testing.allocator);
-    defer mock.deinit();
-    try add_tree(&mock);
-
-    const Watcher = watcher_module.GenericWatcher(FakeBackend(.{}));
-    var watcher: Watcher = undefined;
-    try watcher.init(testing.allocator, mock.io(), &.{
-        .quota_percent = 0,
-    });
-    defer watcher.deinit();
-    try watcher.add(native_path("/root"));
-    try testing.expect(!watcher.stats().is_native_active);
-    try testing.expectEqual(@as(u32, 0), watcher.stats().watch_budget);
-    try testing.expectError(error.NotDir, watcher.add(native_path("/root/a.txt")));
-    try testing.expectError(error.OverlappingRoot, watcher.add(native_path("/root/sub")));
-}
-
-//
-// Goal: the watcher using the platform's own backend reports a real file being created.
-// Method: watch a temporary directory, write a file and wait for the event.
+// Goal: the platform's own backend reports a real change, including one in a directory created
+// after the watch started.
+// Method: watch a temporary directory, create a file, then a directory and a file inside it.
 //
 test "native watcher sees a real change" {
     var tmp = testing.tmpDir(.{});
     defer tmp.cleanup();
     var base: [std.fs.max_path_bytes]u8 = undefined;
     const length = try tmp.dir.realPath(testing.io, &base);
+    const root = base[0..length];
 
     var watcher: watcher_module.Watcher = undefined;
     try watcher.init(testing.allocator, testing.io, &.{});
     defer watcher.deinit();
-    try watcher.add(base[0..length]);
+    try watcher.add(root);
     try testing.expect(watcher.stats().is_native_active);
 
     try tmp.dir.writeFile(testing.io, .{
         .sub_path = "real.txt",
         .data = "x",
     });
-    var expected: [std.fs.max_path_bytes]u8 = undefined;
-    const separator = std.fs.path.sep_str;
-    const path = try std.fmt.bufPrint(&expected, "{s}" ++ separator ++ "real.txt", .{
-        base[0..length],
+    try expect_change(&watcher, root);
+
+    try tmp.dir.createDir(testing.io, "made", .default_dir);
+    try expect_change(&watcher, root);
+    try tmp.dir.writeFile(testing.io, .{
+        .sub_path = "made/inner.txt",
+        .data = "x",
     });
+    try expect_change(&watcher, root);
+}
+
+//
+// Waits up to ten seconds for `root` to be reported changed.
+//
+fn expect_change(watcher: *watcher_module.Watcher, root: []const u8) !void {
     var attempts: u32 = 0;
     while (attempts < 10) : (attempts += 1) {
         const batch = try watcher.next(1000);
-        if (has_event(batch, .created, path)) {
+        if (has_change(batch, root)) {
             return;
         }
     }
@@ -610,13 +595,11 @@ fn run_watcher(gpa: std.mem.Allocator, mock: *MockIo) !void {
     });
     defer watcher.deinit();
     watcher.backend.mock = mock;
-    watcher.watch_budget = 3;
+    watcher.watch_budget = 5;
     try watcher.add(native_path("/root"));
     try watcher.backend.queue(&.{
-        .{
-            .path = native_path("/root/sub"),
-            .scope = .directory,
-        },
+        .{ .path = native_path("/root/more"), .scope = .directory },
+        .{ .path = native_path("/root/sub"), .scope = .gone },
     });
     _ = try watcher.next(100);
     _ = try watcher.next(100);
@@ -634,4 +617,60 @@ test "watcher survives allocation failure" {
     try mock.add_directory(native_path("/root/more"));
     try mock.add_file(native_path("/root/more/f"), 1);
     try testing.checkAllAllocationFailures(testing.allocator, run_watcher, .{&mock});
+}
+
+//
+// Goal: a root's first change is reported at once, later changes within the throttle time are
+// held back and reported once when it ends, and a throttle of 0 reports every batch.
+// Method: script hints at known times on the mock clock and check when the root is reported.
+//
+test "changes are throttled per root" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try add_tree(&mock);
+    try mock.add_directory(native_path("/second"));
+
+    var watcher: DirectoryWatcher = undefined;
+    try watcher.init(testing.allocator, mock.io(), &.{
+        .throttle_ms = 1000,
+    });
+    defer watcher.deinit();
+    watcher.backend.mock = &mock;
+    try watcher.add(native_path("/root"));
+    try watcher.add(native_path("/second"));
+
+    try watcher.backend.queue(&.{.{ .path = native_path("/root/a.txt"), .scope = .entry }});
+    const first = try watcher.next(0);
+    try testing.expect(has_change(first, native_path("/root")));
+    try testing.expectEqual(@as(i96, 0), mock.clock_ns);
+
+    mock.clock_ns += 100 * std.time.ns_per_ms;
+    try watcher.backend.queue(&.{
+        .{ .path = native_path("/root/a.txt"), .scope = .entry },
+        .{ .path = native_path("/second/b.txt"), .scope = .entry },
+    });
+    const held = try watcher.next(0);
+    try testing.expect(!has_change(held, native_path("/root")));
+    try testing.expect(has_change(held, native_path("/second")));
+
+    const released = try watcher.next(60_000);
+    try testing.expect(has_change(released, native_path("/root")));
+    try testing.expectEqual(@as(i96, 1000 * std.time.ns_per_ms), mock.clock_ns);
+
+    const quiet = try watcher.next(500);
+    try testing.expectEqual(@as(usize, 0), quiet.changed.len);
+
+    var unthrottled: DirectoryWatcher = undefined;
+    try unthrottled.init(testing.allocator, mock.io(), &.{
+        .throttle_ms = 0,
+    });
+    defer unthrottled.deinit();
+    unthrottled.backend.mock = &mock;
+    try unthrottled.add(native_path("/root"));
+    for (0..2) |_| {
+        try unthrottled.backend.queue(&.{.{ .path = native_path("/root/a.txt"), .scope = .entry }});
+        const batch = try unthrottled.next(0);
+        try testing.expect(has_change(batch, native_path("/root")));
+    }
 }

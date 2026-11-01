@@ -13,10 +13,11 @@ const Dir = std.Io.Dir;
 const File = std.Io.File;
 
 //
-// The first handle number given to an opened directory, chosen far from real descriptors and
-// from the current directory's special value, so a mix-up fails loudly.
+// The first handle number given to an opened directory, chosen far from the current directory's
+// special value and above any real descriptor or Windows handle, so a mock handle passed to a
+// real system call by mistake can never name a real file.
 //
-const handle_base: usize = 1000;
+const handle_base: usize = 1 << 30;
 
 //
 // `path` with every `/` replaced by the separator of the platform the tests run on, so expected

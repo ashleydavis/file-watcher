@@ -1,18 +1,18 @@
 //
-// Lists a Windows directory with each entry's metadata in one system call per buffer, for the
-// snapshot. Reading each entry's metadata separately opens a handle per entry, which made
-// polling a large tree cost most of a CPU core on Windows.
+// Lists a Windows directory with each entry's metadata in one system call per buffer, for
+// polling. Reading each entry's metadata separately opens a handle per entry, which made polling
+// a large tree cost most of a CPU core on Windows.
 //
 
 const std = @import("std");
-const snapshot_module = @import("snapshot.zig");
+const fingerprint_module = @import("fingerprint.zig");
 
 const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
 const Dir = std.Io.Dir;
-const Listed = snapshot_module.Listed;
-const Stamp = snapshot_module.Stamp;
+const Listed = fingerprint_module.Listed;
+const Stamp = fingerprint_module.Stamp;
 
 //
 // The header of one `FILE_ID_FULL_DIR_INFORMATION` record written by `NtQueryDirectoryFile`.
@@ -66,7 +66,7 @@ const calls_max: u64 = 1 << 32;
 
 //
 // Lists the entries of `dir`, or only the entry called `name` when it is given, into `entries`.
-// Names and the buffer are allocated from `arena`. Follows the snapshot's `Lister` signature;
+// Names and the buffer are allocated from `arena`. Follows the `Lister` signature;
 // `io` and `dir_path` are unused because the handle is enough on Windows.
 //
 pub fn list(
@@ -139,7 +139,7 @@ pub fn keep_named(entries: *std.ArrayList(Listed), name: []const u8) void {
 
 //
 // Decodes the records `NtQueryDirectoryFile` wrote into `buffer` and appends an entry with a
-// stamp for each, leaving out `.` and `..`. The stamps match the ones the snapshot makes from
+// stamp for each, leaving out `.` and `..`. The stamps match the ones `stamp_from_stat` makes from
 // `statFile`, which reads the same fields from the file itself.
 //
 pub fn decode_records(buffer: []const u8, arena: Allocator, entries: *std.ArrayList(Listed)) !void {
@@ -175,12 +175,12 @@ pub fn decode_records(buffer: []const u8, arena: Allocator, entries: *std.ArrayL
 }
 
 //
-// Turns one record into a stamp, the way the snapshot turns `statFile`'s result into one: a
+// Turns one record into a stamp, the way `stamp_from_stat` turns `statFile`'s result into one: a
 // reparse point, such as a symbolic link, is neither a file nor a directory.
 //
 fn stamp_from_record(header: *const FileIdFullDirInformation) Stamp {
     const attributes = header.FileAttributes;
-    const kind: snapshot_module.EntryKind = if (attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0)
+    const kind: fingerprint_module.EntryKind = if (attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0)
         .other
     else if (attributes & FILE_ATTRIBUTE_DIRECTORY != 0)
         .directory

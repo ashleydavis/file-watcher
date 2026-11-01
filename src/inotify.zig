@@ -5,6 +5,7 @@
 
 const std = @import("std");
 const hints_module = @import("hints.zig");
+const paths_module = @import("paths.zig");
 
 const assert = std.debug.assert;
 const linux = std.os.linux;
@@ -15,8 +16,7 @@ const IN = linux.IN;
 //
 // The changes inotify reports for each watched directory: entries created, deleted, renamed or
 // written, metadata changes, and the directory itself being deleted or moved. Symbolic links
-// are not followed and events for unlinked files are dropped, matching how the snapshot reads
-// entries.
+// are not followed and events for unlinked files are dropped.
 //
 const watch_mask: u32 = IN.CREATE | IN.DELETE | IN.MODIFY | IN.ATTRIB | IN.CLOSE_WRITE |
     IN.MOVED_FROM | IN.MOVED_TO | IN.DELETE_SELF | IN.MOVE_SELF | IN.ONLYDIR |
@@ -162,6 +162,28 @@ pub const Inotify = struct {
     }
 
     //
+    // The number of directories watched.
+    pub fn watch_count(self: *const Inotify) u32 {
+        return @intCast(self.descriptors.count());
+    }
+
+    // Stops watching the directory at `path` and every directory under it.
+    pub fn unwatch_tree(self: *Inotify, path: []const u8) !void {
+        assert(path.len > 0);
+        var under: std.ArrayList([]const u8) = .empty;
+        defer under.deinit(self.gpa);
+        var keys = self.descriptors.keyIterator();
+        while (keys.next()) |key| {
+            if (paths_module.is_within(key.*, path)) {
+                try under.append(self.gpa, key.*);
+            }
+        }
+        // `unwatch` frees each path after looking it up, and no path is used after its removal.
+        for (under.items) |watched| {
+            assert(self.unwatch(watched));
+        }
+    }
+
     // Stops watching the directory at `path`. Returns false when the path had no watch of its
     // own, for example because its watch moved to another path.
     //
@@ -225,7 +247,7 @@ pub const Inotify = struct {
                 else => return err,
             };
             assert(count > 0);
-            try decode_events(self.buffer[0..count], &self.paths, hints);
+            try decode_events(self.buffer[0..count], &self.paths, &self.descriptors, hints);
         }
     }
 };
@@ -262,11 +284,16 @@ pub fn watch_error(result: linux.E) anyerror {
 }
 
 //
-// Turns a buffer of raw inotify events into hints. Pure, so it is tested with built buffers.
+// Turns a buffer of raw inotify events into hints. A directory created or moved in is a
+// `directory` hint, so it and what it holds get watches; one deleted or moved away is a `gone`
+// hint, so its watches are dropped; anything else is an `entry` hint. A watch the kernel dropped,
+// because its directory was deleted, is a `gone` hint too. When the kernel's queue overflowed,
+// every watched tree is checked. Pure, so it is tested with built buffers.
 //
 pub fn decode_events(
     buffer: []align(@alignOf(linux.inotify_event)) const u8,
     paths: *const std.AutoHashMapUnmanaged(i32, []const u8),
+    descriptors: *const std.StringHashMapUnmanaged(i32),
     hints: *HintSet,
 ) !void {
     const header_size = @sizeOf(linux.inotify_event);
@@ -280,24 +307,48 @@ pub fn decode_events(
         offset = name_end;
 
         if (header.mask & IN.Q_OVERFLOW != 0) {
-            var all = paths.valueIterator();
-            while (all.next()) |path| {
-                try hints.add(path.*, .directory);
-            }
-            continue;
-        }
-        if (header.mask & IN.IGNORED != 0) {
+            try add_tops(paths, descriptors, hints);
             continue;
         }
         const path = paths.get(header.wd) orelse continue;
+        if (header.mask & IN.IGNORED != 0) {
+            try hints.add(path, .gone);
+            continue;
+        }
         const name = std.mem.sliceTo(buffer[name_start..name_end], 0);
         if (name.len == 0) {
             try hints.add(path, .entry);
-        } else {
-            try hints.add_child(path, name, .entry);
+            continue;
         }
+        const scope: hints_module.Scope = if (header.mask & IN.ISDIR == 0)
+            .entry
+        else if (header.mask & (IN.CREATE | IN.MOVED_TO) != 0)
+            .directory
+        else if (header.mask & (IN.DELETE | IN.MOVED_FROM) != 0)
+            .gone
+        else
+            .entry;
+        try hints.add_child(path, name, scope);
     }
     assert(offset == buffer.len);
+}
+
+// Adds a `tree` hint for each watched directory whose parent is not watched, which are the tops
+// of the watched trees.
+fn add_tops(
+    paths: *const std.AutoHashMapUnmanaged(i32, []const u8),
+    descriptors: *const std.StringHashMapUnmanaged(i32),
+    hints: *HintSet,
+) !void {
+    var all = paths.valueIterator();
+    while (all.next()) |path| {
+        if (std.fs.path.dirname(path.*)) |parent| {
+            if (descriptors.contains(parent)) {
+                continue;
+            }
+        }
+        try hints.add(path.*, .tree);
+    }
 }
 
 test {

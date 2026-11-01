@@ -10,7 +10,7 @@ const Allocator = std.mem.Allocator;
 const Options = file_watcher.Options;
 
 //
-// How events are written to standard output.
+// How changes are written to standard output.
 //
 pub const Format = enum {
     //
@@ -39,7 +39,7 @@ pub const Config = struct {
     paths: []const []const u8,
 
     //
-    // How events are written.
+    // How changes are written.
     //
     format: Format,
 
@@ -90,8 +90,7 @@ pub const Command = union(enum) {
 pub const usage =
     \\Usage: file-watcher [options] <directory>...
     \\
-    \\Watches directory trees and prints every file and directory that is created,
-    \\modified or deleted.
+    \\Watches directory trees and prints which of them changed.
     \\
     \\Options:
     \\  -f, --format <format>        Output format: text, json or yaml. Default: text.
@@ -106,6 +105,8 @@ pub const usage =
     \\                               allows. Directories beyond it are polled.
     \\  -i, --poll-interval <ms>     How often polled directories are rescanned.
     \\                               Default: 1000.
+    \\  -t, --throttle <ms>          The shortest time between two reports of the same
+    \\                               directory. 0 reports at once. Default: 1000.
     \\      --poll                   Poll every directory instead of using native watches.
     \\  -d, --duration <ms>          Exit after this many milliseconds.
     \\  -s, --stats                  Print watch counters to standard error at start.
@@ -210,6 +211,14 @@ pub fn parse(arena: Allocator, argv: []const []const u8) Allocator.Error!Command
                 );
             }
             config.options.poll_interval_ms = interval;
+        } else if (is_flag(argument, "-t", "--throttle")) {
+            config.options.throttle_ms = parse_number(value, std.math.maxInt(u32)) orelse {
+                return failure(
+                    arena,
+                    "Throttle {s} is not a whole number of milliseconds.",
+                    .{value},
+                );
+            };
         } else if (is_flag(argument, "-d", "--duration")) {
             config.duration_ms = parse_number(value, std.math.maxInt(u32)) orelse {
                 return failure(
@@ -273,6 +282,7 @@ fn is_value_flag(argument: []const u8) bool {
         .{ "-q", "--quota" },
         .{ "-m", "--max-watches" },
         .{ "-i", "--poll-interval" },
+        .{ "-t", "--throttle" },
         .{ "-d", "--duration" },
     };
     for (flags) |flag| {

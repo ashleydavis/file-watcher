@@ -165,7 +165,13 @@ const Pending = struct {
 // Appends one event to `pending`, or marks it overflowed when the event does not fit. Pure, so
 // it is tested on every platform.
 //
-pub fn queue_event(gpa: Allocator, bytes: *std.ArrayList(u8), is_overflowed: *bool, path: []const u8, flags: u32) void {
+pub fn queue_event(
+    gpa: Allocator,
+    bytes: *std.ArrayList(u8),
+    is_overflowed: *bool,
+    path: []const u8,
+    flags: u32,
+) void {
     const size = 8 + path.len;
     if (is_overflowed.* or bytes.items.len + size > pending_bytes_max) {
         is_overflowed.* = true;
@@ -184,7 +190,12 @@ pub fn queue_event(gpa: Allocator, bytes: *std.ArrayList(u8), is_overflowed: *bo
 //
 // Turns events encoded by `queue_event` into hints. Pure, so it is tested on every platform.
 //
-pub fn decode_pending(bytes: []const u8, is_overflowed: bool, roots: []const *Root, hints: *HintSet) !void {
+pub fn decode_pending(
+    bytes: []const u8,
+    is_overflowed: bool,
+    roots: []const *Root,
+    hints: *HintSet,
+) !void {
     if (is_overflowed) {
         for (roots) |root| {
             try hints.add(root.path, .tree);
@@ -218,7 +229,10 @@ const Api = struct {
         latency: f64,
         flags: u32,
     ) callconv(.c) ?*anyopaque,
-    FSEventStreamSetDispatchQueue: *const fn (stream: *anyopaque, queue: ?*anyopaque) callconv(.c) void,
+    FSEventStreamSetDispatchQueue: *const fn (
+        stream: *anyopaque,
+        queue: ?*anyopaque,
+    ) callconv(.c) void,
     FSEventStreamStart: *const fn (stream: *anyopaque) callconv(.c) u8,
     FSEventStreamStop: *const fn (stream: *anyopaque) callconv(.c) void,
     FSEventStreamInvalidate: *const fn (stream: *anyopaque) callconv(.c) void,
@@ -238,8 +252,15 @@ const Api = struct {
     ) callconv(.c) ?*anyopaque,
     CFRelease: *const fn (object: *anyopaque) callconv(.c) void,
     kCFTypeArrayCallBacks: *const anyopaque,
-    dispatch_queue_create: *const fn (label: [*:0]const u8, attributes: ?*anyopaque) callconv(.c) ?*anyopaque,
-    dispatch_sync_f: *const fn (queue: *anyopaque, context: ?*anyopaque, work: *const fn (?*anyopaque) callconv(.c) void) callconv(.c) void,
+    dispatch_queue_create: *const fn (
+        label: [*:0]const u8,
+        attributes: ?*anyopaque,
+    ) callconv(.c) ?*anyopaque,
+    dispatch_sync_f: *const fn (
+        queue: *anyopaque,
+        context: ?*anyopaque,
+        work: *const fn (?*anyopaque) callconv(.c) void,
+    ) callconv(.c) void,
     dispatch_release: *const fn (object: *anyopaque) callconv(.c) void,
 };
 
@@ -480,6 +501,13 @@ pub const FsEvents = struct {
     }
 
     //
+    // The number of roots watched.
+    //
+    pub fn watch_count(self: *const FsEvents) u32 {
+        return @intCast(self.roots.items.len);
+    }
+
+    //
     // Stops watching the root at `path`. Returns false when it was not watched.
     //
     pub fn unwatch(self: *FsEvents, path: []const u8) bool {
@@ -523,7 +551,8 @@ pub const FsEvents = struct {
         // Events are taken whether or not the kqueue said so, so a wake never strands them.
         _ = std.c.pthread_mutex_lock(&self.pending.mutex);
         defer _ = std.c.pthread_mutex_unlock(&self.pending.mutex);
-        try decode_pending(self.pending.bytes.items, self.pending.is_overflowed, self.roots.items, hints);
+        const pending = &self.pending;
+        try decode_pending(pending.bytes.items, pending.is_overflowed, self.roots.items, hints);
         self.pending.bytes.clearRetainingCapacity();
         self.pending.is_overflowed = false;
     }
@@ -555,7 +584,9 @@ fn on_events(
         _ = std.c.pthread_mutex_lock(&self.pending.mutex);
         defer _ = std.c.pthread_mutex_unlock(&self.pending.mutex);
         for (0..count) |index| {
-            queue_event(self.gpa, &self.pending.bytes, &self.pending.is_overflowed, std.mem.span(c_paths[index]), flags[index]);
+            const path = std.mem.span(c_paths[index]);
+            const pending = &self.pending;
+            queue_event(self.gpa, &pending.bytes, &pending.is_overflowed, path, flags[index]);
         }
     }
     trigger(self.kq, events_ident);

@@ -5,12 +5,12 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-const snapshot_module = @import("snapshot.zig");
+const fingerprint_module = @import("fingerprint.zig");
 const windows_listing = @import("windows_listing.zig");
 
 const testing = std.testing;
 const FileIdFullDirInformation = windows_listing.FileIdFullDirInformation;
-const Listed = snapshot_module.Listed;
+const Listed = fingerprint_module.Listed;
 
 //
 // Builds a buffer of directory records the way `NtQueryDirectoryFile` lays them out.
@@ -104,16 +104,17 @@ test "decode_records turns records into stamped entries" {
     try testing.expectEqual(@as(usize, 4), entries.items.len);
     const file = entries.items[0];
     try testing.expectEqualStrings("a.txt", file.name);
-    try testing.expectEqual(snapshot_module.EntryKind.file, file.stamp.kind);
+    try testing.expectEqual(fingerprint_module.EntryKind.file, file.stamp.kind);
     try testing.expectEqual(@as(u64, 12), file.stamp.size);
     const expected_time = std.os.windows.fromSysTime(133_000_000_000_000_000);
     try testing.expectEqual(@as(i64, @truncate(expected_time.nanoseconds)), file.stamp.mtime_ns);
     try testing.expectEqual(@as(std.Io.File.INode, 77), file.stamp.inode);
-    try testing.expectEqual(snapshot_module.EntryKind.directory, entries.items[1].stamp.kind);
+    try testing.expectEqual(fingerprint_module.EntryKind.directory, entries.items[1].stamp.kind);
     try testing.expectEqualStrings("link", entries.items[2].name);
-    try testing.expectEqual(snapshot_module.EntryKind.other, entries.items[2].stamp.kind);
+    try testing.expectEqual(fingerprint_module.EntryKind.other, entries.items[2].stamp.kind);
     try testing.expectEqualStrings("é.txt", entries.items[3].name);
-    try testing.expectEqual(@as(std.Io.File.INode, @bitCast(@as(i64, -1))), entries.items[3].stamp.inode);
+    const all_ones: std.Io.File.INode = @bitCast(@as(i64, -1));
+    try testing.expectEqual(all_ones, entries.items[3].stamp.inode);
 }
 
 //
@@ -142,7 +143,7 @@ test "decode_records reads unaligned records" {
 // Method: filter a list holding the name in another case and other names.
 //
 test "keep_named keeps only the named entry" {
-    const stamp: snapshot_module.Stamp = .{
+    const stamp: fingerprint_module.Stamp = .{
         .kind = .file,
         .size = 0,
         .mtime_ns = 0,
@@ -192,7 +193,7 @@ test "list matches statFile on Windows" {
         const stat = try tmp.dir.statFile(io, entry.name, .{
             .follow_symlinks = false,
         });
-        const stamp = snapshot_module.stamp_from_stat(&stat);
+        const stamp = fingerprint_module.stamp_from_stat(&stat);
         try testing.expectEqual(stamp.kind, entry.stamp.kind);
         try testing.expectEqual(stamp.inode, entry.stamp.inode);
         try testing.expectEqual(stamp.mtime_ns, entry.stamp.mtime_ns);

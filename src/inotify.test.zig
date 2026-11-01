@@ -52,35 +52,63 @@ const EventBuffer = struct {
 };
 
 //
-// Goal: each kind of raw event becomes the right hint, and unknown or ignored watches are
-// skipped.
-// Method: decode a buffer with named, unnamed, ignored, unknown and overflow events.
+// Goal: each kind of raw event becomes the right hint: directories created or moved in are
+// `directory` hints, ones deleted or moved away and watches the kernel dropped are `gone` hints,
+// anything else is an `entry` hint, and events for unknown watches are skipped.
+// Method: decode a buffer with each kind of event.
 //
 test "decode_events turns raw events into hints" {
     var paths: std.AutoHashMapUnmanaged(i32, []const u8) = .empty;
     defer paths.deinit(testing.allocator);
+    var descriptors: std.StringHashMapUnmanaged(i32) = .empty;
+    defer descriptors.deinit(testing.allocator);
     try paths.put(testing.allocator, 1, native_path("/root"));
     try paths.put(testing.allocator, 2, native_path("/root/sub"));
+    try descriptors.put(testing.allocator, native_path("/root"), 1);
+    try descriptors.put(testing.allocator, native_path("/root/sub"), 2);
 
     var buffer: EventBuffer = .{};
     buffer.add(1, linux.IN.CREATE, "a.txt");
+    buffer.add(1, linux.IN.CREATE | linux.IN.ISDIR, "new");
+    buffer.add(1, linux.IN.MOVED_TO | linux.IN.ISDIR, "moved-in");
+    buffer.add(1, linux.IN.DELETE | linux.IN.ISDIR, "deleted");
+    buffer.add(1, linux.IN.MOVED_FROM | linux.IN.ISDIR, "moved-out");
+    buffer.add(1, linux.IN.ATTRIB | linux.IN.ISDIR, "touched");
     buffer.add(2, linux.IN.DELETE_SELF, "");
     buffer.add(2, linux.IN.IGNORED, "");
     buffer.add(9, linux.IN.MODIFY, "lost");
 
     var hints = HintSet.init(testing.allocator);
     defer hints.deinit();
-    try inotify_module.decode_events(buffer.bytes[0..buffer.len], &paths, &hints);
-    try testing.expectEqual(@as(usize, 2), hints.paths.count());
+    try inotify_module.decode_events(buffer.bytes[0..buffer.len], &paths, &descriptors, &hints);
+    try testing.expectEqual(@as(usize, 7), hints.paths.count());
     try testing.expect(hints.paths.get(native_path("/root/a.txt")).?.entry);
-    try testing.expect(hints.paths.get(native_path("/root/sub")).?.entry);
+    try testing.expect(hints.paths.get(native_path("/root/new")).?.directory);
+    try testing.expect(hints.paths.get(native_path("/root/moved-in")).?.directory);
+    try testing.expect(hints.paths.get(native_path("/root/deleted")).?.gone);
+    try testing.expect(hints.paths.get(native_path("/root/moved-out")).?.gone);
+    try testing.expect(hints.paths.get(native_path("/root/touched")).?.entry);
+    const sub = hints.paths.get(native_path("/root/sub")).?;
+    try testing.expect(sub.entry);
+    try testing.expect(sub.gone);
 
     hints.clear();
+    try paths.put(testing.allocator, 3, native_path("/other"));
+    try descriptors.put(testing.allocator, native_path("/other"), 3);
     var overflow: EventBuffer = .{};
     overflow.add(-1, linux.IN.Q_OVERFLOW, "");
-    try inotify_module.decode_events(overflow.bytes[0..overflow.len], &paths, &hints);
-    try testing.expect(hints.paths.get(native_path("/root")).?.directory);
-    try testing.expect(hints.paths.get(native_path("/root/sub")).?.directory);
+    try inotify_module.decode_events(overflow.bytes[0..overflow.len], &paths, &descriptors, &hints);
+    try testing.expectEqual(@as(usize, 2), hints.paths.count());
+    try testing.expect(hints.paths.get(native_path("/root")).?.tree);
+    try testing.expect(hints.paths.get(native_path("/other")).?.tree);
+
+    hints.clear();
+    var top_paths: std.AutoHashMapUnmanaged(i32, []const u8) = .empty;
+    defer top_paths.deinit(testing.allocator);
+    try top_paths.put(testing.allocator, 1, "/");
+    const raw = overflow.bytes[0..overflow.len];
+    try inotify_module.decode_events(raw, &top_paths, &descriptors, &hints);
+    try testing.expect(hints.paths.get("/").?.tree);
 }
 
 //
@@ -147,6 +175,17 @@ test "Inotify watches a real directory" {
 
     try testing.expectError(error.FileNotFound, inotify.watch(sub, true));
     try testing.expectError(error.NotDir, inotify.watch(file, true));
+
+    try tmp.dir.createDir(testing.io, "moved/deeper", .default_dir);
+    var deeper_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const deeper = try temp_path(&deeper_buffer, &tmp, "moved/deeper");
+    try testing.expect(try inotify.watch(moved, true));
+    try testing.expect(try inotify.watch(deeper, true));
+    try testing.expectEqual(@as(u32, 3), inotify.watch_count());
+    try inotify.unwatch_tree(moved);
+    try testing.expectEqual(@as(u32, 1), inotify.watch_count());
+    try inotify.unwatch_tree(root);
+    try testing.expectEqual(@as(u32, 0), inotify.watch_count());
 }
 
 //

@@ -8,7 +8,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const hints_module = @import("hints.zig");
 const limit = @import("limit.zig");
-const snapshot_module = @import("snapshot.zig");
+const fingerprint_module = @import("fingerprint.zig");
 const windows_listing = @import("windows_listing.zig");
 
 const assert = std.debug.assert;
@@ -61,7 +61,7 @@ const ERROR_IO_PENDING: DWORD = 997;
 
 //
 // The changes to report: names of files and directories, attributes, sizes, write times and
-// creation times. Together they cover every change the snapshot detects.
+// creation times. Together they cover every change polling detects.
 //
 const notify_filter: DWORD = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0010 | 0x0040;
 
@@ -168,10 +168,10 @@ pub const ReadDirectoryChanges = struct {
     pub const watches_files = false;
 
     //
-    // Lists each directory with its entries' metadata in one query, which polling and rescans
-    // need on Windows, where reading each entry's metadata on its own opens a handle per entry.
+    // Lists each directory with its entries' metadata in one query, which polling needs on
+    // Windows, where reading each entry's metadata on its own opens a handle per entry.
     //
-    pub const lister: snapshot_module.Lister = windows_listing.list;
+    pub const lister: fingerprint_module.Lister = windows_listing.list;
 
     //
     // Allocates the roots.
@@ -281,6 +281,13 @@ pub const ReadDirectoryChanges = struct {
         self.events.appendAssumeCapacity(event);
         assert(self.events.items.len == self.roots.items.len + 1);
         return true;
+    }
+
+    //
+    // The number of roots watched.
+    //
+    pub fn watch_count(self: *const ReadDirectoryChanges) u32 {
+        return @intCast(self.roots.items.len);
     }
 
     //

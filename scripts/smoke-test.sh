@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # Runs the built CLI tool against real directories and checks every feature: help, version,
-# usage errors, the three output formats, created, modified, deleted and renamed entries,
-# exclusions, polling, the quota, counters, several roots and the duration.
+# usage errors, the three output formats, that every kind of change reports its watched
+# directory, exclusions, polling, the quota, counters, several roots and the duration.
 #
 
 set -euo pipefail
@@ -64,6 +64,8 @@ failed=0
 # The longest wait for a case's changes to be reported. Watchers in change cases run with this
 # duration too, as a backstop, and are stopped as soon as their changes are reported.
 event_timeout_seconds=60
+# How long a change that must not be reported is given to show up anyway.
+quiet_seconds=1.5
 event_duration_ms=$((event_timeout_seconds * 1000 + 5000))
 
 # Records a check's result.
@@ -134,7 +136,10 @@ wait_ready() {
 start_watcher() {
     local case_dir="$1"
     shift
-    exec_tool -s "$@" > "$case_dir/out.txt" 2> "$case_dir/err.txt" &
+    # Append mode, because through the iOS simulator's launcher the tool and the launcher each
+    # write to these files with their own position, and the launcher's exit message would
+    # otherwise overwrite the start of the tool's output.
+    exec_tool -s "$@" >> "$case_dir/out.txt" 2>> "$case_dir/err.txt" &
     watcher_pid=$!
     watcher_case_dir="$case_dir"
     wait_ready "$case_dir/err.txt"
@@ -194,6 +199,76 @@ wait_lines() {
     echo "     waited ${event_timeout_seconds} s for: $line"
 }
 
+# Prints how many lines of the output say `root` changed.
+count_changes() {
+    local out="$1" root="$2"
+    slashed "$out" | { grep -cxF -- "changed $root" || true; }
+}
+
+# Waits until the output has gone quiet for half a second, up to $event_timeout_seconds, so
+# reports of an earlier change are all in before the next one is made.
+settle() {
+    local out="$1"
+    local deadline=$((SECONDS + event_timeout_seconds))
+    local previous
+    previous=$(wc -l < "$out")
+    while [ "$SECONDS" -lt "$deadline" ]; do
+        sleep 0.5
+        local current
+        current=$(wc -l < "$out")
+        if [ "$current" -eq "$previous" ]; then
+            return 0
+        fi
+        previous=$current
+    done
+}
+
+# Runs the command after the output and root, then succeeds once a new line says `root` changed,
+# up to $event_timeout_seconds.
+changes() {
+    local out="$1" root="$2"
+    shift 2
+    settle "$out"
+    local before
+    before=$(count_changes "$out" "$root")
+    "$@"
+    local deadline=$((SECONDS + event_timeout_seconds))
+    while [ "$SECONDS" -lt "$deadline" ]; do
+        if [ "$(count_changes "$out" "$root")" -gt "$before" ]; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    echo "     waited ${event_timeout_seconds} s for: changed $root"
+    return 1
+}
+
+# Waits until the output holds `count` lines saying `root` changed, up to $event_timeout_seconds.
+wait_lines_count() {
+    local out="$1" root="$2" count="$3"
+    local deadline=$((SECONDS + event_timeout_seconds))
+    while [ "$SECONDS" -lt "$deadline" ]; do
+        if [ "$(count_changes "$out" "$root")" -ge "$count" ]; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    return 1
+}
+
+# Runs the command after the output and root, then succeeds when nothing is reported within
+# $quiet_seconds, which is several poll intervals and far longer than a native report takes.
+no_changes() {
+    local out="$1" root="$2"
+    shift 2
+    settle "$out"
+    local before
+    before=$(count_changes "$out" "$root")
+    "$@"
+    sleep "$quiet_seconds"
+    [ "$(count_changes "$out" "$root")" -eq "$before" ]
+}
+
 # Stops the watcher started last and waits for it to exit. Through a launcher, the tool runs as
 # its own process, found by its path, and is stopped as well as the launcher.
 stop_watcher() {
@@ -240,64 +315,54 @@ check "missing directory exits with code 1" test "$missing_code" -eq 1
 check "missing directory explains itself" grep -q "it does not exist" "$work/missing.txt"
 check "a file as root exits with code 1" test "$file_code" -eq 1
 
-# Text output for every kind of change, with native watching.
+# Every kind of change is reported as its watched directory changing, with native watching. Each
+# change is made on its own and waited for, and the output is left to go quiet before the next
+# one, so a late report of one change cannot pass for the next.
 case_dir="$(new_case text)"
 tree="$case_dir/tree"
+out="$case_dir/out.txt"
 echo "old" > "$tree/modified.txt"
 echo "old" > "$tree/deleted.txt"
 echo "old" > "$tree/renamed.txt"
-mkdir -p "$tree/gone/inner"
+mkdir -p "$tree/gone/inner" "$tree/node_modules/pkg"
 echo "x" > "$tree/gone/inner/file.txt"
 start_watcher "$case_dir" -d "$event_duration_ms" "$tree"
-echo "new" > "$tree/created.txt"
-echo "changed" >> "$tree/modified.txt"
-rm "$tree/deleted.txt"
-mv "$tree/renamed.txt" "$tree/renamed-to.txt"
-mkdir -p "$tree/new-dir/deeper"
-sleep 0.3
-echo "x" > "$tree/new-dir/deeper/file.txt"
-rm -r "$tree/gone"
-wait_lines "$case_dir/out.txt" \
-    "created file $tree/created.txt" \
-    "modified file $tree/modified.txt" \
-    "deleted file $tree/deleted.txt" \
-    "deleted file $tree/renamed.txt" \
-    "created file $tree/renamed-to.txt" \
-    "created directory $tree/new-dir" \
-    "created directory $tree/new-dir/deeper" \
-    "created file $tree/new-dir/deeper/file.txt" \
-    "deleted directory $tree/gone" \
-    "deleted file $tree/gone/inner/file.txt"
+check "text: created file" changes "$out" "$tree" eval 'echo new > "$tree/created.txt"'
+check "text: modified file" changes "$out" "$tree" eval 'echo changed >> "$tree/modified.txt"'
+check "text: deleted file" changes "$out" "$tree" eval 'rm "$tree/deleted.txt"'
+check "text: renamed file" changes "$out" "$tree" eval 'mv "$tree/renamed.txt" "$tree/renamed-to.txt"'
+check "text: created directory" changes "$out" "$tree" eval 'mkdir "$tree/new-dir"'
+check "text: file in a new directory" changes "$out" "$tree" eval 'echo x > "$tree/new-dir/file.txt"'
+check "text: created nested directories" changes "$out" "$tree" eval 'mkdir -p "$tree/new-dir/a/b"'
+check "text: file in a nested new directory" changes "$out" "$tree" eval 'echo x > "$tree/new-dir/a/b/file.txt"'
+check "text: file in an existing subdirectory" changes "$out" "$tree" eval 'echo y >> "$tree/gone/inner/file.txt"'
+check "text: deleted directory" changes "$out" "$tree" eval 'rm -r "$tree/gone"'
+check "text: node_modules left out by default" no_changes "$out" "$tree" eval 'echo x > "$tree/node_modules/pkg/index.js"'
 stop_watcher
-out="$case_dir/out.txt"
-check "text: created file" has_line "$out" "created file $tree/created.txt"
-check "text: modified file" has_line "$out" "modified file $tree/modified.txt"
-check "text: deleted file" has_line "$out" "deleted file $tree/deleted.txt"
-check "text: rename reports the old path deleted" has_line "$out" "deleted file $tree/renamed.txt"
-check "text: rename reports the new path created" has_line "$out" "created file $tree/renamed-to.txt"
-check "text: created directory" has_line "$out" "created directory $tree/new-dir"
-check "text: created nested directory" has_line "$out" "created directory $tree/new-dir/deeper"
-check "text: file in a new directory" has_line "$out" "created file $tree/new-dir/deeper/file.txt"
-check "text: deleted directory" has_line "$out" "deleted directory $tree/gone"
-check "text: deleted file inside a deleted directory" has_line "$out" "deleted file $tree/gone/inner/file.txt"
+check "text: every line names the watched directory" lacks_text "$out" "$tree/"
 check "text: no warnings" has_no_warnings "$case_dir/err.txt"
+
+# The throttle: a second change soon after the first is held back and reported once the
+# throttle time has passed, not at once.
+case_dir="$(new_case throttle)"
+tree="$case_dir/tree"
+start_watcher "$case_dir" -t 3000 -d "$event_duration_ms" "$tree"
+check "throttle: first change reported at once" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/one.txt"'
+SECONDS=0
+check "throttle: second change held back" no_changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/two.txt"'
+check "throttle: held change reported when the throttle time ends" wait_lines_count "$case_dir/out.txt" "$tree" 2
+check "throttle: held change reported no sooner than the throttle time" test "$SECONDS" -ge 2
+stop_watcher
 
 # JSON output.
 case_dir="$(new_case json)"
 tree="$case_dir/tree"
-# Windows forbids quotes in file names, so there the name checks a space instead.
-json_name='quote"name.txt'
-json_escaped='quote\"name.txt'
-if [ "$is_windows" -eq 1 ]; then
-    json_name='space name.txt'
-    json_escaped='space name.txt'
-fi
 start_watcher "$case_dir" -f json -d "$event_duration_ms" "$tree"
-echo "x" > "$tree/$json_name"
-wait_lines "$case_dir/out.txt" "{\"kind\":\"created\",\"type\":\"file\",\"path\":\"$tree/$json_escaped\"}"
+echo "x" > "$tree/a.txt"
+wait_lines "$case_dir/out.txt" "{\"changed\":\"$tree\"}"
 stop_watcher
 out="$case_dir/out.txt"
-check "json: created event" has_line "$out" "{\"kind\":\"created\",\"type\":\"file\",\"path\":\"$tree/$json_escaped\"}"
+check "json: changed line" has_line "$out" "{\"changed\":\"$tree\"}"
 if command -v python3 > /dev/null; then
     check "json: every line parses" python3 -c '
 import json, sys
@@ -313,117 +378,90 @@ case_dir="$(new_case yaml)"
 tree="$case_dir/tree"
 start_watcher "$case_dir" -f yaml -d "$event_duration_ms" "$tree"
 echo "x" > "$tree/a.txt"
-wait_lines "$case_dir/out.txt" "  path: \"$tree/a.txt\""
+wait_lines "$case_dir/out.txt" "- changed: \"$tree\""
 stop_watcher
 out="$case_dir/out.txt"
-check "yaml: kind line" has_line "$out" "- kind: created"
-check "yaml: type line" has_line "$out" "  type: file"
-check "yaml: path line" has_line "$out" "  path: \"$tree/a.txt\""
+check "yaml: changed line" has_line "$out" "- changed: \"$tree\""
 if command -v python3 > /dev/null && python3 -c "import yaml" 2> /dev/null; then
     check "yaml: output parses" python3 -c '
 import sys, yaml
 items = yaml.safe_load(open(sys.argv[1]))
-assert items[0]["kind"] == "created"
+assert "changed" in items[0]
 ' "$out"
 fi
 
 # Default, custom and disabled exclusions.
 case_dir="$(new_case exclude)"
 tree="$case_dir/tree"
+out="$case_dir/out.txt"
 mkdir -p "$tree/node_modules/pkg" "$tree/build" "$tree/.git"
 start_watcher "$case_dir" -x build -e log -e .tmp -d "$event_duration_ms" "$tree"
-echo "x" > "$tree/node_modules/pkg/index.js"
-echo "x" > "$tree/.git/HEAD"
-echo "x" > "$tree/build/out.o"
-echo "x" > "$tree/server.log"
-echo "x" > "$tree/scratch.tmp"
-mkdir "$tree/node_modules/new"
-# The kept file is written last, so once it is reported the excluded changes before it would
-# have been reported too.
-echo "x" > "$tree/kept.txt"
-wait_lines "$case_dir/out.txt" "created file $tree/kept.txt"
+check "exclude: node_modules left out by default" no_changes "$out" "$tree" eval 'echo x > "$tree/node_modules/pkg/index.js"; mkdir "$tree/node_modules/new"'
+check "exclude: .git left out by default" no_changes "$out" "$tree" eval 'echo x > "$tree/.git/HEAD"'
+check "exclude: custom directory left out" no_changes "$out" "$tree" eval 'echo x > "$tree/build/out.o"'
+check "exclude: extension given without a dot left out" no_changes "$out" "$tree" eval 'echo x > "$tree/server.log"'
+check "exclude: extension given with a dot left out" no_changes "$out" "$tree" eval 'echo x > "$tree/scratch.tmp"'
+check "exclude: kept file reported" changes "$out" "$tree" eval 'echo x > "$tree/kept.txt"'
 stop_watcher
-out="$case_dir/out.txt"
-check "exclude: kept file reported" has_line "$out" "created file $tree/kept.txt"
-check "exclude: node_modules left out by default" lacks_text "$out" "node_modules"
-check "exclude: .git left out by default" lacks_text "$out" ".git"
-check "exclude: custom directory left out" lacks_text "$out" "/build"
-check "exclude: extension given without a dot left out" lacks_text "$out" "server.log"
-check "exclude: extension given with a dot left out" lacks_text "$out" "scratch.tmp"
 
 case_dir="$(new_case no-default-excludes)"
 tree="$case_dir/tree"
 mkdir -p "$tree/node_modules"
 start_watcher "$case_dir" --no-default-excludes -d "$event_duration_ms" "$tree"
-echo "x" > "$tree/node_modules/index.js"
-wait_lines "$case_dir/out.txt" "created file $tree/node_modules/index.js"
+check "exclude: --no-default-excludes watches node_modules" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/node_modules/index.js"'
 stop_watcher
-check "exclude: --no-default-excludes watches node_modules" has_line "$case_dir/out.txt" "created file $tree/node_modules/index.js"
 
 # Polling, the quota and the counters.
 case_dir="$(new_case poll)"
 tree="$case_dir/tree"
 mkdir -p "$tree/sub"
-start_watcher "$case_dir" --poll -i 100 -s -d "$event_duration_ms" "$tree"
-echo "x" > "$tree/sub/polled.txt"
-wait_lines "$case_dir/out.txt" "created file $tree/sub/polled.txt"
+start_watcher "$case_dir" --poll -i 100 -d "$event_duration_ms" "$tree"
+check "poll: change found by polling" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/sub/polled.txt"'
+check "poll: excluded change left out" no_changes "$case_dir/out.txt" "$tree" eval 'mkdir -p "$tree/node_modules"; echo x > "$tree/node_modules/a.js"'
 stop_watcher
-check "poll: change found by polling" has_line "$case_dir/out.txt" "created file $tree/sub/polled.txt"
-check "poll: counters show polling only" grep -q "native_watches=0 polled_directories=2 .* native_active=false" "$case_dir/err.txt"
+check "poll: counters show polling only" grep -q "roots=1 polled_roots=1 native_watches=0 .* native_active=false" "$case_dir/err.txt"
 
 case_dir="$(new_case quota)"
 tree="$case_dir/tree"
-start_watcher "$case_dir" -q 0 -i 100 -s -d "$event_duration_ms" "$tree"
-echo "x" > "$tree/quota.txt"
-wait_lines "$case_dir/out.txt" "created file $tree/quota.txt"
+start_watcher "$case_dir" -q 0 -i 100 -d "$event_duration_ms" "$tree"
+check "quota: zero quota still finds changes" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/quota.txt"'
 stop_watcher
-check "quota: zero quota still finds changes" has_line "$case_dir/out.txt" "created file $tree/quota.txt"
-check "quota: zero quota uses no native watches" grep -q "native_watches=0 .* watch_budget=0" "$case_dir/err.txt"
+check "quota: zero quota uses no native watches" grep -q "native_watches=0 watch_budget=0" "$case_dir/err.txt"
 
-# Directories beyond the quota are polled, and the quota being used up is reported.
+# A tree that needs more native watches than allowed is polled, keeps the watches it got, and
+# the quota being used up is reported.
 case_dir="$(new_case overflow)"
 tree="$case_dir/tree"
-run_tool -q 1 -s -d 0 "$tree" 2> "$case_dir/budget.txt"
-budget=$(sed -n 's/.*watch_budget=\([0-9]*\).*/\1/p' "$case_dir/budget.txt")
 if [ "$is_tree_backend" -eq 1 ]; then
-    echo "skip overflow: one watch covers a whole tree on this platform, so directories never overflow the quota"
-elif [ -n "$budget" ] && [ "$budget" -gt 0 ] && [ "$budget" -lt 20000 ]; then
-    for index in $(seq 1 $((budget + 5))); do
-        mkdir "$tree/dir$index"
-    done
-    start_watcher "$case_dir" -q 1 -i 100 -s -d "$event_duration_ms" "$tree"
-    echo "x" > "$tree/dir$((budget + 5))/late.txt"
-    wait_lines "$case_dir/out.txt" "created file $tree/dir$((budget + 5))/late.txt"
-    stop_watcher
-    check "overflow: native watches stop at the budget" grep -q "native_watches=$budget polled_directories=" "$case_dir/err.txt"
-    check "overflow: quota reported" grep -q "the native watch quota is used up. It is watched by polling instead." "$case_dir/err.txt"
-    check "overflow: change in a polled directory found" has_line "$case_dir/out.txt" "created file $tree/dir$((budget + 5))/late.txt"
+    echo "skip overflow: one watch covers a whole tree on this platform, so a tree never overflows the quota"
 else
-    echo "skip overflow: a 1% quota of this platform's limit is ${budget:-unknown} directories"
+    mkdir -p "$tree/dir1" "$tree/dir2" "$tree/dir3"
+    start_watcher "$case_dir" -m 2 -i 100 -d "$event_duration_ms" "$tree"
+    check "overflow: change in a directory without a native watch found" changes "$case_dir/out.txt" "$tree" eval 'echo x > "$tree/dir3/late.txt"; echo x > "$tree/dir2/late.txt"; echo x > "$tree/dir1/late.txt"'
+    stop_watcher
+    check "overflow: native watches stop at the cap" grep -q "roots=1 polled_roots=1 native_watches=2 watch_budget=2" "$case_dir/err.txt"
+    check "overflow: quota reported" grep -q "the native watch quota is used up. Its watched directory is polled instead." "$case_dir/err.txt"
 fi
 
 case_dir="$(new_case native-stats)"
 tree="$case_dir/tree"
 mkdir -p "$tree/a" "$tree/b"
-start_watcher "$case_dir" -s -d 600 "$tree"
+start_watcher "$case_dir" -d 600 "$tree"
 wait_watcher
 # A tree backend watches the root alone; the other platforms use one watch per directory.
 expected_watches=3
 if [ "$is_tree_backend" -eq 1 ]; then
     expected_watches=1
 fi
-check "stats: native watches" grep -q "directories=3 native_watches=$expected_watches polled_directories=0" "$case_dir/err.txt"
+check "stats: native watches" grep -q "roots=1 polled_roots=0 native_watches=$expected_watches " "$case_dir/err.txt"
 
-# Several roots, and overlapping roots.
+# Several roots, each reported by its own path, and overlapping roots.
 case_dir="$(new_case roots)"
 mkdir -p "$case_dir/second"
 start_watcher "$case_dir" -d "$event_duration_ms" "$case_dir/tree" "$case_dir/second/"
-echo "x" > "$case_dir/tree/one.txt"
-echo "x" > "$case_dir/second/two.txt"
-wait_lines "$case_dir/out.txt" "created file $case_dir/tree/one.txt" "created file $case_dir/second/two.txt"
+check "roots: first root reported" changes "$case_dir/out.txt" "$case_dir/tree" eval 'echo x > "$case_dir/tree/one.txt"'
+check "roots: second root reported, trailing separator removed" changes "$case_dir/out.txt" "$case_dir/second" eval 'echo x > "$case_dir/second/two.txt"'
 stop_watcher
-check "roots: first root watched" has_line "$case_dir/out.txt" "created file $case_dir/tree/one.txt"
-check "roots: second root watched, trailing separator removed" has_line "$case_dir/out.txt" "created file $case_dir/second/two.txt"
 set +e
 run_tool -d 100 "$case_dir" "$case_dir/tree" > /dev/null 2> "$case_dir/overlap.txt"
 overlap_code=$?
@@ -448,7 +486,7 @@ if [ "$is_windows" -eq 0 ] && [ "$launcher_count" -eq 0 ]; then
     set -e
     check "interrupt: Ctrl+C exits with code 130" test "$interrupt_code" -eq 130
     check "interrupt: Ctrl+C stops at once" test "$SECONDS" -lt 2
-    check "interrupt: changes before Ctrl+C are printed" has_line "$case_dir/out.txt" "created file $tree/before-interrupt.txt"
+    check "interrupt: changes before Ctrl+C are printed" has_line "$case_dir/out.txt" "changed $tree"
 else
     echo "skip interrupt: Ctrl+C cannot be sent to the tool on this platform from this script"
 fi
