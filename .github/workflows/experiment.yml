@@ -1,4 +1,4 @@
-# Experiment: runs only "native watcher sees a real file change" on Windows, ten times, with the
+# Experiment 2: runs only "native watcher sees a real file change" on Windows, ten times, with a 50 ms sleep after `add`, and with the
 # polling of the file printed, to see where the file's times fall against the polling window.
 
 name: Experiment

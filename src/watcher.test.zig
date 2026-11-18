@@ -607,6 +607,8 @@ test "native watcher sees a real file change" {
     std.debug.print("before add now={d}\n", .{std.Io.Timestamp.now(testing.io, .real).nanoseconds});
     try watcher.add(file);
     std.debug.print("after add now={d}\n", .{std.Io.Timestamp.now(testing.io, .real).nanoseconds});
+    // Experiment 2: let Windows' file time clock tick past the time `add` started its window.
+    try testing.io.sleep(.fromMilliseconds(50), .awake);
     if (builtin.os.tag == .linux) {
         try testing.expectEqual(@as(u32, 1), watcher.stats().native_watches);
     }

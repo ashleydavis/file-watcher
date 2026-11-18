@@ -1,0 +1,1052 @@
+Windows file test	Set up job	﻿2026-11-18T05:33:52.1276983Z Current runner version: '2.338.2'
+Windows file test	Set up job	2026-11-18T05:33:52.1340572Z ##[group]Runner Image Provisioner
+Windows file test	Set up job	2026-11-18T05:33:52.1341957Z Hosted Compute Agent
+Windows file test	Set up job	2026-11-18T05:33:52.1343018Z Version: 20261103.629
+Windows file test	Set up job	2026-11-18T05:33:52.1344040Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+Windows file test	Set up job	2026-11-18T05:33:52.1345323Z Build Date: 2026-11-03T17:26:59Z
+Windows file test	Set up job	2026-11-18T05:33:52.1346449Z Worker ID: {e4e7f74f-20a1-4955-a0aa-2a9969bfdd7c}
+Windows file test	Set up job	2026-11-18T05:33:52.1347822Z Region: eastus
+Windows file test	Set up job	2026-11-18T05:33:52.1348720Z Cloud: Azure
+Windows file test	Set up job	2026-11-18T05:33:52.1349477Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:33:52.1351749Z ##[group]Operating System
+Windows file test	Set up job	2026-11-18T05:33:52.1352974Z Microsoft Windows Server 2025
+Windows file test	Set up job	2026-11-18T05:33:52.1353922Z 10.0.26100
+Windows file test	Set up job	2026-11-18T05:33:52.1354856Z Datacenter
+Windows file test	Set up job	2026-11-18T05:33:52.1355712Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:33:52.1356605Z ##[group]Runner Image
+Windows file test	Set up job	2026-11-18T05:33:52.1357686Z Image: windows-2025-vs2026
+Windows file test	Set up job	2026-11-18T05:33:52.1358690Z Version: 20261103.298.1
+Windows file test	Set up job	2026-11-18T05:33:52.1360785Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20261103.298/images/windows/Windows2025-VS2026-Readme.md
+Windows file test	Set up job	2026-11-18T05:33:52.1364462Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20261103.298
+Windows file test	Set up job	2026-11-18T05:33:52.1366321Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:33:52.1368714Z ##[group]GITHUB_TOKEN Permissions
+Windows file test	Set up job	2026-11-18T05:33:52.1371489Z Contents: read
+Windows file test	Set up job	2026-11-18T05:33:52.1372428Z Metadata: read
+Windows file test	Set up job	2026-11-18T05:33:52.1373401Z Packages: read
+Windows file test	Set up job	2026-11-18T05:33:52.1374268Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:33:52.1377091Z Secret source: Actions
+Windows file test	Set up job	2026-11-18T05:33:52.1378685Z Cache mode: write
+Windows file test	Set up job	2026-11-18T05:33:52.1379739Z Prepare workflow directory
+Windows file test	Set up job	2026-11-18T05:33:52.1790862Z Prepare all required actions
+Windows file test	Set up job	2026-11-18T05:33:52.1839156Z Getting action download info
+Windows file test	Set up job	2026-11-18T05:33:52.3532477Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+Windows file test	Set up job	2026-11-18T05:33:52.4923302Z Download action repository 'mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29' (SHA:d1434d08867e3ee9daa34448df10607b98908d29)
+Windows file test	Set up job	2026-11-18T05:33:57.8255326Z Complete job name: Windows file test
+Windows file test	Check out	﻿2026-11-18T05:33:58.0990776Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+Windows file test	Check out	2026-11-18T05:33:58.0992739Z with:
+Windows file test	Check out	2026-11-18T05:33:58.0993541Z   repository: ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:33:58.1003492Z   token: ***
+Windows file test	Check out	2026-11-18T05:33:58.1004277Z   ssh-strict: true
+Windows file test	Check out	2026-11-18T05:33:58.1005079Z   ssh-user: git
+Windows file test	Check out	2026-11-18T05:33:58.1005894Z   persist-credentials: true
+Windows file test	Check out	2026-11-18T05:33:58.1006804Z   clean: true
+Windows file test	Check out	2026-11-18T05:33:58.1007605Z   sparse-checkout-cone-mode: true
+Windows file test	Check out	2026-11-18T05:33:58.1008603Z   fetch-depth: 1
+Windows file test	Check out	2026-11-18T05:33:58.1009348Z   fetch-tags: false
+Windows file test	Check out	2026-11-18T05:33:58.1010104Z   show-progress: true
+Windows file test	Check out	2026-11-18T05:33:58.1010850Z   lfs: false
+Windows file test	Check out	2026-11-18T05:33:58.1011548Z   submodules: false
+Windows file test	Check out	2026-11-18T05:33:58.1012350Z   set-safe-directory: true
+Windows file test	Check out	2026-11-18T05:33:58.1013219Z   allow-unsafe-pr-checkout: false
+Windows file test	Check out	2026-11-18T05:33:58.1014455Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:33:58.2808235Z Syncing repository: ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:33:58.2811023Z ##[group]Getting Git version info
+Windows file test	Check out	2026-11-18T05:33:58.2812304Z Working directory is 'D:\a\file-watcher\file-watcher'
+Windows file test	Check out	2026-11-18T05:33:58.3725899Z [command]"C:\Program Files\Git\bin\git.exe" version
+Windows file test	Check out	2026-11-18T05:33:58.7104196Z git version 2.56.0.windows.4
+Windows file test	Check out	2026-11-18T05:33:58.7151596Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:33:58.7168252Z Temporarily overriding HOME='D:\a\_temp\a914741a-a5a6-4b05-8348-819ae7ab0c68' before making global git config changes
+Windows file test	Check out	2026-11-18T05:33:58.7169345Z Adding repository directory to the temporary git global config as a safe directory
+Windows file test	Check out	2026-11-18T05:33:58.7178660Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\file-watcher\file-watcher
+Windows file test	Check out	2026-11-18T05:33:58.7858994Z Deleting the contents of 'D:\a\file-watcher\file-watcher'
+Windows file test	Check out	2026-11-18T05:33:58.7864203Z ##[group]Determining repository object format
+Windows file test	Check out	2026-11-18T05:33:58.7868672Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:33:58.7869668Z ##[group]Initializing the repository
+Windows file test	Check out	2026-11-18T05:33:58.7877784Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\file-watcher\file-watcher
+Windows file test	Check out	2026-11-18T05:33:58.8767673Z Initialized empty Git repository in D:/a/file-watcher/file-watcher/.git/
+Windows file test	Check out	2026-11-18T05:33:58.8823459Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:33:58.9611649Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:33:58.9612393Z ##[group]Disabling automatic garbage collection
+Windows file test	Check out	2026-11-18T05:33:58.9622826Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+Windows file test	Check out	2026-11-18T05:33:59.0019926Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:33:59.0020910Z ##[group]Setting up auth
+Windows file test	Check out	2026-11-18T05:33:59.0021545Z Removing SSH command configuration
+Windows file test	Check out	2026-11-18T05:33:59.0032386Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Windows file test	Check out	2026-11-18T05:33:59.0434558Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Windows file test	Check out	2026-11-18T05:34:00.6350255Z Removing HTTP extra header
+Windows file test	Check out	2026-11-18T05:34:00.6361891Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Windows file test	Check out	2026-11-18T05:34:00.6776015Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Windows file test	Check out	2026-11-18T05:34:01.2814265Z Removing includeIf entries pointing to credentials config files
+Windows file test	Check out	2026-11-18T05:34:01.2825959Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Windows file test	Check out	2026-11-18T05:34:01.3248319Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Windows file test	Check out	2026-11-18T05:34:01.9498257Z [command]"C:\Program Files\Git\bin\git.exe" config --file D:\a\_temp\git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+Windows file test	Check out	2026-11-18T05:34:02.0027301Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/file-watcher/file-watcher/.git.path D:\a\_temp\git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Check out	2026-11-18T05:34:02.0471040Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path D:\a\_temp\git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Check out	2026-11-18T05:34:02.0959505Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Check out	2026-11-18T05:34:02.1402258Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Check out	2026-11-18T05:34:02.1828529Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:34:02.1829894Z ##[group]Fetching the repository
+Windows file test	Check out	2026-11-18T05:34:02.1845161Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ea3032ab19592ce831f42ddbd533761fea44b17d:refs/remotes/origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:34:03.2216955Z From https://github.com/ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:34:03.2218373Z  * [new ref]         ea3032ab19592ce831f42ddbd533761fea44b17d -> origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:34:03.2280311Z [command]"C:\Program Files\Git\bin\git.exe" branch --list --remote origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:34:03.2776656Z   origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:34:03.2834818Z [command]"C:\Program Files\Git\bin\git.exe" rev-parse refs/remotes/origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:34:03.3310837Z ea3032ab19592ce831f42ddbd533761fea44b17d
+Windows file test	Check out	2026-11-18T05:34:03.3354044Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:34:03.3354746Z ##[group]Determining the checkout info
+Windows file test	Check out	2026-11-18T05:34:03.3355546Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:34:03.3366138Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+Windows file test	Check out	2026-11-18T05:34:03.3923040Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+Windows file test	Check out	2026-11-18T05:34:03.4377228Z ##[group]Checking out the ref
+Windows file test	Check out	2026-11-18T05:34:03.4388047Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B tmp-root-cause-windows-file-poll refs/remotes/origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:34:03.5219765Z Switched to a new branch 'tmp-root-cause-windows-file-poll'
+Windows file test	Check out	2026-11-18T05:34:03.5329023Z branch 'tmp-root-cause-windows-file-poll' set up to track 'origin/tmp-root-cause-windows-file-poll'.
+Windows file test	Check out	2026-11-18T05:34:03.5379516Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:34:03.5949764Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+Windows file test	Check out	2026-11-18T05:34:03.6347033Z ea3032ab19592ce831f42ddbd533761fea44b17d
+Windows file test	Install Zig	﻿2026-11-18T05:34:03.6895909Z ##[group]Run mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
+Windows file test	Install Zig	2026-11-18T05:34:03.6896358Z with:
+Windows file test	Install Zig	2026-11-18T05:34:03.6896550Z   version: 0.16.0
+Windows file test	Install Zig	2026-11-18T05:34:03.6896736Z   use-cache: true
+Windows file test	Install Zig	2026-11-18T05:34:03.6896929Z   cache-size-limit: 2048
+Windows file test	Install Zig	2026-11-18T05:34:03.6897142Z ##[endgroup]
+Windows file test	Install Zig	2026-11-18T05:34:04.0710444Z Using tool-cache: false
+Windows file test	Install Zig	2026-11-18T05:34:04.0717861Z Fetching zig-x86_64-windows-0.16.0.zip
+Windows file test	Install Zig	2026-11-18T05:34:04.3578768Z Cache hit for: setup-zig-tarball-zig-x86_64-windows-0.16.0
+Windows file test	Install Zig	2026-11-18T05:34:05.0857790Z Received 91486638 of 91486638 (100.0%), 132.2 MBs/sec
+Windows file test	Install Zig	2026-11-18T05:34:05.0862371Z Cache Size: ~87 MB (91486638 B)
+Windows file test	Install Zig	2026-11-18T05:34:05.0970628Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/e97ef4d3-f7ae-43d3-9075-4be44a5cf297/cache.tzst -P -C D:/a/file-watcher/file-watcher --force-local --use-compress-program "zstd -d"
+Windows file test	Install Zig	2026-11-18T05:34:05.4116463Z Cache restored successfully
+Windows file test	Install Zig	2026-11-18T05:34:05.4179583Z Fetch took 1347 ms
+Windows file test	Install Zig	2026-11-18T05:34:05.4180022Z Extracting tarball zig-x86_64-windows-0.16.0.zip
+Windows file test	Install Zig	2026-11-18T05:34:05.5154645Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command "$ErrorActionPreference = 'Stop' ; try { Add-Type -AssemblyName System.IO.Compression.ZipFile } catch { } ; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('D:\a\_temp\zig-x86_64-windows-0.16.0.zip', 'D:\a\_temp\4216a8c6-6461-40cb-9d12-48b01dc52a12', $true) } catch { if (($_.Exception.GetType().FullName -eq 'System.Management.Automation.MethodException') -or ($_.Exception.GetType().FullName -eq 'System.Management.Automation.RuntimeException') ){ Expand-Archive -LiteralPath 'D:\a\_temp\zig-x86_64-windows-0.16.0.zip' -DestinationPath 'D:\a\_temp\4216a8c6-6461-40cb-9d12-48b01dc52a12' -Force } else { throw $_ } } ;"
+Windows file test	Install Zig	2026-11-18T05:34:12.4477874Z Extract took 7029 ms
+Windows file test	Install Zig	2026-11-18T05:34:12.5282683Z [command]D:\a\_temp\4216a8c6-6461-40cb-9d12-48b01dc52a12\zig-x86_64-windows-0.16.0\zig.exe version
+Windows file test	Install Zig	2026-11-18T05:34:12.6993356Z 0.16.0
+Windows file test	Install Zig	2026-11-18T05:34:12.7048943Z Resolved Zig version 0.16.0
+Windows file test	Install Zig	2026-11-18T05:34:12.7061661Z Attempting restore of Zig cache with prefix 'setup-zig-cache-v2-windows_file_test-zig-x86_64-windows-0.16.0--'
+Windows file test	Install Zig	2026-11-18T05:34:12.8427298Z Cache miss: leaving Zig cache directory at D:\a\file-watcher\file-watcher\.zig-cache unpopulated
+Windows file test	Build the library tests	﻿2026-11-18T05:34:12.8810149Z ##[group]Run zig build -Dcpu=baseline install-tests
+Windows file test	Build the library tests	2026-11-18T05:34:12.8810735Z [36;1mzig build -Dcpu=baseline install-tests[0m
+Windows file test	Build the library tests	2026-11-18T05:34:12.8834416Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Windows file test	Build the library tests	2026-11-18T05:34:12.8835048Z env:
+Windows file test	Build the library tests	2026-11-18T05:34:12.8835410Z   ZIG_GLOBAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Build the library tests	2026-11-18T05:34:12.8835888Z   ZIG_LOCAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Build the library tests	2026-11-18T05:34:12.8836480Z ##[endgroup]
+Windows file test	Run the test ten times	﻿2026-11-18T05:34:35.5050934Z ##[group]Run passed=0
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5051313Z [36;1mpassed=0[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5051543Z [36;1mfailed=0[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5051791Z [36;1mfor run in 1 2 3 4 5 6 7 8 9 10; do[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5052111Z [36;1m  echo "=== run $run"[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5052441Z [36;1m  if zig-out/tests/library-tests.exe; then[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5052806Z [36;1m    passed=$((passed + 1))[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5053102Z [36;1m  else[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5053345Z [36;1m    failed=$((failed + 1))[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5053623Z [36;1m  fi[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5053828Z [36;1mdone[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5054094Z [36;1mecho "=== passed=$passed failed=$failed"[0m
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5071042Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5071503Z env:
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5071793Z   ZIG_GLOBAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5072267Z   ZIG_LOCAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5072663Z ##[endgroup]
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5467161Z === run 1
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5730520Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5735843Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5736331Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5736808Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5737300Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5737740Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5738201Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5738661Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5739218Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5739875Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5740454Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5740954Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5741475Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5755187Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980075575352700
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5758018Z scan_file now=1794980075575643200 since=1794980075575572000 until=1794980075575572000 mtime=1794980075574915400 ctime=1794980075574915400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5759273Z after add now=1794980075575685300
+Windows file test	Run the test ten times	2026-11-18T05:34:35.5759809Z first write done now=1794980075575925500
+Windows file test	Run the test ten times	2026-11-18T05:34:35.6769749Z scan_file now=1794980075676685400 since=1794980075575572000 until=1794980075576484500 mtime=1794980075575683900 ctime=1794980075575683900 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:34:35.7794781Z scan_file now=1794980075779235000 since=1794980075576484500 until=1794980075679011100 mtime=1794980075575683900 ctime=1794980075575683900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:35.8804306Z scan_file now=1794980075880160000 since=1794980075679011100 until=1794980075779959700 mtime=1794980075575683900 ctime=1794980075575683900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:35.9855000Z scan_file now=1794980075985224400 since=1794980075779959700 until=1794980075885043200 mtime=1794980075977456700 ctime=1794980075978287300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:36.0960509Z scan_file now=1794980076095727400 since=1794980075885043200 until=1794980075995409000 mtime=1794980075977456700 ctime=1794980075978287300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:34:36.1968042Z scan_file now=1794980076196529000 since=1794980075995409000 until=1794980076096331400 mtime=1794980075977456700 ctime=1794980075978287300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:36.3018394Z scan_file now=1794980076301591000 since=1794980076096331400 until=1794980076201377800 mtime=1794980075977456700 ctime=1794980075978287300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:36.4126920Z scan_file now=1794980076412415400 since=1794980076201377800 until=1794980076312227800 mtime=1794980076396176300 ctime=1794980076396176300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:36.5137129Z scan_file now=1794980076513436200 since=1794980076312227800 until=1794980076413242100 mtime=1794980076396176300 ctime=1794980076396176300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:34:36.6179442Z scan_file now=1794980076617667900 since=1794980076413242100 until=1794980076517472200 mtime=1794980076396176300 ctime=1794980076396176300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:36.7287185Z scan_file now=1794980076728423600 since=1794980076517472200 until=1794980076628209000 mtime=1794980076396176300 ctime=1794980076396176300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1719945Z scan_file now=1794980077171721200 since=1794980076960731600 until=1794980077071533000 mtime=1794980077139737200 ctime=1794980077139737200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1726025Z OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1726504Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1749296Z === run 2
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1918529Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1919403Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1920028Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1920594Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1921184Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1921800Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1922390Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1922945Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1923579Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1924297Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1924936Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1925341Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1925909Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1939104Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980077193760500
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1941860Z scan_file now=1794980077194033700 since=1794980077193956600 until=1794980077193956600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1942946Z after add now=1794980077194072200
+Windows file test	Run the test ten times	2026-11-18T05:34:37.1943901Z first write done now=1794980077194310000
+Windows file test	Run the test ten times	2026-11-18T05:34:37.2981080Z scan_file now=1794980077297805400 since=1794980077193956600 until=1794980077197613200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.4091747Z scan_file now=1794980077408867700 since=1794980077197613200 until=1794980077308600900 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.5101187Z scan_file now=1794980077509824100 since=1794980077308600900 until=1794980077409667100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.6146586Z scan_file now=1794980077614436200 since=1794980077409667100 until=1794980077514187000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.7255088Z scan_file now=1794980077725240400 since=1794980077514187000 until=1794980077625022500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.8376147Z scan_file now=1794980077837339200 since=1794980077625022500 until=1794980077737051000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:37.9375529Z scan_file now=1794980077937315300 since=1794980077737051000 until=1794980077837122100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.0385800Z scan_file now=1794980078038272400 since=1794980077837122100 until=1794980077938076300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.1532030Z scan_file now=1794980078152917000 since=1794980077938076300 until=1794980078052708100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.2541088Z scan_file now=1794980078253849200 since=1794980078052708100 until=1794980078153651100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.3593606Z scan_file now=1794980078359092000 since=1794980078153651100 until=1794980078258901700 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.4696112Z scan_file now=1794980078469368900 since=1794980078258901700 until=1794980078369179100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.5706575Z scan_file now=1794980078570369900 since=1794980078369179100 until=1794980078470155000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.6716018Z scan_file now=1794980078671335200 since=1794980078470155000 until=1794980078571138800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.7728694Z scan_file now=1794980078772590000 since=1794980078571138800 until=1794980078672385600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.8735864Z scan_file now=1794980078873294100 since=1794980078672385600 until=1794980078773089600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:38.9762457Z scan_file now=1794980078975996600 since=1794980078773089600 until=1794980078875730000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.0773692Z scan_file now=1794980079077071100 since=1794980078875730000 until=1794980078976843800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.1821225Z scan_file now=1794980079181844800 since=1794980078976843800 until=1794980079081606400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.2923594Z scan_file now=1794980079292076700 since=1794980079081606400 until=1794980079191885800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.3933163Z scan_file now=1794980079393036800 since=1794980079191885800 until=1794980079292826500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.4981900Z scan_file now=1794980079497907300 since=1794980079292826500 until=1794980079397687900 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.5991612Z scan_file now=1794980079598894900 since=1794980079397687900 until=1794980079498675400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.7001845Z scan_file now=1794980079699918300 since=1794980079498675400 until=1794980079599701500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.8149425Z scan_file now=1794980079814684800 since=1794980079599701500 until=1794980079714485800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:39.9157138Z scan_file now=1794980079915444800 since=1794980079714485800 until=1794980079815230500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.0167832Z scan_file now=1794980080016516400 since=1794980079815230500 until=1794980079916311600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.1175652Z scan_file now=1794980080117271800 since=1794980079916311600 until=1794980080017044000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.2262963Z scan_file now=1794980080226051800 since=1794980080017044000 until=1794980080125838800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.3268178Z scan_file now=1794980080326537800 since=1794980080125838800 until=1794980080226318300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.4278001Z scan_file now=1794980080427525600 since=1794980080226318300 until=1794980080327326300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.5286552Z scan_file now=1794980080528364500 since=1794980080327326300 until=1794980080428120300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.6373578Z scan_file now=1794980080637098100 since=1794980080428120300 until=1794980080536908400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.7383528Z scan_file now=1794980080738083500 since=1794980080536908400 until=1794980080637869400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.8388624Z scan_file now=1794980080838581900 since=1794980080637869400 until=1794980080738353300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:40.9395860Z scan_file now=1794980080939296300 since=1794980080738353300 until=1794980080839083300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.0405069Z scan_file now=1794980081040241800 since=1794980080839083300 until=1794980080940050700 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.1414724Z scan_file now=1794980081141211300 since=1794980080940050700 until=1794980081041030000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.2422400Z scan_file now=1794980081241973600 since=1794980081041030000 until=1794980081141772900 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.3433004Z scan_file now=1794980081343021100 since=1794980081141772900 until=1794980081242790400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.4439795Z scan_file now=1794980081443710700 since=1794980081242790400 until=1794980081343503400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.5545064Z scan_file now=1794980081554236500 since=1794980081343503400 until=1794980081454044200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.6555627Z scan_file now=1794980081655281200 since=1794980081454044200 until=1794980081555078200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.7565564Z scan_file now=1794980081756286600 since=1794980081555078200 until=1794980081656080000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.8707586Z scan_file now=1794980081870469900 since=1794980081656080000 until=1794980081770142800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:41.9715212Z scan_file now=1794980081971255500 since=1794980081770142800 until=1794980081871005600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.0762701Z scan_file now=1794980082075988800 since=1794980081871005600 until=1794980081975776300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.1871315Z scan_file now=1794980082186854200 since=1794980081975776300 until=1794980082086610300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.2977817Z scan_file now=1794980082297503800 since=1794980082086610300 until=1794980082197293500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.3984237Z scan_file now=1794980082398148500 since=1794980082197293500 until=1794980082297932300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.5031685Z scan_file now=1794980082502896600 since=1794980082297932300 until=1794980082402676200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.6139197Z scan_file now=1794980082613624200 since=1794980082402676200 until=1794980082513420400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.7248843Z scan_file now=1794980082724506200 since=1794980082513420400 until=1794980082624245200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.8355190Z scan_file now=1794980082835270900 since=1794980082624245200 until=1794980082735051200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:42.9463073Z scan_file now=1794980082946053000 since=1794980082735051200 until=1794980082845815200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.0573407Z scan_file now=1794980083057037600 since=1794980082845815200 until=1794980082956837600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.1680801Z scan_file now=1794980083167811200 since=1794980082956837600 until=1794980083067601200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.2790230Z scan_file now=1794980083278667000 since=1794980083067601200 until=1794980083178456200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.3889865Z scan_file now=1794980083388708800 since=1794980083178456200 until=1794980083288501700 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.4899437Z scan_file now=1794980083489665600 since=1794980083288501700 until=1794980083389474400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.5908228Z scan_file now=1794980083590522400 since=1794980083389474400 until=1794980083490294100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.6915305Z scan_file now=1794980083691277900 since=1794980083490294100 until=1794980083591081500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.8003815Z scan_file now=1794980083800131500 since=1794980083591081500 until=1794980083699947900 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:43.9013815Z scan_file now=1794980083901108700 since=1794980083699947900 until=1794980083800922500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.0061937Z scan_file now=1794980084005919000 since=1794980083800922500 until=1794980083905703200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.1071923Z scan_file now=1794980084106902800 since=1794980083905703200 until=1794980084006706000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.2082197Z scan_file now=1794980084207936200 since=1794980084006706000 until=1794980084107735000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.3228060Z scan_file now=1794980084322514200 since=1794980084107735000 until=1794980084222302400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.4336241Z scan_file now=1794980084433357600 since=1794980084222302400 until=1794980084333091600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.5444599Z scan_file now=1794980084544190800 since=1794980084333091600 until=1794980084443963300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.6456453Z scan_file now=1794980084645359900 since=1794980084443963300 until=1794980084545153900 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.7503840Z scan_file now=1794980084750124800 since=1794980084545153900 until=1794980084649913300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.8509597Z scan_file now=1794980084850660900 since=1794980084649913300 until=1794980084750440300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:44.9519505Z scan_file now=1794980084951673300 since=1794980084750440300 until=1794980084851463300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.0526830Z scan_file now=1794980085052405300 since=1794980084851463300 until=1794980084952186500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.1536775Z scan_file now=1794980085153396600 since=1794980084952186500 until=1794980085053190800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.2571405Z scan_file now=1794980085256816500 since=1794980085053190800 until=1794980085156550200 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.3573263Z scan_file now=1794980085357037900 since=1794980085156550200 until=1794980085256831400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.4620630Z scan_file now=1794980085461767600 since=1794980085256831400 until=1794980085361529600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.5726957Z scan_file now=1794980085572426700 since=1794980085361529600 until=1794980085472198100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.6835097Z scan_file now=1794980085683192300 since=1794980085472198100 until=1794980085582974000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.7844265Z scan_file now=1794980085784161400 since=1794980085582974000 until=1794980085683971500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:45.8895180Z scan_file now=1794980085889233700 since=1794980085683971500 until=1794980085788992900 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.0006620Z scan_file now=1794980086000352800 since=1794980085788992900 until=1794980085900049400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.1112165Z scan_file now=1794980086110932200 since=1794980085900049400 until=1794980086010662400 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.2122769Z scan_file now=1794980086212007600 since=1794980086010662400 until=1794980086111786000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.3168827Z scan_file now=1794980086316587000 since=1794980086111786000 until=1794980086216351300 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.4180372Z scan_file now=1794980086417772600 since=1794980086216351300 until=1794980086317572800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.5190272Z scan_file now=1794980086518754300 since=1794980086317572800 until=1794980086418564700 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.6330821Z scan_file now=1794980086632804400 since=1794980086418564700 until=1794980086532515100 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.7439651Z scan_file now=1794980086743694300 since=1794980086532515100 until=1794980086643487700 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.8537618Z scan_file now=1794980086853478300 since=1794980086643487700 until=1794980086753274500 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:46.9549227Z scan_file now=1794980086954639700 since=1794980086753274500 until=1794980086854426600 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.0596604Z scan_file now=1794980087059392600 since=1794980086854426600 until=1794980086959175800 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.1604796Z scan_file now=1794980087160194100 since=1794980086959175800 until=1794980087059985000 mtime=1794980077193362200 ctime=1794980077193362200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2443274Z FAIL (TestExpectedEqual)
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2538573Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:673:5: 0x7ff719aa9293 in expect_change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2540789Z     return error.TestExpectedEqual;
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2541387Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2577399Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:619:5: 0x7ff719aa9a5d in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2578808Z     try expect_change(&watcher, file);
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2579413Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2579853Z 13 passed; 0 skipped; 1 failed.
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2603416Z === run 3
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2783402Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2783845Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2784267Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2784714Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2785162Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2785492Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2785818Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2786211Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2786616Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2788682Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2789135Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2789819Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2790269Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2804961Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980087280335800
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2810012Z scan_file now=1794980087280678500 since=1794980087280539000 until=1794980087280539000 mtime=1794980087279273800 ctime=1794980087279273800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2811067Z after add now=1794980087280828000
+Windows file test	Run the test ten times	2026-11-18T05:34:47.2811549Z first write done now=1794980087281088000
+Windows file test	Run the test ten times	2026-11-18T05:34:47.3820634Z scan_file now=1794980087381804700 since=1794980087280539000 until=1794980087281591400 mtime=1794980087280631300 ctime=1794980087280631300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:34:47.4870272Z scan_file now=1794980087486758300 since=1794980087281591400 until=1794980087386538500 mtime=1794980087280631300 ctime=1794980087280631300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.5879760Z scan_file now=1794980087587726200 since=1794980087386538500 until=1794980087487523600 mtime=1794980087280631300 ctime=1794980087280631300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.6935853Z scan_file now=1794980087693352800 since=1794980087487523600 until=1794980087593245500 mtime=1794980087692614200 ctime=1794980087692614200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:47.8034913Z scan_file now=1794980087803241300 since=1794980087593245500 until=1794980087703039000 mtime=1794980087692614200 ctime=1794980087692614200 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:34:47.9042482Z scan_file now=1794980087903997800 since=1794980087703039000 until=1794980087803784700 mtime=1794980087692614200 ctime=1794980087692614200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.0090228Z scan_file now=1794980088008779000 since=1794980087803784700 until=1794980087908537800 mtime=1794980087692614200 ctime=1794980087692614200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.1100581Z scan_file now=1794980088109810400 since=1794980087908537800 until=1794980088009638700 mtime=1794980088103491800 ctime=1794980088103491800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.2149097Z scan_file now=1794980088214658800 since=1794980088009638700 until=1794980088114430700 mtime=1794980088103491800 ctime=1794980088103491800 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:34:48.3259237Z scan_file now=1794980088325679300 since=1794980088114430700 until=1794980088225481500 mtime=1794980088103491800 ctime=1794980088103491800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.4367891Z scan_file now=1794980088436483000 since=1794980088225481500 until=1794980088336266900 mtime=1794980088103491800 ctime=1794980088103491800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8641832Z scan_file now=1794980088863900500 since=1794980088652279400 until=1794980088763701600 mtime=1794980088837975300 ctime=1794980088837975300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8648422Z OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8649311Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8671249Z === run 4
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8847290Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8847773Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8848171Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8848566Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8848956Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8849307Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8849670Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8850024Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8850442Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8850917Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8851331Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8851680Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8852051Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8864864Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980088886332700
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8867430Z scan_file now=1794980088886593300 since=1794980088886511800 until=1794980088886511800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8868596Z after add now=1794980088886620800
+Windows file test	Run the test ten times	2026-11-18T05:34:48.8869885Z first write done now=1794980088886822300
+Windows file test	Run the test ten times	2026-11-18T05:34:48.9910296Z scan_file now=1794980088990781100 since=1794980088886511800 until=1794980088890576100 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.1018933Z scan_file now=1794980089101598200 since=1794980088890576100 until=1794980089001392200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.2126824Z scan_file now=1794980089212408100 since=1794980089001392200 until=1794980089112181300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.3135158Z scan_file now=1794980089313250000 since=1794980089112181300 until=1794980089213051300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.4180392Z scan_file now=1794980089417761200 since=1794980089213051300 until=1794980089317560000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.5190060Z scan_file now=1794980089518715800 since=1794980089317560000 until=1794980089418514800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.6200193Z scan_file now=1794980089619741600 since=1794980089418514800 until=1794980089519541700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.7208047Z scan_file now=1794980089720510400 since=1794980089519541700 until=1794980089620307900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.8294663Z scan_file now=1794980089829181600 since=1794980089620307900 until=1794980089728953300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:49.9401081Z scan_file now=1794980089939823900 since=1794980089728953300 until=1794980089839579900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.0412164Z scan_file now=1794980090040914100 since=1794980089839579900 until=1794980089940715400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.1458167Z scan_file now=1794980090145533300 since=1794980089940715400 until=1794980090045296100 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.2567298Z scan_file now=1794980090256479500 since=1794980090045296100 until=1794980090156297400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.3572448Z scan_file now=1794980090356956900 since=1794980090156297400 until=1794980090256785500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.4619903Z scan_file now=1794980090461727600 since=1794980090256785500 until=1794980090361436900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.5630457Z scan_file now=1794980090562749400 since=1794980090361436900 until=1794980090462532300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.6640767Z scan_file now=1794980090663797200 since=1794980090462532300 until=1794980090563581400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.7648210Z scan_file now=1794980090764534000 since=1794980090563581400 until=1794980090664330400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.8735853Z scan_file now=1794980090873312700 since=1794980090664330400 until=1794980090773135200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:50.9843043Z scan_file now=1794980090984019900 since=1794980090773135200 until=1794980090883762900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.0853764Z scan_file now=1794980091085150400 since=1794980090883762900 until=1794980090984938800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.1863506Z scan_file now=1794980091186090300 since=1794980090984938800 until=1794980091085895700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.2871456Z scan_file now=1794980091286861800 since=1794980091085895700 until=1794980091186644000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.3960034Z scan_file now=1794980091395711400 since=1794980091186644000 until=1794980091295485400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.4969357Z scan_file now=1794980091496662500 since=1794980091295485400 until=1794980091396464800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.6017988Z scan_file now=1794980091601544900 since=1794980091396464800 until=1794980091501345800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.7022010Z scan_file now=1794980091701928700 since=1794980091501345800 until=1794980091601734000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.8069552Z scan_file now=1794980091806684600 since=1794980091601734000 until=1794980091706480700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:51.9180593Z scan_file now=1794980091917776200 since=1794980091706480700 until=1794980091817550800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.0188952Z scan_file now=1794980092018612900 since=1794980091817550800 until=1794980091918414300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.1236887Z scan_file now=1794980092123399900 since=1794980091918414300 until=1794980092023125700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.2248294Z scan_file now=1794980092224485400 since=1794980092023125700 until=1794980092124279100 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.3255272Z scan_file now=1794980092325255300 since=1794980092124279100 until=1794980092225074200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.4263721Z scan_file now=1794980092426108400 since=1794980092225074200 until=1794980092325911500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.5272411Z scan_file now=1794980092526959600 since=1794980092325911500 until=1794980092426760700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.6299616Z scan_file now=1794980092629711500 since=1794980092426760700 until=1794980092529529600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.7310478Z scan_file now=1794980092730742500 since=1794980092529529600 until=1794980092630544300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.8323751Z scan_file now=1794980092832123300 since=1794980092630544300 until=1794980092731931600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:52.9465269Z scan_file now=1794980092946251900 since=1794980092731931600 until=1794980092846048600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.0475092Z scan_file now=1794980093047231700 since=1794980092846048600 until=1794980092947039900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.1486248Z scan_file now=1794980093148292100 since=1794980092947039900 until=1794980093048082000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.2492078Z scan_file now=1794980093248956800 since=1794980093048082000 until=1794980093148772200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.3578219Z scan_file now=1794980093357527400 since=1794980093148772200 until=1794980093257321500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.4687465Z scan_file now=1794980093468452100 since=1794980093257321500 until=1794980093368214500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.5794757Z scan_file now=1794980093579227600 since=1794980093368214500 until=1794980093479003600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.6806144Z scan_file now=1794980093680317300 since=1794980093479003600 until=1794980093580100400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.7854466Z scan_file now=1794980093785176400 since=1794980093580100400 until=1794980093684980400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.8965030Z scan_file now=1794980093896228800 since=1794980093684980400 until=1794980093796027300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:53.9974526Z scan_file now=1794980093997194700 since=1794980093796027300 until=1794980093896993000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.1022131Z scan_file now=1794980094101961600 since=1794980093896993000 until=1794980094001767000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.2032191Z scan_file now=1794980094202945400 since=1794980094001767000 until=1794980094102730600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.3079894Z scan_file now=1794980094307719900 since=1794980094102730600 until=1794980094207501500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.4088976Z scan_file now=1794980094408590000 since=1794980094207501500 until=1794980094308375800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.5096916Z scan_file now=1794980094509413400 since=1794980094308375800 until=1794980094409218000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.6103305Z scan_file now=1794980094610023200 since=1794980094409218000 until=1794980094509840100 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.7113325Z scan_file now=1794980094711067000 since=1794980094509840100 until=1794980094610834600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.8143264Z scan_file now=1794980094814061900 since=1794980094610834600 until=1794980094713877800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:54.9244397Z scan_file now=1794980094924189800 since=1794980094713877800 until=1794980094824005300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.0255329Z scan_file now=1794980095025265100 since=1794980094824005300 until=1794980094925084800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.1302449Z scan_file now=1794980095129963200 since=1794980094925084800 until=1794980095029752500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.2410306Z scan_file now=1794980095240740200 since=1794980095029752500 until=1794980095140519600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.3519401Z scan_file now=1794980095351676900 since=1794980095140519600 until=1794980095251475500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.4628088Z scan_file now=1794980095462539600 since=1794980095251475500 until=1794980095362276900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.5638418Z scan_file now=1794980095563560900 since=1794980095362276900 until=1794980095463334300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.6686703Z scan_file now=1794980095668433500 since=1794980095463334300 until=1794980095568249000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.7696401Z scan_file now=1794980095769393900 since=1794980095568249000 until=1794980095669200300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.8711782Z scan_file now=1794980095870943000 since=1794980095669200300 until=1794980095770759900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:55.9857709Z scan_file now=1794980095985494200 since=1794980095770759900 until=1794980095885191000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.0964674Z scan_file now=1794980096096223800 since=1794980095885191000 until=1794980095995986800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.1975902Z scan_file now=1794980096197309500 since=1794980095995986800 until=1794980096097085500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.2983181Z scan_file now=1794980096298063500 since=1794980096097085500 until=1794980096197850900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.3984011Z scan_file now=1794980096398102500 since=1794980096197850900 until=1794980096297913500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.4994280Z scan_file now=1794980096499148800 since=1794980096297913500 until=1794980096398927700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.6004400Z scan_file now=1794980096600178500 since=1794980096398927700 until=1794980096499969200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.7012371Z scan_file now=1794980096700963300 since=1794980096499969200 until=1794980096600736200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.8022171Z scan_file now=1794980096801950500 since=1794980096600736200 until=1794980096701733800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:56.9032363Z scan_file now=1794980096902961900 since=1794980096701733800 until=1794980096802741700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.0140248Z scan_file now=1794980097013750000 since=1794980096802741700 until=1794980096913560900 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.1247041Z scan_file now=1794980097124482300 since=1794980096913560900 until=1794980097024213800 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.2258144Z scan_file now=1794980097225563400 since=1794980097024213800 until=1794980097125358000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.3304195Z scan_file now=1794980097330161700 since=1794980097125358000 until=1794980097229952400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.4314319Z scan_file now=1794980097431161100 since=1794980097229952400 until=1794980097330964600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.5365622Z scan_file now=1794980097536243500 since=1794980097330964600 until=1794980097436038600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.6472425Z scan_file now=1794980097646999600 since=1794980097436038600 until=1794980097546725500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.7481897Z scan_file now=1794980097747897400 since=1794980097546725500 until=1794980097647691700 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.8484303Z scan_file now=1794980097848165700 since=1794980097647691700 until=1794980097747938200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:57.9494178Z scan_file now=1794980097949155000 since=1794980097747938200 until=1794980097848956000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.0504802Z scan_file now=1794980098050181900 since=1794980097848956000 until=1794980097949963400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.1535761Z scan_file now=1794980098153302000 since=1794980097949963400 until=1794980098053038300 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.2542304Z scan_file now=1794980098253946300 since=1794980098053038300 until=1794980098153720000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.3554935Z scan_file now=1794980098355195100 since=1794980098153720000 until=1794980098254968600 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.4700513Z scan_file now=1794980098469770300 since=1794980098254968600 until=1794980098369549400 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.5710007Z scan_file now=1794980098570726500 since=1794980098369549400 until=1794980098470522000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.6720179Z scan_file now=1794980098671751900 since=1794980098470522000 until=1794980098571542500 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.7727636Z scan_file now=1794980098772489500 since=1794980098571542500 until=1794980098672280200 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.8737187Z scan_file now=1794980098873446500 since=1794980098672280200 until=1794980098773267000 mtime=1794980088885548100 ctime=1794980088885548100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9295854Z FAIL (TestExpectedEqual)
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9387706Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:673:5: 0x7ff719aa9293 in expect_change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9389807Z     return error.TestExpectedEqual;
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9390547Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9424396Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:619:5: 0x7ff719aa9a5d in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9426902Z     try expect_change(&watcher, file);
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9427357Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9427639Z 13 passed; 0 skipped; 1 failed.
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9450323Z === run 5
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9617568Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9618117Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9618571Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9619012Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9619429Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9619834Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9620266Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9620740Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9621540Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9622076Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9622555Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9622956Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9623384Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9636872Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980098963527300
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9639727Z scan_file now=1794980098963782900 since=1794980098963708500 until=1794980098963708500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9641752Z after add now=1794980098963816300
+Windows file test	Run the test ten times	2026-11-18T05:34:58.9642396Z first write done now=1794980098964047700
+Windows file test	Run the test ten times	2026-11-18T05:34:59.0715467Z scan_file now=1794980099071265900 since=1794980098963708500 until=1794980098971055900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.1725674Z scan_file now=1794980099172270000 since=1794980098971055900 until=1794980099072067900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.2772191Z scan_file now=1794980099276913900 since=1794980099072067900 until=1794980099176669200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.3772102Z scan_file now=1794980099376928500 since=1794980099176669200 until=1794980099276737200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.4780556Z scan_file now=1794980099477765900 since=1794980099276737200 until=1794980099377572700 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.5788046Z scan_file now=1794980099578525400 since=1794980099377572700 until=1794980099478332800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.6878365Z scan_file now=1794980099687463500 since=1794980099478332800 until=1794980099587228200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.7887089Z scan_file now=1794980099788436300 since=1794980099587228200 until=1794980099688240000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:34:59.8896774Z scan_file now=1794980099889405900 since=1794980099688240000 until=1794980099789216100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.0052994Z scan_file now=1794980100004576500 since=1794980099789216100 until=1794980099904367500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.1053152Z scan_file now=1794980100105056000 since=1794980099904367500 until=1794980100004856300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.2063397Z scan_file now=1794980100206074600 since=1794980100004856300 until=1794980100105870900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.3207344Z scan_file now=1794980100320486100 since=1794980100105870900 until=1794980100220301100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.4313568Z scan_file now=1794980100431084700 since=1794980100220301100 until=1794980100330878000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.5421604Z scan_file now=1794980100541880700 since=1794980100330878000 until=1794980100441640500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.6432501Z scan_file now=1794980100643016400 since=1794980100441640500 until=1794980100542598500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.7441685Z scan_file now=1794980100743875600 since=1794980100542598500 until=1794980100643674200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.8450458Z scan_file now=1794980100844765600 since=1794980100643674200 until=1794980100744572900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:00.9459136Z scan_file now=1794980100945624200 since=1794980100744572900 until=1794980100845416400 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.0487139Z scan_file now=1794980101048448700 since=1794980100845416400 until=1794980100948272600 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.1497534Z scan_file now=1794980101149517400 since=1794980100948272600 until=1794980101049326700 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.2508232Z scan_file now=1794980101250522000 since=1794980101049326700 until=1794980101150311800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.3508647Z scan_file now=1794980101350573500 since=1794980101150311800 until=1794980101250346300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.4595282Z scan_file now=1794980101459274000 since=1794980101250346300 until=1794980101359032800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.5704027Z scan_file now=1794980101570135200 since=1794980101359032800 until=1794980101469926300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.6812567Z scan_file now=1794980101681003100 since=1794980101469926300 until=1794980101580761900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.7821957Z scan_file now=1794980101781920700 since=1794980101580761900 until=1794980101681719800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.8868565Z scan_file now=1794980101886527700 since=1794980101681719800 until=1794980101786299500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:01.9977538Z scan_file now=1794980101997485200 since=1794980101786299500 until=1794980101897286000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.0987909Z scan_file now=1794980102098506100 since=1794980101897286000 until=1794980101998297900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.1998125Z scan_file now=1794980102199529900 since=1794980101998297900 until=1794980102099325200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.3005944Z scan_file now=1794980102300306400 since=1794980102099325200 until=1794980102200104100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.4013682Z scan_file now=1794980102401078000 since=1794980102200104100 until=1794980102300884400 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.5042395Z scan_file now=1794980102503951900 since=1794980102300884400 until=1794980102403720100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.6051641Z scan_file now=1794980102604887100 since=1794980102403720100 until=1794980102504698900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.7099247Z scan_file now=1794980102709658900 since=1794980102504698900 until=1794980102609464300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.8206322Z scan_file now=1794980102820355400 since=1794980102609464300 until=1794980102720103300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:02.9217799Z scan_file now=1794980102921484300 since=1794980102720103300 until=1794980102821270800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.0266069Z scan_file now=1794980103026343300 since=1794980102821270800 until=1794980102926128100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.1276331Z scan_file now=1794980103127355200 since=1794980102926128100 until=1794980103027143200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.2323544Z scan_file now=1794980103232090600 since=1794980103027143200 until=1794980103131877400 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.3333144Z scan_file now=1794980103333064900 since=1794980103131877400 until=1794980103232865000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.4380495Z scan_file now=1794980103437772700 since=1794980103232865000 until=1794980103337596100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.5386199Z scan_file now=1794980103538326500 since=1794980103337596100 until=1794980103438118200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.6433170Z scan_file now=1794980103643043800 since=1794980103438118200 until=1794980103542818300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.7542315Z scan_file now=1794980103753944900 since=1794980103542818300 until=1794980103653689900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.8655283Z scan_file now=1794980103865271200 since=1794980103653689900 until=1794980103765081200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:03.9665052Z scan_file now=1794980103966234700 since=1794980103765081200 until=1794980103866033700 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.0674846Z scan_file now=1794980104067210500 since=1794980103866033700 until=1794980103967009300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.1682402Z scan_file now=1794980104168016000 since=1794980103967009300 until=1794980104067816500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.2770513Z scan_file now=1794980104276794300 since=1794980104067816500 until=1794980104176597900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.3770631Z scan_file now=1794980104376802100 since=1794980104176597900 until=1794980104276604100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.4781222Z scan_file now=1794980104477841000 since=1794980104276604100 until=1794980104377618600 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.5788653Z scan_file now=1794980104578595700 since=1794980104377618600 until=1794980104478376200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.6799075Z scan_file now=1794980104679640100 since=1794980104478376200 until=1794980104579426200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.7826691Z scan_file now=1794980104782402600 since=1794980104579426200 until=1794980104682193000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.8841789Z scan_file now=1794980104883912700 since=1794980104682193000 until=1794980104783708800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:04.9888625Z scan_file now=1794980104988609200 since=1794980104783708800 until=1794980104888432700 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.0997376Z scan_file now=1794980105099444300 since=1794980104888432700 until=1794980104999242400 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.2104661Z scan_file now=1794980105210200300 since=1794980104999242400 until=1794980105110012400 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.3207303Z scan_file now=1794980105320473400 since=1794980105110012400 until=1794980105220289800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.4307825Z scan_file now=1794980105430541400 since=1794980105220289800 until=1794980105330302900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.5417514Z scan_file now=1794980105541491400 since=1794980105330302900 until=1794980105441192800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.6430268Z scan_file now=1794980105642755300 since=1794980105441192800 until=1794980105542558100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.7474184Z scan_file now=1794980105747134000 since=1794980105542558100 until=1794980105646884300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.8579836Z scan_file now=1794980105857727400 since=1794980105646884300 until=1794980105757477800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:05.9589653Z scan_file now=1794980105958675700 since=1794980105757477800 until=1794980105858478800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.0599386Z scan_file now=1794980106059657000 since=1794980105858478800 until=1794980105959460100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.1747741Z scan_file now=1794980106174506900 since=1794980105959460100 until=1794980106074295000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.2757628Z scan_file now=1794980106275474200 since=1794980106074295000 until=1794980106175281200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.3797239Z scan_file now=1794980106379496500 since=1794980106175281200 until=1794980106279295500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.4807227Z scan_file now=1794980106480459900 since=1794980106279295500 until=1794980106380255500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.5857412Z scan_file now=1794980106585476300 since=1794980106380255500 until=1794980106485284100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.6963615Z scan_file now=1794980106696146200 since=1794980106485284100 until=1794980106595969400 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.7975094Z scan_file now=1794980106797233600 since=1794980106595969400 until=1794980106697016500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.8991373Z scan_file now=1794980106898871800 since=1794980106697016500 until=1794980106798674600 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:06.9996320Z scan_file now=1794980106999391000 since=1794980106798674600 until=1794980106899209600 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.1085122Z scan_file now=1794980107108257300 since=1794980106899209600 until=1794980107008059300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.2191593Z scan_file now=1794980107218962800 since=1794980107008059300 until=1794980107118799300 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.3207636Z scan_file now=1794980107320497100 since=1794980107118799300 until=1794980107220307900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.4253033Z scan_file now=1794980107425035600 since=1794980107220307900 until=1794980107324855200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.5262560Z scan_file now=1794980107526006500 since=1794980107324855200 until=1794980107425820000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.6312251Z scan_file now=1794980107630994800 since=1794980107425820000 until=1794980107530813800 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.7419900Z scan_file now=1794980107741747800 since=1794980107530813800 until=1794980107641582100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.8528209Z scan_file now=1794980107852550400 since=1794980107641582100 until=1794980107752355000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:07.9637603Z scan_file now=1794980107963407300 since=1794980107752355000 until=1794980107863247100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.0644656Z scan_file now=1794980108064210500 since=1794980107863247100 until=1794980107964020500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.1692814Z scan_file now=1794980108169002300 since=1794980107964020500 until=1794980108068827100 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.2799212Z scan_file now=1794980108279664000 since=1794980108068827100 until=1794980108179442200 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.3812602Z scan_file now=1794980108381011600 since=1794980108179442200 until=1794980108280824500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.4813403Z scan_file now=1794980108481080300 since=1794980108280824500 until=1794980108380894000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.5813988Z scan_file now=1794980108581117500 since=1794980108380894000 until=1794980108480907000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.6823427Z scan_file now=1794980108682056000 since=1794980108480907000 until=1794980108581844000 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.7870547Z scan_file now=1794980108786792700 since=1794980108581844000 until=1794980108686609500 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.8880308Z scan_file now=1794980108887765500 since=1794980108686609500 until=1794980108787567900 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:08.9892853Z scan_file now=1794980108989007100 since=1794980108787567900 until=1794980108888820600 mtime=1794980098962050300 ctime=1794980098962050300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0253145Z FAIL (TestExpectedEqual)
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0346533Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:673:5: 0x7ff719aa9293 in expect_change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0349037Z     return error.TestExpectedEqual;
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0349501Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0385474Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:619:5: 0x7ff719aa9a5d in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0387367Z     try expect_change(&watcher, file);
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0387793Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0388109Z 13 passed; 0 skipped; 1 failed.
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0412072Z === run 6
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0582086Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0582767Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0583208Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0583617Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0584058Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0584468Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0584899Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0585301Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0585791Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0586451Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0586989Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0587434Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0587895Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0602779Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980109060131300
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0605820Z scan_file now=1794980109060423000 since=1794980109060343700 until=1794980109060343700 mtime=1794980109058302000 ctime=1794980109058302000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0606716Z after add now=1794980109060452300
+Windows file test	Run the test ten times	2026-11-18T05:35:09.0607518Z first write done now=1794980109060667600
+Windows file test	Run the test ten times	2026-11-18T05:35:09.1668564Z scan_file now=1794980109166614800 since=1794980109060343700 until=1794980109066418100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.2778369Z scan_file now=1794980109277546700 since=1794980109066418100 until=1794980109177348300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.3780626Z scan_file now=1794980109377796100 since=1794980109177348300 until=1794980109277595000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.4790901Z scan_file now=1794980109478801500 since=1794980109277595000 until=1794980109378593000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.5798137Z scan_file now=1794980109579526500 since=1794980109378593000 until=1794980109479327100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.6810127Z scan_file now=1794980109680746700 since=1794980109479327100 until=1794980109580556900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.7837796Z scan_file now=1794980109783495800 since=1794980109580556900 until=1794980109683298900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.8847597Z scan_file now=1794980109884469300 since=1794980109683298900 until=1794980109784261700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:09.9857123Z scan_file now=1794980109985423800 since=1794980109784261700 until=1794980109885220900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.0864294Z scan_file now=1794980110086157100 since=1794980109885220900 until=1794980109985964100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.1875457Z scan_file now=1794980110187237700 since=1794980109985964100 until=1794980110087025500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.2897146Z scan_file now=1794980110289455000 since=1794980110087025500 until=1794980110189265300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.4002435Z scan_file now=1794980110400001800 since=1794980110189265300 until=1794980110299815500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.5012567Z scan_file now=1794980110500968600 since=1794980110299815500 until=1794980110400764200 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.6060207Z scan_file now=1794980110605729900 since=1794980110400764200 until=1794980110505516500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.7168421Z scan_file now=1794980110716589800 since=1794980110505516500 until=1794980110616357800 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.8177413Z scan_file now=1794980110817460700 since=1794980110616357800 until=1794980110717228700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:10.9188508Z scan_file now=1794980110918560700 since=1794980110717228700 until=1794980110818349900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.0195755Z scan_file now=1794980111019299600 since=1794980110818349900 until=1794980110919096700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.1205565Z scan_file now=1794980111120287500 since=1794980110919096700 until=1794980111020087000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.2234421Z scan_file now=1794980111223150800 since=1794980111020087000 until=1794980111122931500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.3335073Z scan_file now=1794980111333246200 since=1794980111122931500 until=1794980111233067900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.4345260Z scan_file now=1794980111434254700 since=1794980111233067900 until=1794980111334043600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.5392607Z scan_file now=1794980111539009600 since=1794980111334043600 until=1794980111438808300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.6402893Z scan_file now=1794980111640005600 since=1794980111438808300 until=1794980111539783500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.7449938Z scan_file now=1794980111744721000 since=1794980111539783500 until=1794980111644523000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.8460092Z scan_file now=1794980111845729900 since=1794980111644523000 until=1794980111745546000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:11.9508835Z scan_file now=1794980111950623900 since=1794980111745546000 until=1794980111850430000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.0615617Z scan_file now=1794980112061293100 since=1794980111850430000 until=1794980111961081100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.1724280Z scan_file now=1794980112172166600 since=1794980111961081100 until=1794980112071977300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.2825658Z scan_file now=1794980112282320700 since=1794980112071977300 until=1794980112182134600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.3835132Z scan_file now=1794980112383232200 since=1794980112182134600 until=1794980112283042900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.4881825Z scan_file now=1794980112487924800 since=1794980112283042900 until=1794980112387746400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.5892688Z scan_file now=1794980112588946400 since=1794980112387746400 until=1794980112488741300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.6940473Z scan_file now=1794980112693756400 since=1794980112488741300 until=1794980112593549500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.8048504Z scan_file now=1794980112804565000 since=1794980112593549500 until=1794980112704359200 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:12.9156908Z scan_file now=1794980112915398500 since=1794980112704359200 until=1794980112815195800 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.0166746Z scan_file now=1794980113016397600 since=1794980112815195800 until=1794980112916178600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.1213805Z scan_file now=1794980113121129900 since=1794980112916178600 until=1794980113020935000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.2322103Z scan_file now=1794980113231929600 since=1794980113020935000 until=1794980113131726700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.3429671Z scan_file now=1794980113342688600 since=1794980113131726700 until=1794980113242485100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.4534688Z scan_file now=1794980113453219400 since=1794980113242485100 until=1794980113352987800 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.5644508Z scan_file now=1794980113564155200 since=1794980113352987800 until=1794980113463943600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.6752150Z scan_file now=1794980113674942000 since=1794980113463943600 until=1794980113574686600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.7859860Z scan_file now=1794980113785695900 since=1794980113574686600 until=1794980113685482500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:13.8961596Z scan_file now=1794980113895846800 since=1794980113685482500 until=1794980113795591200 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.0068801Z scan_file now=1794980114006614200 since=1794980113795591200 until=1794980113906388200 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.1181499Z scan_file now=1794980114117896800 since=1794980113906388200 until=1794980114017695700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.2190076Z scan_file now=1794980114218781800 since=1794980114017695700 until=1794980114118566700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.3235723Z scan_file now=1794980114323309700 since=1794980114118566700 until=1794980114223122000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.4338420Z scan_file now=1794980114433558000 since=1794980114223122000 until=1794980114333298400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.5349067Z scan_file now=1794980114534586400 since=1794980114333298400 until=1794980114434325600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.6395123Z scan_file now=1794980114639230900 since=1794980114434325600 until=1794980114538979900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.7503815Z scan_file now=1794980114750114600 since=1794980114538979900 until=1794980114649906400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.8514015Z scan_file now=1794980114851119600 since=1794980114649906400 until=1794980114750900300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:14.9561116Z scan_file now=1794980114955827500 since=1794980114750900300 until=1794980114855600300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.0668585Z scan_file now=1794980115066610900 since=1794980114855600300 until=1794980114966428800 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.1679623Z scan_file now=1794980115167677500 since=1794980114966428800 until=1794980115067453000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.2724397Z scan_file now=1794980115272189600 since=1794980115067453000 until=1794980115171982300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.3829686Z scan_file now=1794980115382714100 since=1794980115171982300 until=1794980115282526200 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.4839379Z scan_file now=1794980115483669600 since=1794980115282526200 until=1794980115383481300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.5849045Z scan_file now=1794980115584636900 since=1794980115383481300 until=1794980115484450100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.6856467Z scan_file now=1794980115685365100 since=1794980115484450100 until=1794980115585168500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.7866369Z scan_file now=1794980115786358500 since=1794980115585168500 until=1794980115686164500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:15.8893664Z scan_file now=1794980115889103000 since=1794980115686164500 until=1794980115788916000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.0001781Z scan_file now=1794980115999905600 since=1794980115788916000 until=1794980115899718000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.1109487Z scan_file now=1794980116110683100 since=1794980115899718000 until=1794980116010495900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.2119157Z scan_file now=1794980116211615800 since=1794980116010495900 until=1794980116111394600 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.3169901Z scan_file now=1794980116316702400 since=1794980116111394600 until=1794980116216495400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.4276506Z scan_file now=1794980116427405500 since=1794980116216495400 until=1794980116327223800 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.5286823Z scan_file now=1794980116528417100 since=1794980116327223800 until=1794980116428235800 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.6339883Z scan_file now=1794980116633710700 since=1794980116428235800 until=1794980116533523700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.7347280Z scan_file now=1794980116734497100 since=1794980116533523700 until=1794980116634288400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.8400377Z scan_file now=1794980116839760800 since=1794980116634288400 until=1794980116739511100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:16.9409960Z scan_file now=1794980116940715000 since=1794980116739511100 until=1794980116840491400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.0419570Z scan_file now=1794980117041687400 since=1794980116840491400 until=1794980116941473700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.1432135Z scan_file now=1794980117142905300 since=1794980116941473700 until=1794980117042686300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.2446920Z scan_file now=1794980117244426500 since=1794980117042686300 until=1794980117144224900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.3468426Z scan_file now=1794980117346600900 since=1794980117144224900 until=1794980117246372500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.4480043Z scan_file now=1794980117447709700 since=1794980117246372500 until=1794980117347481100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.5489299Z scan_file now=1794980117548669500 since=1794980117347481100 until=1794980117448447100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.6634031Z scan_file now=1794980117663164900 since=1794980117448447100 until=1794980117562964100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.7644669Z scan_file now=1794980117764220400 since=1794980117562964100 until=1794980117664023700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.8694033Z scan_file now=1794980117869144600 since=1794980117664023700 until=1794980117768959400 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:17.9702930Z scan_file now=1794980117970011000 since=1794980117768959400 until=1794980117869810100 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.0752137Z scan_file now=1794980118074944200 since=1794980117869810100 until=1794980117974743500 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.1760104Z scan_file now=1794980118175745300 since=1794980117974743500 until=1794980118075528300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.2769819Z scan_file now=1794980118276713800 since=1794980118075528300 until=1794980118176513900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.3769560Z scan_file now=1794980118376731900 since=1794980118176513900 until=1794980118276573300 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.4780800Z scan_file now=1794980118477788900 since=1794980118276573300 until=1794980118377589700 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.5808418Z scan_file now=1794980118580556300 since=1794980118377589700 until=1794980118480351900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.6817837Z scan_file now=1794980118681516400 since=1794980118480351900 until=1794980118581328000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.7858493Z scan_file now=1794980118785598100 since=1794980118581328000 until=1794980118685407000 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:18.8962020Z scan_file now=1794980118895934000 since=1794980118685407000 until=1794980118795758900 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.0069327Z scan_file now=1794980119006637000 since=1794980118795758900 until=1794980118906379200 mtime=1794980109060318300 ctime=1794980109060318300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1086017Z FAIL (TestExpectedEqual)
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1178792Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:673:5: 0x7ff719aa9293 in expect_change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1180378Z     return error.TestExpectedEqual;
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1181031Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1216065Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:619:5: 0x7ff719aa9a5d in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1217701Z     try expect_change(&watcher, file);
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1218342Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1218679Z 13 passed; 0 skipped; 1 failed.
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1240219Z === run 7
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1407531Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1408438Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1408893Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1409519Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1409946Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1410385Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1410841Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1411251Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1411705Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1412248Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1412732Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1413476Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1413913Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1427112Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980119142558000
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1429935Z scan_file now=1794980119142814700 since=1794980119142740100 until=1794980119142740100 mtime=1794980119141054400 ctime=1794980119141054400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1431330Z after add now=1794980119142843800
+Windows file test	Run the test ten times	2026-11-18T05:35:19.1432997Z first write done now=1794980119143197500
+Windows file test	Run the test ten times	2026-11-18T05:35:19.2444735Z scan_file now=1794980119244231500 since=1794980119142740100 until=1794980119144020100 mtime=1794980119143067300 ctime=1794980119143067300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:35:19.3455629Z scan_file now=1794980119345278300 since=1794980119144020100 until=1794980119245066200 mtime=1794980119143067300 ctime=1794980119143067300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.4503730Z scan_file now=1794980119450084200 since=1794980119245066200 until=1794980119349883900 mtime=1794980119143067300 ctime=1794980119143067300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.5610660Z scan_file now=1794980119560816400 since=1794980119349883900 until=1794980119460575400 mtime=1794980119544694900 ctime=1794980119544694900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.6621967Z scan_file now=1794980119661914700 since=1794980119460575400 until=1794980119561692100 mtime=1794980119544694900 ctime=1794980119544694900 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:35:19.7669164Z scan_file now=1794980119766654100 since=1794980119561692100 until=1794980119666474200 mtime=1794980119544694900 ctime=1794980119544694900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.8679294Z scan_file now=1794980119867661000 since=1794980119666474200 until=1794980119767460200 mtime=1794980119544694900 ctime=1794980119544694900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:19.9728332Z scan_file now=1794980119972440200 since=1794980119767460200 until=1794980119872286200 mtime=1794980119962200700 ctime=1794980119962200700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:20.0838429Z scan_file now=1794980120083603800 since=1794980119872286200 until=1794980119983374200 mtime=1794980119962200700 ctime=1794980119962200700 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:35:20.1948732Z scan_file now=1794980120194611100 since=1794980119983374200 until=1794980120094408400 mtime=1794980119962200700 ctime=1794980119962200700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:20.2958249Z scan_file now=1794980120295562200 since=1794980120094408400 until=1794980120195366600 mtime=1794980119962200700 ctime=1794980119962200700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7164705Z scan_file now=1794980120716188000 since=1794980120504941700 until=1794980120616013300 mtime=1794980120715271800 ctime=1794980120715271800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7170226Z OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7170704Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7191742Z === run 8
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7357927Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7358446Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7358836Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7359252Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7359662Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7360031Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7360360Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7360676Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7361440Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7361977Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7362428Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7362800Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7363563Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7377652Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980120737613200
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7380550Z scan_file now=1794980120737886000 since=1794980120737810100 until=1794980120737810100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7381490Z after add now=1794980120737915700
+Windows file test	Run the test ten times	2026-11-18T05:35:20.7381937Z first write done now=1794980120738125500
+Windows file test	Run the test ten times	2026-11-18T05:35:20.8425384Z scan_file now=1794980120842290500 since=1794980120737810100 until=1794980120742108100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:20.9435088Z scan_file now=1794980120943271500 since=1794980120742108100 until=1794980120843071400 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.0445225Z scan_file now=1794980121044250300 since=1794980120843071400 until=1794980120944053200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.1591083Z scan_file now=1794980121158844500 since=1794980120944053200 until=1794980121058651000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.2699422Z scan_file now=1794980121269702400 since=1794980121058651000 until=1794980121169480400 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.3701636Z scan_file now=1794980121369904100 since=1794980121169480400 until=1794980121269684600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.4751911Z scan_file now=1794980121474872300 since=1794980121269684600 until=1794980121374729500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.5761864Z scan_file now=1794980121575898600 since=1794980121374729500 until=1794980121475669100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.6811098Z scan_file now=1794980121680773400 since=1794980121475669100 until=1794980121580576600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.7917973Z scan_file now=1794980121791547200 since=1794980121580576600 until=1794980121691339100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.8925534Z scan_file now=1794980121892284300 since=1794980121691339100 until=1794980121792077900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:21.9973456Z scan_file now=1794980121997080500 since=1794980121792077900 until=1794980121896855900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.0982899Z scan_file now=1794980122098045000 since=1794980121896855900 until=1794980121997847100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.2030206Z scan_file now=1794980122202788200 since=1794980121997847100 until=1794980122102613500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.3136146Z scan_file now=1794980122313369800 since=1794980122102613500 until=1794980122213188300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.4141309Z scan_file now=1794980122413873300 since=1794980122213188300 until=1794980122313677900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.5151886Z scan_file now=1794980122514897800 since=1794980122313677900 until=1794980122414675900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.6158096Z scan_file now=1794980122615583500 since=1794980122414675900 until=1794980122515399200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.7247365Z scan_file now=1794980122724412500 since=1794980122515399200 until=1794980122624210900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.8259080Z scan_file now=1794980122825661700 since=1794980122624210900 until=1794980122725437600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:22.9303892Z scan_file now=1794980122930146000 since=1794980122725437600 until=1794980122829957100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.0314905Z scan_file now=1794980123031188200 since=1794980122829957100 until=1794980122930948600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.1362332Z scan_file now=1794980123135960500 since=1794980122930948600 until=1794980123035741300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.2470214Z scan_file now=1794980123246717900 since=1794980123035741300 until=1794980123146498600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.3472860Z scan_file now=1794980123346980200 since=1794980123146498600 until=1794980123246768200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.4524889Z scan_file now=1794980123452218600 since=1794980123246768200 until=1794980123352027300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.5632481Z scan_file now=1794980123562954300 since=1794980123352027300 until=1794980123462722900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.6739295Z scan_file now=1794980123673677600 since=1794980123462722900 until=1794980123573476900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.7750397Z scan_file now=1794980123774771500 since=1794980123573476900 until=1794980123674555200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.8759839Z scan_file now=1794980123875713600 since=1794980123674555200 until=1794980123775510600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:23.9766876Z scan_file now=1794980123976434300 since=1794980123775510600 until=1794980123876264000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.0855225Z scan_file now=1794980124085254300 since=1794980123876264000 until=1794980123985054800 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.1963496Z scan_file now=1794980124196073300 since=1794980123985054800 until=1794980124095876400 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.2973041Z scan_file now=1794980124297041600 since=1794980124095876400 until=1794980124196851000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.3981851Z scan_file now=1794980124397887300 since=1794980124196851000 until=1794980124297665100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.5125436Z scan_file now=1794980124512282900 since=1794980124297665100 until=1794980124412078500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.6233462Z scan_file now=1794980124623101800 since=1794980124412078500 until=1794980124522859800 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.7342327Z scan_file now=1794980124733979000 since=1794980124522859800 until=1794980124633797500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.8355232Z scan_file now=1794980124835266600 since=1794980124633797500 until=1794980124735067000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:24.9355693Z scan_file now=1794980124935323700 since=1794980124735067000 until=1794980124835167100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.0364785Z scan_file now=1794980125036197000 since=1794980124835167100 until=1794980124935994900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.1374537Z scan_file now=1794980125137187700 since=1794980124935994900 until=1794980125036981000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.2402627Z scan_file now=1794980125239971600 since=1794980125036981000 until=1794980125139750700 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.3409276Z scan_file now=1794980125340660900 since=1794980125139750700 until=1794980125240478100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.4419125Z scan_file now=1794980125441656500 since=1794980125240478100 until=1794980125341454300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.5427191Z scan_file now=1794980125542441200 since=1794980125341454300 until=1794980125442237500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.6436656Z scan_file now=1794980125643411400 since=1794980125442237500 until=1794980125543231400 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.7464760Z scan_file now=1794980125746193300 since=1794980125543231400 until=1794980125645976700 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.8574966Z scan_file now=1794980125857255800 since=1794980125645976700 until=1794980125757037800 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:25.9585246Z scan_file now=1794980125958264500 since=1794980125757037800 until=1794980125858076900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.0632509Z scan_file now=1794980126062995300 since=1794980125858076900 until=1794980125962797000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.1739996Z scan_file now=1794980126173714700 since=1794980125962797000 until=1794980126073464300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.2755586Z scan_file now=1794980126275299700 since=1794980126073464300 until=1794980126175097800 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.3760263Z scan_file now=1794980126375755900 since=1794980126175097800 until=1794980126275563300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.4905623Z scan_file now=1794980126490284100 since=1794980126275563300 until=1794980126390039300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.5913725Z scan_file now=1794980126591094600 since=1794980126390039300 until=1794980126490898200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.6962358Z scan_file now=1794980126695950200 since=1794980126490898200 until=1794980126595688800 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.7971545Z scan_file now=1794980126796930000 since=1794980126595688800 until=1794980126696710900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:26.9019170Z scan_file now=1794980126901648600 since=1794980126696710900 until=1794980126801438900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.0029284Z scan_file now=1794980127002641300 since=1794980126801438900 until=1794980126902436200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.1039171Z scan_file now=1794980127103638500 since=1794980126902436200 until=1794980127003435600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.2046460Z scan_file now=1794980127204384500 since=1794980127003435600 until=1794980127104186100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.3134003Z scan_file now=1794980127313164400 since=1794980127104186100 until=1794980127212970100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.4138998Z scan_file now=1794980127413618200 since=1794980127212970100 until=1794980127313414000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.5186440Z scan_file now=1794980127518392700 since=1794980127313414000 until=1794980127418188200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.6196194Z scan_file now=1794980127619353300 since=1794980127418188200 until=1794980127519168300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.7206495Z scan_file now=1794980127720400400 since=1794980127519168300 until=1794980127620230600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.8350239Z scan_file now=1794980127834783600 since=1794980127620230600 until=1794980127734603700 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:27.9358177Z scan_file now=1794980127935562300 since=1794980127734603700 until=1794980127835367900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.0368156Z scan_file now=1794980128036566900 since=1794980127835367900 until=1794980127936365400 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.1375353Z scan_file now=1794980128137304300 since=1794980127936365400 until=1794980128037140000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.2464991Z scan_file now=1794980128246232600 since=1794980128037140000 until=1794980128146029100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.3565899Z scan_file now=1794980128356354100 since=1794980128146029100 until=1794980128256144200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.4575646Z scan_file now=1794980128457295600 since=1794980128256144200 until=1794980128357069500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.5586529Z scan_file now=1794980128558387900 since=1794980128357069500 until=1794980128458181400 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.6731351Z scan_file now=1794980128672896400 since=1794980128458181400 until=1794980128572713300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.7742012Z scan_file now=1794980128773922200 since=1794980128572713300 until=1794980128673734100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.8793356Z scan_file now=1794980128879067100 since=1794980128673734100 until=1794980128778828700 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:28.9804443Z scan_file now=1794980128980188400 since=1794980128778828700 until=1794980128879994900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.0852195Z scan_file now=1794980129084959500 since=1794980128879994900 until=1794980128984774600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.1862868Z scan_file now=1794980129185991400 since=1794980128984774600 until=1794980129085788300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.2873378Z scan_file now=1794980129287043700 since=1794980129085788300 until=1794980129186834000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.4018378Z scan_file now=1794980129401580300 since=1794980129186834000 until=1794980129301297900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.5027513Z scan_file now=1794980129502480300 since=1794980129301297900 until=1794980129402275100 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.6037855Z scan_file now=1794980129603494000 since=1794980129402275100 until=1794980129503279600 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.7044898Z scan_file now=1794980129704217600 since=1794980129503279600 until=1794980129604024500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.8136011Z scan_file now=1794980129813345300 since=1794980129604024500 until=1794980129712983000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:29.9246504Z scan_file now=1794980129924398200 since=1794980129712983000 until=1794980129824189900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.0257556Z scan_file now=1794980130025496400 since=1794980129824189900 until=1794980129925303500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.1304882Z scan_file now=1794980130130256200 since=1794980129925303500 until=1794980130030123200 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.2414405Z scan_file now=1794980130241173800 since=1794980130030123200 until=1794980130140909000 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.3524108Z scan_file now=1794980130352151200 since=1794980130140909000 until=1794980130251940900 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.4533564Z scan_file now=1794980130453094800 since=1794980130251940900 until=1794980130352884300 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.5544366Z scan_file now=1794980130554155800 since=1794980130352884300 until=1794980130453963500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.6691051Z scan_file now=1794980130668822200 since=1794980130453963500 until=1794980130568592500 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.7700205Z scan_file now=1794980130769736200 since=1794980130568592500 until=1794980130669540800 mtime=1794980120737212200 ctime=1794980120737212200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8140351Z FAIL (TestExpectedEqual)
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8235653Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:673:5: 0x7ff719aa9293 in expect_change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8237739Z     return error.TestExpectedEqual;
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8238637Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8273364Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:619:5: 0x7ff719aa9a5d in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8275325Z     try expect_change(&watcher, file);
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8276143Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8276449Z 13 passed; 0 skipped; 1 failed.
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8297358Z === run 9
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8465216Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8465804Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8466254Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8466979Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8467447Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8467860Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8468367Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8468766Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8469222Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8469755Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8470276Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8470696Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8471131Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8484311Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980130848275900
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8487269Z scan_file now=1794980130848522100 since=1794980130848451900 until=1794980130848451900 mtime=1794980130846547400 ctime=1794980130846547400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8488152Z after add now=1794980130848550400
+Windows file test	Run the test ten times	2026-11-18T05:35:30.8488922Z first write done now=1794980130848801600
+Windows file test	Run the test ten times	2026-11-18T05:35:30.9540643Z scan_file now=1794980130953759300 since=1794980130848451900 until=1794980130853559800 mtime=1794980130848566200 ctime=1794980130848566200 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:35:31.0550784Z scan_file now=1794980131054827400 since=1794980130853559800 until=1794980130954646700 mtime=1794980130848566200 ctime=1794980130848566200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.1598411Z scan_file now=1794980131159579100 since=1794980130954646700 until=1794980131059397800 mtime=1794980130848566200 ctime=1794980130848566200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.2706725Z scan_file now=1794980131270406400 since=1794980131059397800 until=1794980131170218300 mtime=1794980131254145400 ctime=1794980131254145400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.3713451Z scan_file now=1794980131371094700 since=1794980131170218300 until=1794980131270905400 mtime=1794980131254145400 ctime=1794980131254145400 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:35:31.4763744Z scan_file now=1794980131476115800 since=1794980131270905400 until=1794980131375931500 mtime=1794980131254145400 ctime=1794980131254145400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.5870428Z scan_file now=1794980131586809000 since=1794980131375931500 until=1794980131486604900 mtime=1794980131254145400 ctime=1794980131254145400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.6879861Z scan_file now=1794980131687737900 since=1794980131486604900 until=1794980131587593900 mtime=1794980131671616600 ctime=1794980131671616600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.7890421Z scan_file now=1794980131788773200 since=1794980131587593900 until=1794980131688580900 mtime=1794980131671616600 ctime=1794980131671616600 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:35:31.8898108Z scan_file now=1794980131889538200 since=1794980131688580900 until=1794980131789333200 mtime=1794980131671616600 ctime=1794980131671616600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:31.9974271Z scan_file now=1794980131997181200 since=1794980131789333200 until=1794980131896989400 mtime=1794980131671616600 ctime=1794980131671616600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4250275Z scan_file now=1794980132424733200 since=1794980132210259100 until=1794980132324551700 mtime=1794980132408572300 ctime=1794980132408572300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4256566Z OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4257044Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4278585Z === run 10
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4448479Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4449023Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4449292Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4449588Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4449884Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4450129Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4450373Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4450613Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4450879Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4451207Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4451484Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4451724Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4451976Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4466061Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980132446404000
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4469170Z scan_file now=1794980132446700000 since=1794980132446621100 until=1794980132446621100 mtime=1794980132444319800 ctime=1794980132444319800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4470144Z after add now=1794980132446729600
+Windows file test	Run the test ten times	2026-11-18T05:35:32.4470605Z first write done now=1794980132446945100
+Windows file test	Run the test ten times	2026-11-18T05:35:32.5518363Z scan_file now=1794980132551617900 since=1794980132446621100 until=1794980132451359200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.6627634Z scan_file now=1794980132662528800 since=1794980132451359200 until=1794980132562321400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.7633324Z scan_file now=1794980132763057600 since=1794980132562321400 until=1794980132662859000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.8680244Z scan_file now=1794980132867777500 since=1794980132662859000 until=1794980132767571100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:32.9788404Z scan_file now=1794980132978579400 since=1794980132767571100 until=1794980132878370600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.0893820Z scan_file now=1794980133089115200 since=1794980132878370600 until=1794980132988892000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.2002399Z scan_file now=1794980133199959700 since=1794980132988892000 until=1794980133099725700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.3109303Z scan_file now=1794980133310677200 since=1794980133099725700 until=1794980133210476600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.4216845Z scan_file now=1794980133421394800 since=1794980133210476600 until=1794980133321180000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.5314259Z scan_file now=1794980133531199700 since=1794980133321180000 until=1794980133431017700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.6324388Z scan_file now=1794980133632153100 since=1794980133431017700 until=1794980133531937400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.7334334Z scan_file now=1794980133733167500 since=1794980133531937400 until=1794980133632957100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.8341058Z scan_file now=1794980133833855700 since=1794980133632957100 until=1794980133733665800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:33.9351561Z scan_file now=1794980133934879700 since=1794980133733665800 until=1794980133834686200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.0378660Z scan_file now=1794980134037631800 since=1794980133834686200 until=1794980133937427900 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.1389111Z scan_file now=1794980134138643800 since=1794980133937427900 until=1794980134038434300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.2437190Z scan_file now=1794980134243426200 since=1794980134038434300 until=1794980134143232700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.3545589Z scan_file now=1794980134354341300 since=1794980134143232700 until=1794980134254139900 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.4654320Z scan_file now=1794980134465140400 since=1794980134254139900 until=1794980134364924800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.5762594Z scan_file now=1794980134575972600 since=1794980134364924800 until=1794980134475718100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.6871750Z scan_file now=1794980134686898800 since=1794980134475718100 until=1794980134586551800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.7882675Z scan_file now=1794980134787947600 since=1794980134586551800 until=1794980134687723300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:34.8927898Z scan_file now=1794980134892546700 since=1794980134687723300 until=1794980134792312600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.0037649Z scan_file now=1794980135003451300 since=1794980134792312600 until=1794980134903251700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.1143975Z scan_file now=1794980135114145500 since=1794980134903251700 until=1794980135013907300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.2154631Z scan_file now=1794980135215221700 since=1794980135013907300 until=1794980135115010200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.3200770Z scan_file now=1794980135319729700 since=1794980135115010200 until=1794980135219521300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.4209045Z scan_file now=1794980135420638700 since=1794980135219521300 until=1794980135320451300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.5249858Z scan_file now=1794980135524716800 since=1794980135320451300 until=1794980135424499200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.6356744Z scan_file now=1794980135635400100 since=1794980135424499200 until=1794980135535124200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.7366206Z scan_file now=1794980135736375800 since=1794980135535124200 until=1794980135636162800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.8377406Z scan_file now=1794980135837459700 since=1794980135636162800 until=1794980135737279100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:35.9385256Z scan_file now=1794980135938248300 since=1794980135737279100 until=1794980135838058100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.0389964Z scan_file now=1794980136038713400 since=1794980135838058100 until=1794980135938523600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.1418301Z scan_file now=1794980136141534200 since=1794980135938523600 until=1794980136041333000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.2519710Z scan_file now=1794980136251687600 since=1794980136041333000 until=1794980136151449300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.3631429Z scan_file now=1794980136362896200 since=1794980136151449300 until=1794980136262641900 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.4741132Z scan_file now=1794980136473870800 since=1794980136262641900 until=1794980136373690600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.5850140Z scan_file now=1794980136584786300 since=1794980136373690600 until=1794980136484613700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.6858861Z scan_file now=1794980136685637000 since=1794980136484613700 until=1794980136585471700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.7869633Z scan_file now=1794980136786687000 since=1794980136585471700 until=1794980136686477800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.8882152Z scan_file now=1794980136887948800 since=1794980136686477800 until=1794980136787743100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:36.9890343Z scan_file now=1794980136988760000 since=1794980136787743100 until=1794980136888548200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.0918164Z scan_file now=1794980137091537100 since=1794980136888548200 until=1794980136991266500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.2026423Z scan_file now=1794980137202356000 since=1794980136991266500 until=1794980137102122600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.3134045Z scan_file now=1794980137313160200 since=1794980137102122600 until=1794980137212853300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.4136183Z scan_file now=1794980137413370700 since=1794980137212853300 until=1794980137313168200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.5151927Z scan_file now=1794980137514886500 since=1794980137313168200 until=1794980137414680200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.6158126Z scan_file now=1794980137615541700 since=1794980137414680200 until=1794980137515334000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.7248099Z scan_file now=1794980137724533300 since=1794980137515334000 until=1794980137624342200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.8256447Z scan_file now=1794980137825364600 since=1794980137624342200 until=1794980137725183200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:37.9300904Z scan_file now=1794980137929816600 since=1794980137725183200 until=1794980137829605500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.0310279Z scan_file now=1794980138030763200 since=1794980137829605500 until=1794980137930575200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.1359076Z scan_file now=1794980138135646500 since=1794980137930575200 until=1794980138035388000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.2368969Z scan_file now=1794980138236618100 since=1794980138035388000 until=1794980138136430500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.3378612Z scan_file now=1794980138337591900 since=1794980138136430500 until=1794980138237387200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.4526645Z scan_file now=1794980138452407600 since=1794980138237387200 until=1794980138352189000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.5531636Z scan_file now=1794980138552906700 since=1794980138352189000 until=1794980138452689100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.6547463Z scan_file now=1794980138654474800 since=1794980138452689100 until=1794980138554268000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.7678134Z scan_file now=1794980138767505700 since=1794980138554268000 until=1794980138667354800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.8688212Z scan_file now=1794980138868568500 since=1794980138667354800 until=1794980138768370500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:38.9698418Z scan_file now=1794980138969565200 since=1794980138768370500 until=1794980138869373300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.0705827Z scan_file now=1794980139070307200 since=1794980138869373300 until=1794980138970113800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.1715627Z scan_file now=1794980139171300700 since=1794980138970113800 until=1794980139071116100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.2735950Z scan_file now=1794980139273327200 since=1794980139071116100 until=1794980139173136500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.3742805Z scan_file now=1794980139374066800 since=1794980139173136500 until=1794980139273865900 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.4792399Z scan_file now=1794980139478970400 since=1794980139273865900 until=1794980139378771200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.5899576Z scan_file now=1794980139589687300 since=1794980139378771200 until=1794980139489476100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.7007245Z scan_file now=1794980139700457400 since=1794980139489476100 until=1794980139600213000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.8017637Z scan_file now=1794980139801500300 since=1794980139600213000 until=1794980139701316400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:39.9026404Z scan_file now=1794980139902372900 since=1794980139701316400 until=1794980139802171200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.0033897Z scan_file now=1794980140003115800 since=1794980139802171200 until=1794980139902916400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.1044261Z scan_file now=1794980140104149000 since=1794980139902916400 until=1794980140003950300 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.2054265Z scan_file now=1794980140205175300 since=1794980140003950300 until=1794980140104953200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.3182567Z scan_file now=1794980140318013500 since=1794980140104953200 until=1794980140217824600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.4198745Z scan_file now=1794980140419595600 since=1794980140217824600 until=1794980140319377000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.5201792Z scan_file now=1794980140519903200 since=1794980140319377000 until=1794980140419680500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.6208966Z scan_file now=1794980140620614900 since=1794980140419680500 until=1794980140520402400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.7218766Z scan_file now=1794980140721603700 since=1794980140520402400 until=1794980140621392500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.8249322Z scan_file now=1794980140824665600 since=1794980140621392500 until=1794980140724440000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:40.9259438Z scan_file now=1794980140925696400 since=1794980140724440000 until=1794980140825491800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.0306595Z scan_file now=1794980141030431100 since=1794980140825491800 until=1794980140930246400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.1415859Z scan_file now=1794980141141314300 since=1794980140930246400 until=1794980141041061700 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.2424003Z scan_file now=1794980141242153100 since=1794980141041061700 until=1794980141141901500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.3435075Z scan_file now=1794980141343239200 since=1794980141141901500 until=1794980141243043400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.4442582Z scan_file now=1794980141444013200 since=1794980141243043400 until=1794980141343789500 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.5535238Z scan_file now=1794980141553282900 since=1794980141343789500 until=1794980141453070400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.6537125Z scan_file now=1794980141653462200 since=1794980141453070400 until=1794980141553270400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.7547954Z scan_file now=1794980141754541600 since=1794980141553270400 until=1794980141654333600 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.8555248Z scan_file now=1794980141855280900 since=1794980141654333600 until=1794980141755100200 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:41.9641459Z scan_file now=1794980141963898500 since=1794980141755100200 until=1794980141863678400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:42.0648803Z scan_file now=1794980142064625400 since=1794980141863678400 until=1794980141964421800 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:42.1658428Z scan_file now=1794980142165588500 since=1794980141964421800 until=1794980142065381000 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:42.2666472Z scan_file now=1794980142266361000 since=1794980142065381000 until=1794980142166154100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:42.3676175Z scan_file now=1794980142367360100 since=1794980142166154100 until=1794980142267150100 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:42.4705233Z scan_file now=1794980142470250200 since=1794980142267150100 until=1794980142369982400 mtime=1794980132446335000 ctime=1794980132446335000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5029871Z FAIL (TestExpectedEqual)
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5121949Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:673:5: 0x7ff719aa9293 in expect_change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5124482Z     return error.TestExpectedEqual;
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5125036Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5160522Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:619:5: 0x7ff719aa9a5d in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5161946Z     try expect_change(&watcher, file);
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5162506Z     ^
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5163309Z 13 passed; 0 skipped; 1 failed.
+Windows file test	Run the test ten times	2026-11-18T05:35:42.5185803Z === passed=4 failed=6
+Windows file test	Post Install Zig	﻿2026-11-18T05:35:42.5452110Z Post job cleanup.
+Windows file test	Post Install Zig	2026-11-18T05:35:42.9137692Z Checking size of cache directory at D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Post Install Zig	2026-11-18T05:35:42.9982883Z Cache directory is 92585705 bytes, below limit of 2147483648 bytes; keeping intact
+Windows file test	Post Install Zig	2026-11-18T05:35:42.9988714Z Saving Zig cache with key 'setup-zig-cache-v2-windows_file_test-zig-x86_64-windows-0.16.0--44245117710-1'
+Windows file test	Post Install Zig	2026-11-18T05:35:43.1355051Z [command]"C:\Program Files\Git\usr\bin\tar.exe" --posix -cf cache.tzst --exclude cache.tzst -P -C D:/a/file-watcher/file-watcher --files-from manifest.txt --force-local --use-compress-program "zstd -T0"
+Windows file test	Post Install Zig	2026-11-18T05:35:44.4204164Z Sent 30110548 of 30110548 (100.0%), 51.6 MBs/sec
+Windows file test	Post Check out	﻿2026-11-18T05:35:44.5638056Z Post job cleanup.
+Windows file test	Post Check out	2026-11-18T05:35:44.8136443Z [command]"C:\Program Files\Git\bin\git.exe" version
+Windows file test	Post Check out	2026-11-18T05:35:44.8597839Z git version 2.56.0.windows.4
+Windows file test	Post Check out	2026-11-18T05:35:44.8683926Z Temporarily overriding HOME='D:\a\_temp\33577738-c7b4-4bc1-8a4b-08e484c86cd0' before making global git config changes
+Windows file test	Post Check out	2026-11-18T05:35:44.8685576Z Adding repository directory to the temporary git global config as a safe directory
+Windows file test	Post Check out	2026-11-18T05:35:44.8696863Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\file-watcher\file-watcher
+Windows file test	Post Check out	2026-11-18T05:35:44.9149950Z Removing SSH command configuration
+Windows file test	Post Check out	2026-11-18T05:35:44.9162691Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Windows file test	Post Check out	2026-11-18T05:35:44.9670284Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Windows file test	Post Check out	2026-11-18T05:35:45.6484757Z Removing HTTP extra header
+Windows file test	Post Check out	2026-11-18T05:35:45.6499453Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Windows file test	Post Check out	2026-11-18T05:35:45.6932317Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Windows file test	Post Check out	2026-11-18T05:35:46.3267213Z Removing includeIf entries pointing to credentials config files
+Windows file test	Post Check out	2026-11-18T05:35:46.3279387Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Windows file test	Post Check out	2026-11-18T05:35:46.3648536Z includeif.gitdir:D:/a/file-watcher/file-watcher/.git.path
+Windows file test	Post Check out	2026-11-18T05:35:46.3649384Z includeif.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:35:46.3649829Z includeif.gitdir:/github/workspace/.git.path
+Windows file test	Post Check out	2026-11-18T05:35:46.3650399Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:35:46.3697761Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/file-watcher/file-watcher/.git.path
+Windows file test	Post Check out	2026-11-18T05:35:46.4067890Z D:\a\_temp\git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Post Check out	2026-11-18T05:35:46.4128985Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/file-watcher/file-watcher/.git.path D\:\\a\\_temp\\git\-credentials\-fd2390a7\-fa05\-42ea\-b259\-dbfb4e358d78\.config
+Windows file test	Post Check out	2026-11-18T05:35:46.4553687Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:35:46.4916624Z D:\a\_temp\git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Post Check out	2026-11-18T05:35:46.4964858Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path D\:\\a\\_temp\\git\-credentials\-fd2390a7\-fa05\-42ea\-b259\-dbfb4e358d78\.config
+Windows file test	Post Check out	2026-11-18T05:35:46.5377810Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Windows file test	Post Check out	2026-11-18T05:35:46.5740421Z /github/runner_temp/git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Post Check out	2026-11-18T05:35:46.5790634Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-fd2390a7\-fa05\-42ea\-b259\-dbfb4e358d78\.config
+Windows file test	Post Check out	2026-11-18T05:35:46.6207329Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:35:46.6575932Z /github/runner_temp/git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config
+Windows file test	Post Check out	2026-11-18T05:35:46.6627857Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-fd2390a7\-fa05\-42ea\-b259\-dbfb4e358d78\.config
+Windows file test	Post Check out	2026-11-18T05:35:46.7052156Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Windows file test	Post Check out	2026-11-18T05:35:47.3244220Z Removing credentials config 'D:\a\_temp\git-credentials-fd2390a7-fa05-42ea-b259-dbfb4e358d78.config'
+Windows file test	Complete job	﻿2026-11-18T05:35:47.3460766Z Cleaning up orphan processes
+Windows file test	Complete job	2026-11-18T05:35:47.3719318Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
