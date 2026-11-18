@@ -608,6 +608,10 @@ test "native watcher sees a real file change" {
     if (builtin.os.tag == .linux) {
         try testing.expectEqual(@as(u32, 1), watcher.stats().native_watches);
     }
+    // Windows stamps a write up to about a millisecond behind the clock `add` read, so a write
+    // made at once can carry a time before watching began and is then not reported. The wait
+    // puts the first write clearly after `add`, as a user's change would be.
+    try testing.io.sleep(.fromMilliseconds(50), .awake);
 
     try tmp.dir.writeFile(testing.io, .{
         .sub_path = "watched.txt",
