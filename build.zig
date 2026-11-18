@@ -125,6 +125,7 @@ pub fn build(builder: *std.Build) void {
         .name = "library-tests",
         .root_module = library_test_module,
         .use_llvm = use_llvm,
+        .filters = &.{"native watcher sees a real file change"},
     });
     const cli_tests = builder.addTest(.{
         .name = "cli-tests",

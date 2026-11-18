@@ -604,7 +604,9 @@ test "native watcher sees a real file change" {
         .throttle_ms = 0,
     });
     defer watcher.deinit();
+    std.debug.print("before add now={d}\n", .{std.Io.Timestamp.now(testing.io, .real).nanoseconds});
     try watcher.add(file);
+    std.debug.print("after add now={d}\n", .{std.Io.Timestamp.now(testing.io, .real).nanoseconds});
     if (builtin.os.tag == .linux) {
         try testing.expectEqual(@as(u32, 1), watcher.stats().native_watches);
     }
@@ -613,6 +615,7 @@ test "native watcher sees a real file change" {
         .sub_path = "watched.txt",
         .data = "written",
     });
+    std.debug.print("first write done now={d}\n", .{std.Io.Timestamp.now(testing.io, .real).nanoseconds});
     try expect_change(&watcher, file);
     try drain(&watcher);
 

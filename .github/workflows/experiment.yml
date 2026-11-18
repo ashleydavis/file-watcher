@@ -1,0 +1,40 @@
+# Experiment: runs only "native watcher sees a real file change" on Windows, ten times, with the
+# polling of the file printed, to see where the file's times fall against the polling window.
+
+name: Experiment
+
+on:
+  push:
+
+jobs:
+  windows-file-test:
+    name: Windows file test
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
+      - name: Build the library tests
+        run: zig build -Dcpu=baseline install-tests
+
+      - name: Run the test ten times
+        run: |
+          passed=0
+          failed=0
+          for run in 1 2 3 4 5 6 7 8 9 10; do
+            echo "=== run $run"
+            if zig-out/tests/library-tests.exe; then
+              passed=$((passed + 1))
+            else
+              failed=$((failed + 1))
+            fi
+          done
+          echo "=== passed=$passed failed=$failed"

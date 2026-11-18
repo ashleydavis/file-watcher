@@ -369,6 +369,14 @@ pub fn scan_file(
         },
     };
     const changed_ns = @max(stat.mtime.nanoseconds, stat.ctime.nanoseconds);
+    std.debug.print("scan_file now={d} since={d} until={d} mtime={d} ctime={d} in_window={}\n", .{
+        Io.Timestamp.now(io, .real).nanoseconds,
+        since_ns,
+        until_ns,
+        stat.mtime.nanoseconds,
+        stat.ctime.nanoseconds,
+        is_in_window(changed_ns, since_ns, until_ns),
+    });
     return if (is_in_window(changed_ns, since_ns, until_ns)) .changed else .unchanged;
 }
 
