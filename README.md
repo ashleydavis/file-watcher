@@ -106,6 +106,22 @@ zig build
 scripts/smoke-test.sh zig-out/bin/file-watcher
 ```
 
+## Run only the tests that changed
+
+[what-changed](https://github.com/ashleydavis/what-changed) runs the unit tests, the smoke tests and coverage only when the paths they watch in `what-changed.yaml` changed since they last passed:
+
+```bash
+scripts/test-everything.sh
+```
+
+The pre-commit hook in `.githooks/pre-commit` runs the same script and refuses the commit when a test fails. Install it once per clone:
+
+```bash
+scripts/install-hooks.sh
+```
+
+Skip it for one commit with `git commit --no-verify`.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push, and can be started by hand from the Actions tab. A newer push cancels the run still going for the same branch. Each platform has a build job that builds the CLI tool and the unit test binaries once and saves them to a cache keyed by the commit SHA. That platform's test jobs restore the build and run it, so the code is built once per platform per commit. Each platform and kind of test has its own job, so the run overview shows exactly what failed:

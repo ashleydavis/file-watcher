@@ -1,0 +1,36 @@
+# what-changed configuration.
+#
+# Each target is one test step run by scripts/test-everything.sh, with the paths whose content
+# decides whether that step has to run again.
+
+# The build files and the locked Zig version change what every target builds. The driver script
+# and this file change how every target runs.
+always:
+  - build.zig
+  - build.zig.zon
+  - mise.toml
+  - scripts/test-everything.sh
+  - what-changed.yaml
+
+ignore:
+  - .md
+  - .txt
+  - .log
+
+targets:
+  - name: unit-tests
+    paths:
+      - src
+
+  - name: smoke-tests
+    paths:
+      - src
+      - scripts/smoke-test.sh
+
+  # kcov runs on Linux, and coverage counts the Linux backend.
+  - name: coverage
+    paths:
+      - src
+      - scripts/coverage.sh
+    platforms:
+      - linux

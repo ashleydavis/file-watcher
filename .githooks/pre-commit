@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#
+# Runs the tests whose watched paths changed before each commit and refuses the commit when one
+# fails.
+#
+
+set -uo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+
+# Git exports these to hooks. A test that runs git in a temporary repository would otherwise act on
+# this repository's index.
+unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_PREFIX
+
+cd "$root"
+
+# mise puts the locked Zig and what-changed on the PATH.
+run_tests() {
+    if command -v mise > /dev/null; then
+        mise exec -- ./scripts/test-everything.sh
+    else
+        ./scripts/test-everything.sh
+    fi
+}
+
+if ! run_tests; then
+    echo "pre-commit failed. Commit anyway with: git commit --no-verify" >&2
+    exit 1
+fi

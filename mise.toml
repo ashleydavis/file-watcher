@@ -1,2 +1,3 @@
 [tools]
 zig = "0.16.0"
+"github:ashleydavis/what-changed" = "0.0.6"
