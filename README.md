@@ -20,7 +20,7 @@ A fast file watcher written in Zig: a library for Zig projects and a CLI tool bu
 
 ## Requirements
 
-- Zig 0.16.0, locked as the minimum version in `build.zig.zon`.
+- Zig 0.16.0, locked as the minimum version in `build.zig.zon`. Run `mise install` to install it from `mise.toml`.
 - kcov, only for measuring test coverage.
 - bash, only for the smoke and performance test scripts.
 
