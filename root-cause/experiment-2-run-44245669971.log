@@ -1,0 +1,531 @@
+Windows file test	Set up job	﻿2026-11-18T05:38:42.7612903Z Current runner version: '2.338.2'
+Windows file test	Set up job	2026-11-18T05:38:42.7681117Z ##[group]Runner Image Provisioner
+Windows file test	Set up job	2026-11-18T05:38:42.7682611Z Hosted Compute Agent
+Windows file test	Set up job	2026-11-18T05:38:42.7683602Z Version: 20261103.629
+Windows file test	Set up job	2026-11-18T05:38:42.7684719Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+Windows file test	Set up job	2026-11-18T05:38:42.7685912Z Build Date: 2026-11-03T17:26:59Z
+Windows file test	Set up job	2026-11-18T05:38:42.7687515Z Worker ID: {980110a8-753b-4efe-b53b-eea19cba40e4}
+Windows file test	Set up job	2026-11-18T05:38:42.7688845Z Region: northcentralus
+Windows file test	Set up job	2026-11-18T05:38:42.7689792Z Cloud: Azure
+Windows file test	Set up job	2026-11-18T05:38:42.7690638Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:38:42.7692032Z ##[group]Operating System
+Windows file test	Set up job	2026-11-18T05:38:42.7692670Z Microsoft Windows Server 2025
+Windows file test	Set up job	2026-11-18T05:38:42.7693349Z 10.0.26100
+Windows file test	Set up job	2026-11-18T05:38:42.7693820Z Datacenter
+Windows file test	Set up job	2026-11-18T05:38:42.7694315Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:38:42.7694802Z ##[group]Runner Image
+Windows file test	Set up job	2026-11-18T05:38:42.7695336Z Image: windows-2025-vs2026
+Windows file test	Set up job	2026-11-18T05:38:42.7695888Z Version: 20261103.298.1
+Windows file test	Set up job	2026-11-18T05:38:42.7696984Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20261103.298/images/windows/Windows2025-VS2026-Readme.md
+Windows file test	Set up job	2026-11-18T05:38:42.7698934Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20261103.298
+Windows file test	Set up job	2026-11-18T05:38:42.7699872Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:38:42.7701018Z ##[group]GITHUB_TOKEN Permissions
+Windows file test	Set up job	2026-11-18T05:38:42.7703029Z Contents: read
+Windows file test	Set up job	2026-11-18T05:38:42.7703669Z Metadata: read
+Windows file test	Set up job	2026-11-18T05:38:42.7704171Z Packages: read
+Windows file test	Set up job	2026-11-18T05:38:42.7704656Z ##[endgroup]
+Windows file test	Set up job	2026-11-18T05:38:42.7706616Z Secret source: Actions
+Windows file test	Set up job	2026-11-18T05:38:42.7707775Z Cache mode: write
+Windows file test	Set up job	2026-11-18T05:38:42.7708490Z Prepare workflow directory
+Windows file test	Set up job	2026-11-18T05:38:42.8147268Z Prepare all required actions
+Windows file test	Set up job	2026-11-18T05:38:42.8195212Z Getting action download info
+Windows file test	Set up job	2026-11-18T05:38:43.0377944Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+Windows file test	Set up job	2026-11-18T05:38:43.1725704Z Download action repository 'mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29' (SHA:d1434d08867e3ee9daa34448df10607b98908d29)
+Windows file test	Set up job	2026-11-18T05:38:48.2899432Z Complete job name: Windows file test
+Windows file test	Check out	﻿2026-11-18T05:38:48.4479293Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+Windows file test	Check out	2026-11-18T05:38:48.4480949Z with:
+Windows file test	Check out	2026-11-18T05:38:48.4481665Z   repository: ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:38:48.4488534Z   token: ***
+Windows file test	Check out	2026-11-18T05:38:48.4489226Z   ssh-strict: true
+Windows file test	Check out	2026-11-18T05:38:48.4489916Z   ssh-user: git
+Windows file test	Check out	2026-11-18T05:38:48.4490621Z   persist-credentials: true
+Windows file test	Check out	2026-11-18T05:38:48.4491418Z   clean: true
+Windows file test	Check out	2026-11-18T05:38:48.4492342Z   sparse-checkout-cone-mode: true
+Windows file test	Check out	2026-11-18T05:38:48.4493182Z   fetch-depth: 1
+Windows file test	Check out	2026-11-18T05:38:48.4493854Z   fetch-tags: false
+Windows file test	Check out	2026-11-18T05:38:48.4494561Z   show-progress: true
+Windows file test	Check out	2026-11-18T05:38:48.4495266Z   lfs: false
+Windows file test	Check out	2026-11-18T05:38:48.4495921Z   submodules: false
+Windows file test	Check out	2026-11-18T05:38:48.4496662Z   set-safe-directory: true
+Windows file test	Check out	2026-11-18T05:38:48.4497477Z   allow-unsafe-pr-checkout: false
+Windows file test	Check out	2026-11-18T05:38:48.4498629Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:48.6809165Z Syncing repository: ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:38:48.6811559Z ##[group]Getting Git version info
+Windows file test	Check out	2026-11-18T05:38:48.6812694Z Working directory is 'D:\a\file-watcher\file-watcher'
+Windows file test	Check out	2026-11-18T05:38:48.7619275Z [command]"C:\Program Files\Git\bin\git.exe" version
+Windows file test	Check out	2026-11-18T05:38:49.1224347Z git version 2.56.0.windows.4
+Windows file test	Check out	2026-11-18T05:38:49.1270150Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:49.1285912Z Temporarily overriding HOME='D:\a\_temp\74688fe0-eeab-4eef-982e-2f9ada9c0a94' before making global git config changes
+Windows file test	Check out	2026-11-18T05:38:49.1287248Z Adding repository directory to the temporary git global config as a safe directory
+Windows file test	Check out	2026-11-18T05:38:49.1295420Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\file-watcher\file-watcher
+Windows file test	Check out	2026-11-18T05:38:49.1960915Z Deleting the contents of 'D:\a\file-watcher\file-watcher'
+Windows file test	Check out	2026-11-18T05:38:49.1965936Z ##[group]Determining repository object format
+Windows file test	Check out	2026-11-18T05:38:49.1969566Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:49.1970603Z ##[group]Initializing the repository
+Windows file test	Check out	2026-11-18T05:38:49.1976440Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\file-watcher\file-watcher
+Windows file test	Check out	2026-11-18T05:38:49.2817460Z Initialized empty Git repository in D:/a/file-watcher/file-watcher/.git/
+Windows file test	Check out	2026-11-18T05:38:49.2855386Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:38:49.3572276Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:49.3573366Z ##[group]Disabling automatic garbage collection
+Windows file test	Check out	2026-11-18T05:38:49.3580480Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+Windows file test	Check out	2026-11-18T05:38:49.3934551Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:49.3936086Z ##[group]Setting up auth
+Windows file test	Check out	2026-11-18T05:38:49.3936871Z Removing SSH command configuration
+Windows file test	Check out	2026-11-18T05:38:49.3949982Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Windows file test	Check out	2026-11-18T05:38:49.4362848Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Windows file test	Check out	2026-11-18T05:38:50.9311570Z Removing HTTP extra header
+Windows file test	Check out	2026-11-18T05:38:50.9320436Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Windows file test	Check out	2026-11-18T05:38:50.9701153Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Windows file test	Check out	2026-11-18T05:38:51.4995695Z Removing includeIf entries pointing to credentials config files
+Windows file test	Check out	2026-11-18T05:38:51.5006771Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Windows file test	Check out	2026-11-18T05:38:51.5373857Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Windows file test	Check out	2026-11-18T05:38:52.1111111Z [command]"C:\Program Files\Git\bin\git.exe" config --file D:\a\_temp\git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+Windows file test	Check out	2026-11-18T05:38:52.1487961Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/file-watcher/file-watcher/.git.path D:\a\_temp\git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Check out	2026-11-18T05:38:52.1855338Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path D:\a\_temp\git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Check out	2026-11-18T05:38:52.2281903Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Check out	2026-11-18T05:38:52.2647615Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Check out	2026-11-18T05:38:52.3033769Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:52.3034454Z ##[group]Fetching the repository
+Windows file test	Check out	2026-11-18T05:38:52.3047751Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +57eedc08158031299e894654907eacdef3fc78c5:refs/remotes/origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:38:53.3684877Z From https://github.com/ashleydavis/file-watcher
+Windows file test	Check out	2026-11-18T05:38:53.3686118Z  * [new ref]         57eedc08158031299e894654907eacdef3fc78c5 -> origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:38:53.3737559Z [command]"C:\Program Files\Git\bin\git.exe" branch --list --remote origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:38:53.4199930Z   origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:38:53.4237873Z [command]"C:\Program Files\Git\bin\git.exe" rev-parse refs/remotes/origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:38:53.4664118Z 57eedc08158031299e894654907eacdef3fc78c5
+Windows file test	Check out	2026-11-18T05:38:53.4701061Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:53.4701731Z ##[group]Determining the checkout info
+Windows file test	Check out	2026-11-18T05:38:53.4702610Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:53.4711281Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+Windows file test	Check out	2026-11-18T05:38:53.5198344Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+Windows file test	Check out	2026-11-18T05:38:53.5561393Z ##[group]Checking out the ref
+Windows file test	Check out	2026-11-18T05:38:53.5568930Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B tmp-root-cause-windows-file-poll refs/remotes/origin/tmp-root-cause-windows-file-poll
+Windows file test	Check out	2026-11-18T05:38:53.6611530Z Switched to a new branch 'tmp-root-cause-windows-file-poll'
+Windows file test	Check out	2026-11-18T05:38:53.6726429Z branch 'tmp-root-cause-windows-file-poll' set up to track 'origin/tmp-root-cause-windows-file-poll'.
+Windows file test	Check out	2026-11-18T05:38:53.6764269Z ##[endgroup]
+Windows file test	Check out	2026-11-18T05:38:53.7307896Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+Windows file test	Check out	2026-11-18T05:38:53.7654969Z 57eedc08158031299e894654907eacdef3fc78c5
+Windows file test	Install Zig	﻿2026-11-18T05:38:53.8131145Z ##[group]Run mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
+Windows file test	Install Zig	2026-11-18T05:38:53.8131578Z with:
+Windows file test	Install Zig	2026-11-18T05:38:53.8131770Z   version: 0.16.0
+Windows file test	Install Zig	2026-11-18T05:38:53.8131952Z   use-cache: true
+Windows file test	Install Zig	2026-11-18T05:38:53.8132138Z   cache-size-limit: 2048
+Windows file test	Install Zig	2026-11-18T05:38:53.8132347Z ##[endgroup]
+Windows file test	Install Zig	2026-11-18T05:38:54.1652404Z Using tool-cache: false
+Windows file test	Install Zig	2026-11-18T05:38:54.1658261Z Fetching zig-x86_64-windows-0.16.0.zip
+Windows file test	Install Zig	2026-11-18T05:38:54.4426084Z Cache hit for: setup-zig-tarball-zig-x86_64-windows-0.16.0
+Windows file test	Install Zig	2026-11-18T05:38:55.5650885Z Received 87292334 of 91486638 (95.4%), 82.8 MBs/sec
+Windows file test	Install Zig	2026-11-18T05:38:56.5773988Z Received 87292334 of 91486638 (95.4%), 41.3 MBs/sec
+Windows file test	Install Zig	2026-11-18T05:38:56.9723519Z Received 91486638 of 91486638 (100.0%), 36.2 MBs/sec
+Windows file test	Install Zig	2026-11-18T05:38:56.9729476Z Cache Size: ~87 MB (91486638 B)
+Windows file test	Install Zig	2026-11-18T05:38:56.9824856Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/26661b61-7016-4d47-b4ca-e8b588349df2/cache.tzst -P -C D:/a/file-watcher/file-watcher --force-local --use-compress-program "zstd -d"
+Windows file test	Install Zig	2026-11-18T05:38:57.2656661Z Cache restored successfully
+Windows file test	Install Zig	2026-11-18T05:38:57.2719503Z Fetch took 3106 ms
+Windows file test	Install Zig	2026-11-18T05:38:57.2719879Z Extracting tarball zig-x86_64-windows-0.16.0.zip
+Windows file test	Install Zig	2026-11-18T05:38:57.3800606Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command "$ErrorActionPreference = 'Stop' ; try { Add-Type -AssemblyName System.IO.Compression.ZipFile } catch { } ; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('D:\a\_temp\zig-x86_64-windows-0.16.0.zip', 'D:\a\_temp\768c5f31-6082-4f91-9367-e5c2cd73962c', $true) } catch { if (($_.Exception.GetType().FullName -eq 'System.Management.Automation.MethodException') -or ($_.Exception.GetType().FullName -eq 'System.Management.Automation.RuntimeException') ){ Expand-Archive -LiteralPath 'D:\a\_temp\zig-x86_64-windows-0.16.0.zip' -DestinationPath 'D:\a\_temp\768c5f31-6082-4f91-9367-e5c2cd73962c' -Force } else { throw $_ } } ;"
+Windows file test	Install Zig	2026-11-18T05:39:03.8626671Z Extract took 6591 ms
+Windows file test	Install Zig	2026-11-18T05:39:03.9509957Z [command]D:\a\_temp\768c5f31-6082-4f91-9367-e5c2cd73962c\zig-x86_64-windows-0.16.0\zig.exe version
+Windows file test	Install Zig	2026-11-18T05:39:04.1835346Z 0.16.0
+Windows file test	Install Zig	2026-11-18T05:39:04.1882624Z Resolved Zig version 0.16.0
+Windows file test	Install Zig	2026-11-18T05:39:04.1893871Z Attempting restore of Zig cache with prefix 'setup-zig-cache-v2-windows_file_test-zig-x86_64-windows-0.16.0--'
+Windows file test	Install Zig	2026-11-18T05:39:04.3708736Z Cache hit for restore-key: setup-zig-cache-v2-windows_file_test-zig-x86_64-windows-0.16.0--44245117710-1
+Windows file test	Install Zig	2026-11-18T05:39:04.9498194Z Received 30110548 of 30110548 (100.0%), 59.8 MBs/sec
+Windows file test	Install Zig	2026-11-18T05:39:04.9500517Z Cache Size: ~29 MB (30110548 B)
+Windows file test	Install Zig	2026-11-18T05:39:04.9518398Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/6402df52-4218-4ef5-a854-c370b6548afe/cache.tzst -P -C D:/a/file-watcher/file-watcher --force-local --use-compress-program "zstd -d"
+Windows file test	Install Zig	2026-11-18T05:39:05.4815344Z Cache restored successfully
+Windows file test	Install Zig	2026-11-18T05:39:05.4840773Z Cache hit (key 'setup-zig-cache-v2-windows_file_test-zig-x86_64-windows-0.16.0--44245117710-1'): populating Zig cache directory at D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Build the library tests	﻿2026-11-18T05:39:05.5204558Z ##[group]Run zig build -Dcpu=baseline install-tests
+Windows file test	Build the library tests	2026-11-18T05:39:05.5205097Z [36;1mzig build -Dcpu=baseline install-tests[0m
+Windows file test	Build the library tests	2026-11-18T05:39:05.5228130Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Windows file test	Build the library tests	2026-11-18T05:39:05.5228548Z env:
+Windows file test	Build the library tests	2026-11-18T05:39:05.5228821Z   ZIG_GLOBAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Build the library tests	2026-11-18T05:39:05.5229264Z   ZIG_LOCAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Build the library tests	2026-11-18T05:39:05.5229590Z ##[endgroup]
+Windows file test	Run the test ten times	﻿2026-11-18T05:39:11.3304051Z ##[group]Run passed=0
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3304550Z [36;1mpassed=0[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3304877Z [36;1mfailed=0[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3305248Z [36;1mfor run in 1 2 3 4 5 6 7 8 9 10; do[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3305709Z [36;1m  echo "=== run $run"[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3306172Z [36;1m  if zig-out/tests/library-tests.exe; then[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3306694Z [36;1m    passed=$((passed + 1))[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3307104Z [36;1m  else[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3307421Z [36;1m    failed=$((failed + 1))[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3307819Z [36;1m  fi[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3308105Z [36;1mdone[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3308468Z [36;1mecho "=== passed=$passed failed=$failed"[0m
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3331335Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3331752Z env:
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3332023Z   ZIG_GLOBAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3332448Z   ZIG_LOCAL_CACHE_DIR: D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3332797Z ##[endgroup]
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3712348Z === run 1
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3941331Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3942029Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3942406Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3942783Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3943151Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3943502Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3943852Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3944468Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3944877Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3945338Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3945734Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3946069Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3946412Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3962483Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980351396106800
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3965714Z scan_file now=1794980351396384600 since=1794980351396313200 until=1794980351396313200 mtime=1794980351395447400 ctime=1794980351395447400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:11.3967052Z after add now=1794980351396425500
+Windows file test	Run the test ten times	2026-11-18T05:39:11.4584246Z first write done now=1794980351458347300
+Windows file test	Run the test ten times	2026-11-18T05:39:11.5046853Z scan_file now=1794980351504524400 since=1794980351396313200 until=1794980351404404700 mtime=1794980351457867300 ctime=1794980351457867300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:11.6149588Z scan_file now=1794980351614733300 since=1794980351404404700 until=1794980351514596700 mtime=1794980351457867300 ctime=1794980351457867300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:11.7234285Z scan_file now=1794980351723266700 since=1794980351514596700 until=1794980351623128900 mtime=1794980351457867300 ctime=1794980351457867300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:11.8244392Z scan_file now=1794980351824214200 since=1794980351623128900 until=1794980351724062800 mtime=1794980351457867300 ctime=1794980351457867300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:11.9269682Z scan_file now=1794980351926699800 since=1794980351724062800 until=1794980351826621000 mtime=1794980351925788100 ctime=1794980351925788100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:12.0275892Z scan_file now=1794980352027411800 since=1794980351826621000 until=1794980351927309300 mtime=1794980351925788100 ctime=1794980351925788100 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:12.1287812Z scan_file now=1794980352128560700 since=1794980351927309300 until=1794980352028460000 mtime=1794980351925788100 ctime=1794980351925788100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:12.2288849Z scan_file now=1794980352228705500 since=1794980352028460000 until=1794980352128578100 mtime=1794980351925788100 ctime=1794980351925788100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:12.3332171Z scan_file now=1794980352333061100 since=1794980352128578100 until=1794980352232988400 mtime=1794980352332938200 ctime=1794980352332938200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:12.4425363Z scan_file now=1794980352442350700 since=1794980352232988400 until=1794980352342249300 mtime=1794980352332938200 ctime=1794980352332938200 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:12.5529705Z scan_file now=1794980352552811500 since=1794980352342249300 until=1794980352452713900 mtime=1794980352332938200 ctime=1794980352332938200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:12.6542958Z scan_file now=1794980352654133000 since=1794980352452713900 until=1794980352554040600 mtime=1794980352332938200 ctime=1794980352332938200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0783042Z scan_file now=1794980353078067700 since=1794980352876844600 until=1794980352977978200 mtime=1794980353057934600 ctime=1794980353057934600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0790743Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0791078Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0812167Z === run 2
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0961590Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0962231Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0962631Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0963005Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0963374Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0963714Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0964104Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0964461Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0964860Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0965313Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0965706Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0966041Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0966389Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0980730Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980353097955200
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0984677Z scan_file now=1794980353098282900 since=1794980353098194800 until=1794980353098194800 mtime=1794980353095666700 ctime=1794980353095666700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.0985351Z after add now=1794980353098313600
+Windows file test	Run the test ten times	2026-11-18T05:39:13.1484480Z first write done now=1794980353148330400
+Windows file test	Run the test ten times	2026-11-18T05:39:13.1992441Z scan_file now=1794980353199055800 since=1794980353098194800 until=1794980353098882900 mtime=1794980353148120500 ctime=1794980353148120500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.3098693Z scan_file now=1794980353309695200 since=1794980353098882900 until=1794980353209495800 mtime=1794980353148120500 ctime=1794980353148120500 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:13.4115214Z scan_file now=1794980353411382000 since=1794980353209495800 until=1794980353311294100 mtime=1794980353148120500 ctime=1794980353148120500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.5126650Z scan_file now=1794980353512470400 since=1794980353311294100 until=1794980353412385500 mtime=1794980353148120500 ctime=1794980353148120500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.6249861Z scan_file now=1794980353624850000 since=1794980353412385500 until=1794980353524762600 mtime=1794980353610765700 ctime=1794980353610765700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.7261823Z scan_file now=1794980353726018200 since=1794980353524762600 until=1794980353625864200 mtime=1794980353610765700 ctime=1794980353610765700 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:13.8265813Z scan_file now=1794980353826433700 since=1794980353625864200 until=1794980353726348100 mtime=1794980353610765700 ctime=1794980353610765700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:13.9274188Z scan_file now=1794980353927237300 since=1794980353726348100 until=1794980353827131300 mtime=1794980353610765700 ctime=1794980353610765700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.0281156Z scan_file now=1794980354027945800 since=1794980353827131300 until=1794980353927870500 mtime=1794980354027387000 ctime=1794980354027387000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.1306606Z scan_file now=1794980354130477400 since=1794980353927870500 until=1794980354030367700 mtime=1794980354027387000 ctime=1794980354027387000 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:14.2321622Z scan_file now=1794980354231981300 since=1794980354030367700 until=1794980354131876100 mtime=1794980354027387000 ctime=1794980354027387000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.3328985Z scan_file now=1794980354332723300 since=1794980354131876100 until=1794980354232618300 mtime=1794980354027387000 ctime=1794980354027387000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7489452Z scan_file now=1794980354748780400 since=1794980354536004600 until=1794980354648696900 mtime=1794980354734642900 ctime=1794980354734642900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7494138Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7494423Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7513426Z === run 3
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7665713Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7666113Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7666499Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7666862Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7667243Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7667593Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7667963Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7668330Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7668710Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7669201Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7669454Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7669674Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7669891Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7684696Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980354768311600
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7687508Z scan_file now=1794980354768551900 since=1794980354768483100 until=1794980354768483100 mtime=1794980354766363300 ctime=1794980354766363300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.7688184Z after add now=1794980354768580400
+Windows file test	Run the test ten times	2026-11-18T05:39:14.8202408Z first write done now=1794980354820116300
+Windows file test	Run the test ten times	2026-11-18T05:39:14.8697925Z scan_file now=1794980354869607400 since=1794980354768483100 until=1794980354769491600 mtime=1794980354819866200 ctime=1794980354819866200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:14.9706227Z scan_file now=1794980354970488000 since=1794980354769491600 until=1794980354870333600 mtime=1794980354819866200 ctime=1794980354819866200 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:15.0813065Z scan_file now=1794980355081071000 since=1794980354870333600 until=1794980354980963900 mtime=1794980354819866200 ctime=1794980354819866200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:15.1823685Z scan_file now=1794980355182212200 since=1794980354980963900 until=1794980355082127200 mtime=1794980354819866200 ctime=1794980354819866200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:15.2871263Z scan_file now=1794980355286975400 since=1794980355082127200 until=1794980355186888600 mtime=1794980355270817300 ctime=1794980355270817300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:15.3879560Z scan_file now=1794980355387775200 since=1794980355186888600 until=1794980355287648700 mtime=1794980355270817300 ctime=1794980355270817300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:15.4892541Z scan_file now=1794980355489006700 since=1794980355287648700 until=1794980355388871900 mtime=1794980355270817300 ctime=1794980355270817300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:15.5897684Z scan_file now=1794980355589581000 since=1794980355388871900 until=1794980355489466200 mtime=1794980355270817300 ctime=1794980355270817300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:15.6983778Z scan_file now=1794980355698220300 since=1794980355489466200 until=1794980355598100700 mtime=1794980355688226300 ctime=1794980355688226300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:15.8096521Z scan_file now=1794980355809506600 since=1794980355598100700 until=1794980355709392500 mtime=1794980355688226300 ctime=1794980355688226300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:15.9106472Z scan_file now=1794980355910489700 since=1794980355709392500 until=1794980355810401100 mtime=1794980355688226300 ctime=1794980355688226300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.0125109Z scan_file now=1794980356012292900 since=1794980355810401100 until=1794980355912135800 mtime=1794980355688226300 ctime=1794980355688226300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4449013Z scan_file now=1794980356444689400 since=1794980356229906900 until=1794980356344582500 mtime=1794980356428491800 ctime=1794980356428491800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4454970Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4455286Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4475117Z === run 4
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4629124Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4629541Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4630639Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4631016Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4631401Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4631739Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4632086Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4632423Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4632798Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4633240Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4633637Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4633967Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4634308Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4647975Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980356464664600
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4650440Z scan_file now=1794980356464905300 since=1794980356464838100 until=1794980356464838100 mtime=1794980356464228200 ctime=1794980356464228200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.4651184Z after add now=1794980356464935200
+Windows file test	Run the test ten times	2026-11-18T05:39:16.5243395Z first write done now=1794980356524227700
+Windows file test	Run the test ten times	2026-11-18T05:39:16.5660231Z scan_file now=1794980356565866300 since=1794980356464838100 until=1794980356465749600 mtime=1794980356523873000 ctime=1794980356523873000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.6670797Z scan_file now=1794980356666898300 since=1794980356465749600 until=1794980356566805200 mtime=1794980356523873000 ctime=1794980356523873000 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:16.7681363Z scan_file now=1794980356767942500 since=1794980356566805200 until=1794980356667817200 mtime=1794980356523873000 ctime=1794980356523873000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.8693708Z scan_file now=1794980356869183400 since=1794980356667817200 until=1794980356769091700 mtime=1794980356523873000 ctime=1794980356523873000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:16.9842076Z scan_file now=1794980356984017600 since=1794980356769091700 until=1794980356883896400 mtime=1794980356967802900 ctime=1794980356967802900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:17.0857078Z scan_file now=1794980357085547900 since=1794980356883896400 until=1794980356985460600 mtime=1794980356967802900 ctime=1794980356967802900 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:17.1860867Z scan_file now=1794980357185900800 since=1794980356985460600 until=1794980357085784700 mtime=1794980356967802900 ctime=1794980356967802900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:17.2877540Z scan_file now=1794980357287511700 since=1794980357085784700 until=1794980357187120900 mtime=1794980356967802900 ctime=1794980356967802900 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:17.3963037Z scan_file now=1794980357396094100 since=1794980357187120900 until=1794980357295990800 mtime=1794980357386076600 ctime=1794980357386076600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:17.4974882Z scan_file now=1794980357497318100 since=1794980357295990800 until=1794980357397222500 mtime=1794980357386076600 ctime=1794980357386076600 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:17.6046316Z scan_file now=1794980357604398000 since=1794980357397222500 until=1794980357504221900 mtime=1794980357386076600 ctime=1794980357386076600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:17.7153159Z scan_file now=1794980357715145400 since=1794980357504221900 until=1794980357615003000 mtime=1794980357386076600 ctime=1794980357386076600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1441609Z scan_file now=1794980358143876700 since=1794980357938639900 until=1794980358043712500 mtime=1794980358127962100 ctime=1794980358127962100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1446384Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1446698Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1467523Z === run 5
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1643552Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1644048Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1644419Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1644772Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1645134Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1645469Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1645812Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1646154Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1646532Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1647359Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1647762Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1648110Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1648452Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1662284Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980358166101700
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1665220Z scan_file now=1794980358166371000 since=1794980358166303800 until=1794980358166303800 mtime=1794980358165421500 ctime=1794980358165421500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.1665900Z after add now=1794980358166399700
+Windows file test	Run the test ten times	2026-11-18T05:39:18.2178711Z first write done now=1794980358217684100
+Windows file test	Run the test ten times	2026-11-18T05:39:18.2674388Z scan_file now=1794980358267229000 since=1794980358166303800 until=1794980358167070900 mtime=1794980358217164700 ctime=1794980358217164700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.3675454Z scan_file now=1794980358367306300 since=1794980358167070900 until=1794980358267156900 mtime=1794980358217164700 ctime=1794980358217164700 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:18.4688368Z scan_file now=1794980358468645900 since=1794980358267156900 until=1794980358368499700 mtime=1794980358217164700 ctime=1794980358217164700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.5718110Z scan_file now=1794980358571639300 since=1794980358368499700 until=1794980358471520400 mtime=1794980358217164700 ctime=1794980358217164700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.6828375Z scan_file now=1794980358682661700 since=1794980358471520400 until=1794980358582565200 mtime=1794980358668448700 ctime=1794980358668448700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:18.7846193Z scan_file now=1794980358784426900 since=1794980358582565200 until=1794980358684283200 mtime=1794980358668448700 ctime=1794980358668448700 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:18.8890533Z scan_file now=1794980358888850300 since=1794980358684283200 until=1794980358788641900 mtime=1794980358668448700 ctime=1794980358668448700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.0001875Z scan_file now=1794980358999951400 since=1794980358788641900 until=1794980358899697800 mtime=1794980358668448700 ctime=1794980358668448700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.1015908Z scan_file now=1794980359101404200 since=1794980358899697800 until=1794980359001312400 mtime=1794980359085269600 ctime=1794980359085269600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.2028408Z scan_file now=1794980359202679100 since=1794980359001312400 until=1794980359102561700 mtime=1794980359085269600 ctime=1794980359085269600 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:19.3180869Z scan_file now=1794980359317919500 since=1794980359102561700 until=1794980359217822600 mtime=1794980359085269600 ctime=1794980359085269600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.4282956Z scan_file now=1794980359428102500 since=1794980359217822600 until=1794980359328002800 mtime=1794980359085269600 ctime=1794980359085269600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8546193Z scan_file now=1794980359854465700 since=1794980359642878100 until=1794980359754382300 mtime=1794980359840424000 ctime=1794980359840424000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8550958Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8551233Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8569671Z === run 6
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8719500Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8720102Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8720490Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8720852Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8721227Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8721565Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8721916Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8722259Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8722638Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8723566Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8723976Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8724316Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8724658Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8738763Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980359873743700
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8741429Z scan_file now=1794980359873981700 since=1794980359873914200 until=1794980359873914200 mtime=1794980359872132600 ctime=1794980359872132600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:19.8743582Z after add now=1794980359874010700
+Windows file test	Run the test ten times	2026-11-18T05:39:19.9243623Z first write done now=1794980359924229400
+Windows file test	Run the test ten times	2026-11-18T05:39:19.9741393Z scan_file now=1794980359973987300 since=1794980359873914200 until=1794980359873881600 mtime=1794980359923763700 ctime=1794980359923763700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.0772829Z scan_file now=1794980360076920000 since=1794980359873881600 until=1794980359976746500 mtime=1794980359923763700 ctime=1794980359923763700 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:20.1780275Z scan_file now=1794980360177798000 since=1794980359976746500 until=1794980360077587000 mtime=1794980359923763700 ctime=1794980359923763700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.2796912Z scan_file now=1794980360279437000 since=1794980360077587000 until=1794980360179240900 mtime=1794980359923763700 ctime=1794980359923763700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.3800912Z scan_file now=1794980360379845900 since=1794980360179240900 until=1794980360279762500 mtime=1794980360378528100 ctime=1794980360378528100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.4802809Z scan_file now=1794980360480086400 since=1794980360279762500 until=1794980360379971800 mtime=1794980360378528100 ctime=1794980360378528100 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:20.5815869Z scan_file now=1794980360581356500 since=1794980360379971800 until=1794980360481181500 mtime=1794980360378528100 ctime=1794980360378528100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.6824665Z scan_file now=1794980360682269600 since=1794980360481181500 until=1794980360582107100 mtime=1794980360378528100 ctime=1794980360378528100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.7889429Z scan_file now=1794980360788750700 since=1794980360582107100 until=1794980360688602400 mtime=1794980360781221200 ctime=1794980360781221200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:20.8901848Z scan_file now=1794980360890005400 since=1794980360688602400 until=1794980360789885400 mtime=1794980360781221200 ctime=1794980360781221200 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:20.9917576Z scan_file now=1794980360991533600 since=1794980360789885400 until=1794980360891397300 mtime=1794980360781221200 ctime=1794980360781221200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:21.1064475Z scan_file now=1794980361106272800 since=1794980360891397300 until=1794980361006048600 mtime=1794980360781221200 ctime=1794980360781221200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5203851Z scan_file now=1794980361520151700 since=1794980361314488900 until=1794980361420006800 mtime=1794980361509847200 ctime=1794980361509847200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5209630Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5209977Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5235280Z === run 7
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5421205Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5437339Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5438221Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5438783Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5439268Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5439634Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5439973Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5440313Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5441760Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5442044Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5442294Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5442497Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5442709Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5445553Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980361544405600
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5448613Z scan_file now=1794980361544692200 since=1794980361544601900 until=1794980361544601900 mtime=1794980361543727400 ctime=1794980361543727400 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5449261Z after add now=1794980361544727800
+Windows file test	Run the test ten times	2026-11-18T05:39:21.5944977Z first write done now=1794980361594356100
+Windows file test	Run the test ten times	2026-11-18T05:39:21.6460901Z scan_file now=1794980361645868800 since=1794980361544601900 until=1794980361545703400 mtime=1794980361594018200 ctime=1794980361594018200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:21.7466038Z scan_file now=1794980361746408900 since=1794980361545703400 until=1794980361646272500 mtime=1794980361594018200 ctime=1794980361594018200 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:21.8539416Z scan_file now=1794980361853745900 since=1794980361646272500 until=1794980361753612500 mtime=1794980361594018200 ctime=1794980361594018200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:21.9549621Z scan_file now=1794980361954781900 since=1794980361753612500 until=1794980361854629700 mtime=1794980361594018200 ctime=1794980361594018200 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:22.0601258Z scan_file now=1794980362059937600 since=1794980361854629700 until=1794980361959817000 mtime=1794980362047790800 ctime=1794980362047790800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:22.1713135Z scan_file now=1794980362171085500 since=1794980361959817000 until=1794980362070928100 mtime=1794980362047790800 ctime=1794980362047790800 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:22.2724117Z scan_file now=1794980362272143400 since=1794980362070928100 until=1794980362171943000 mtime=1794980362047790800 ctime=1794980362047790800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:22.3730803Z scan_file now=1794980362372826300 since=1794980362171943000 until=1794980362272651800 mtime=1794980362047790800 ctime=1794980362047790800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:22.4736057Z scan_file now=1794980362473275600 since=1794980362272651800 until=1794980362373186100 mtime=1794980362472752100 ctime=1794980362472752100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:22.5745298Z scan_file now=1794980362574297400 since=1794980362373186100 until=1794980362474127100 mtime=1794980362472752100 ctime=1794980362472752100 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:22.6787203Z scan_file now=1794980362678423500 since=1794980362474127100 until=1794980362578231900 mtime=1794980362472752100 ctime=1794980362472752100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:22.7891215Z scan_file now=1794980362788854300 since=1794980362578231900 until=1794980362688625800 mtime=1794980362472752100 ctime=1794980362472752100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2046693Z scan_file now=1794980363204418200 since=1794980363003576400 until=1794980363104292300 mtime=1794980363200731700 ctime=1794980363200731700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2051658Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2052046Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2073015Z === run 8
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2249394Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2249909Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2250156Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2250400Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2250642Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2250862Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2251111Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2251350Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2251614Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2251929Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2252200Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2252430Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2252713Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2267429Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980363226586200
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2270172Z scan_file now=1794980363226834500 since=1794980363226760000 until=1794980363226760000 mtime=1794980363226016500 ctime=1794980363226016500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2270848Z after add now=1794980363226873200
+Windows file test	Run the test ten times	2026-11-18T05:39:23.2783070Z first write done now=1794980363278130200
+Windows file test	Run the test ten times	2026-11-18T05:39:23.3294750Z scan_file now=1794980363329234600 since=1794980363226760000 until=1794980363229061800 mtime=1794980363277700800 ctime=1794980363277700800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.4306695Z scan_file now=1794980363430412000 since=1794980363229061800 until=1794980363330254200 mtime=1794980363277700800 ctime=1794980363277700800 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:23.5323994Z scan_file now=1794980363532141500 since=1794980363330254200 until=1794980363431954900 mtime=1794980363277700800 ctime=1794980363277700800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.6336871Z scan_file now=1794980363633419200 since=1794980363431954900 until=1794980363533240300 mtime=1794980363277700800 ctime=1794980363277700800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.7438260Z scan_file now=1794980363743610500 since=1794980363533240300 until=1794980363643522300 mtime=1794980363742532800 ctime=1794980363742532800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:23.8534030Z scan_file now=1794980363853182800 since=1794980363643522300 until=1794980363752962600 mtime=1794980363742532800 ctime=1794980363742532800 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:23.9544823Z scan_file now=1794980363954268100 since=1794980363752962600 until=1794980363854128600 mtime=1794980363742532800 ctime=1794980363742532800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.0597308Z scan_file now=1794980364059478900 since=1794980363854128600 until=1794980363959287500 mtime=1794980363742532800 ctime=1794980363742532800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.1602585Z scan_file now=1794980364160043800 since=1794980363959287500 until=1794980364059921600 mtime=1794980364153641500 ctime=1794980364153641500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.2650856Z scan_file now=1794980364264860700 since=1794980364059921600 until=1794980364164712800 mtime=1794980364153641500 ctime=1794980364153641500 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:24.3662887Z scan_file now=1794980364366088600 since=1794980364164712800 until=1794980364265965100 mtime=1794980364153641500 ctime=1794980364153641500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.4680448Z scan_file now=1794980364467745600 since=1794980364265965100 until=1794980364367552900 mtime=1794980364153641500 ctime=1794980364153641500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8708648Z scan_file now=1794980364870587700 since=1794980364669703400 until=1794980364770504200 mtime=1794980364869751100 ctime=1794980364869751100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8713901Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8714227Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8738449Z === run 9
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8896472Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8896854Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8897087Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8897468Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8898160Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8898487Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8898703Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8898919Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8899149Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8899431Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8899672Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8899871Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8900081Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8914233Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980364891278700
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8916552Z scan_file now=1794980364891519700 since=1794980364891450800 until=1794980364891450800 mtime=1794980364889692700 ctime=1794980364889692700 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:24.8917592Z after add now=1794980364891548400
+Windows file test	Run the test ten times	2026-11-18T05:39:24.9478077Z first write done now=1794980364947572800
+Windows file test	Run the test ten times	2026-11-18T05:39:24.9933775Z scan_file now=1794980364993212000 since=1794980364891450800 until=1794980364893118100 mtime=1794980364947150500 ctime=1794980364947150500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.1062593Z scan_file now=1794980365106047100 since=1794980364893118100 until=1794980365005886800 mtime=1794980364947150500 ctime=1794980364947150500 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:25.2073500Z scan_file now=1794980365207128800 since=1794980365005886800 until=1794980365106986000 mtime=1794980364947150500 ctime=1794980364947150500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.3123024Z scan_file now=1794980365312084600 since=1794980365106986000 until=1794980365211935900 mtime=1794980364947150500 ctime=1794980364947150500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.4232401Z scan_file now=1794980365423045900 since=1794980365211935900 until=1794980365322941400 mtime=1794980365406879500 ctime=1794980365406879500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.5246427Z scan_file now=1794980365524461100 since=1794980365322941400 until=1794980365424322900 mtime=1794980365406879500 ctime=1794980365406879500 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:25.6297644Z scan_file now=1794980365629590100 since=1794980365424322900 until=1794980365529427300 mtime=1794980365406879500 ctime=1794980365406879500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.7306548Z scan_file now=1794980365730506800 since=1794980365529427300 until=1794980365630385600 mtime=1794980365406879500 ctime=1794980365406879500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.8354727Z scan_file now=1794980365835303200 since=1794980365630385600 until=1794980365735194800 mtime=1794980365825156800 ctime=1794980365825156800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:25.9464353Z scan_file now=1794980365946251000 since=1794980365735194800 until=1794980365846080800 mtime=1794980365825156800 ctime=1794980365825156800 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:26.0475417Z scan_file now=1794980366047342200 since=1794980365846080800 until=1794980365947173600 mtime=1794980365825156800 ctime=1794980365825156800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:26.1523339Z scan_file now=1794980366152159700 since=1794980365947173600 until=1794980366051986600 mtime=1794980365825156800 ctime=1794980365825156800 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5800696Z scan_file now=1794980366579882500 since=1794980366374821100 until=1794980366479754100 mtime=1794980366563723300 ctime=1794980366563723300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5805197Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5805595Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5826914Z === run 10
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5979705Z 1/14 root.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5980177Z 2/14 event.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5980751Z 3/14 filter.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5981010Z 4/14 fsevents.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5981239Z 5/14 hints.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5981447Z 6/14 inotify.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5981660Z 7/14 limit.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5981870Z 8/14 options.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5982099Z 9/14 read_directory_changes.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5982391Z 10/14 windows_listing.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5982627Z 11/14 scan.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5982842Z 12/14 paths.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5983045Z 13/14 watcher.test_0...OK
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5997099Z 14/14 watcher.test.test.native watcher sees a real file change...before add now=1794980366599588300
+Windows file test	Run the test ten times	2026-11-18T05:39:26.5999296Z scan_file now=1794980366599806400 since=1794980366599736100 until=1794980366599736100 mtime=1794980366597492100 ctime=1794980366597492100 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:26.6000200Z after add now=1794980366599834300
+Windows file test	Run the test ten times	2026-11-18T05:39:26.6593561Z first write done now=1794980366659252200
+Windows file test	Run the test ten times	2026-11-18T05:39:26.7068007Z scan_file now=1794980366706672100 since=1794980366599736100 until=1794980366606577000 mtime=1794980366658836300 ctime=1794980366658836300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:26.8080029Z scan_file now=1794980366807807300 since=1794980366606577000 until=1794980366707652400 mtime=1794980366658836300 ctime=1794980366658836300 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:26.9097877Z scan_file now=1794980366909614300 since=1794980366707652400 until=1794980366809466700 mtime=1794980366658836300 ctime=1794980366658836300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.0099801Z scan_file now=1794980367009830200 since=1794980366809466700 until=1794980366909693200 mtime=1794980366658836300 ctime=1794980366658836300 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.1110841Z scan_file now=1794980367110674300 since=1794980366909693200 until=1794980367010569700 mtime=1794980367109240600 ctime=1794980367109240600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.2140485Z scan_file now=1794980367213820500 since=1794980367010569700 until=1794980367113627000 mtime=1794980367109240600 ctime=1794980367109240600 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:27.3154670Z scan_file now=1794980367315259600 since=1794980367113627000 until=1794980367215098700 mtime=1794980367109240600 ctime=1794980367109240600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.4201954Z scan_file now=1794980367420022500 since=1794980367215098700 until=1794980367319870400 mtime=1794980367109240600 ctime=1794980367109240600 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.5309014Z scan_file now=1794980367530705800 since=1794980367319870400 until=1794980367430592600 mtime=1794980367514652500 ctime=1794980367514652500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.6320997Z scan_file now=1794980367631906600 since=1794980367430592600 until=1794980367531755000 mtime=1794980367514652500 ctime=1794980367514652500 in_window=true
+Windows file test	Run the test ten times	2026-11-18T05:39:27.7331920Z scan_file now=1794980367733021600 since=1794980367531755000 until=1794980367632879400 mtime=1794980367514652500 ctime=1794980367514652500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:27.8341991Z scan_file now=1794980367833997800 since=1794980367632879400 until=1794980367733829600 mtime=1794980367514652500 ctime=1794980367514652500 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:28.2501844Z scan_file now=1794980368249937000 since=1794980368048933300 until=1794980368149829000 mtime=1794980368243648000 ctime=1794980368243648000 in_window=false
+Windows file test	Run the test ten times	2026-11-18T05:39:28.2506888Z OK
+Windows file test	Run the test ten times	2026-11-18T05:39:28.2507193Z All 14 tests passed.
+Windows file test	Run the test ten times	2026-11-18T05:39:28.2527284Z === passed=10 failed=0
+Windows file test	Post Install Zig	﻿2026-11-18T05:39:28.2766990Z Post job cleanup.
+Windows file test	Post Install Zig	2026-11-18T05:39:28.6724858Z Checking size of cache directory at D:\a\file-watcher\file-watcher\.zig-cache
+Windows file test	Post Install Zig	2026-11-18T05:39:28.7798825Z Cache directory is 115402433 bytes, below limit of 2147483648 bytes; keeping intact
+Windows file test	Post Install Zig	2026-11-18T05:39:28.7805648Z Saving Zig cache with key 'setup-zig-cache-v2-windows_file_test-zig-x86_64-windows-0.16.0--44245669971-1'
+Windows file test	Post Install Zig	2026-11-18T05:39:28.9369992Z [command]"C:\Program Files\Git\usr\bin\tar.exe" --posix -cf cache.tzst --exclude cache.tzst -P -C D:/a/file-watcher/file-watcher --files-from manifest.txt --force-local --use-compress-program "zstd -T0"
+Windows file test	Post Install Zig	2026-11-18T05:39:30.8766743Z Sent 36029483 of 36029483 (100.0%), 34.3 MBs/sec
+Windows file test	Post Check out	﻿2026-11-18T05:39:31.1477095Z Post job cleanup.
+Windows file test	Post Check out	2026-11-18T05:39:31.3969946Z [command]"C:\Program Files\Git\bin\git.exe" version
+Windows file test	Post Check out	2026-11-18T05:39:31.4380648Z git version 2.56.0.windows.4
+Windows file test	Post Check out	2026-11-18T05:39:31.4469880Z Temporarily overriding HOME='D:\a\_temp\b33b3dfa-b68c-409a-8066-3e6799a87c7f' before making global git config changes
+Windows file test	Post Check out	2026-11-18T05:39:31.4471245Z Adding repository directory to the temporary git global config as a safe directory
+Windows file test	Post Check out	2026-11-18T05:39:31.4483257Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\file-watcher\file-watcher
+Windows file test	Post Check out	2026-11-18T05:39:31.4940938Z Removing SSH command configuration
+Windows file test	Post Check out	2026-11-18T05:39:31.4953423Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Windows file test	Post Check out	2026-11-18T05:39:31.5408360Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Windows file test	Post Check out	2026-11-18T05:39:32.2226121Z Removing HTTP extra header
+Windows file test	Post Check out	2026-11-18T05:39:32.2236822Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Windows file test	Post Check out	2026-11-18T05:39:32.2686613Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Windows file test	Post Check out	2026-11-18T05:39:32.9617037Z Removing includeIf entries pointing to credentials config files
+Windows file test	Post Check out	2026-11-18T05:39:32.9630115Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Windows file test	Post Check out	2026-11-18T05:39:33.0049574Z includeif.gitdir:D:/a/file-watcher/file-watcher/.git.path
+Windows file test	Post Check out	2026-11-18T05:39:33.0050393Z includeif.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:39:33.0050849Z includeif.gitdir:/github/workspace/.git.path
+Windows file test	Post Check out	2026-11-18T05:39:33.0051229Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:39:33.0128957Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/file-watcher/file-watcher/.git.path
+Windows file test	Post Check out	2026-11-18T05:39:33.0580898Z D:\a\_temp\git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Post Check out	2026-11-18T05:39:33.0642925Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/file-watcher/file-watcher/.git.path D\:\\a\\_temp\\git\-credentials\-dd2ea252\-8023\-4aee\-a4e8\-98de37afee75\.config
+Windows file test	Post Check out	2026-11-18T05:39:33.1089255Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:39:33.1475263Z D:\a\_temp\git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Post Check out	2026-11-18T05:39:33.1523378Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/file-watcher/file-watcher/.git/worktrees/*.path D\:\\a\\_temp\\git\-credentials\-dd2ea252\-8023\-4aee\-a4e8\-98de37afee75\.config
+Windows file test	Post Check out	2026-11-18T05:39:33.1937364Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git.path
+Windows file test	Post Check out	2026-11-18T05:39:33.2300384Z /github/runner_temp/git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Post Check out	2026-11-18T05:39:33.2347868Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-dd2ea252\-8023\-4aee\-a4e8\-98de37afee75\.config
+Windows file test	Post Check out	2026-11-18T05:39:33.2751024Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+Windows file test	Post Check out	2026-11-18T05:39:33.3108053Z /github/runner_temp/git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config
+Windows file test	Post Check out	2026-11-18T05:39:33.3159856Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-dd2ea252\-8023\-4aee\-a4e8\-98de37afee75\.config
+Windows file test	Post Check out	2026-11-18T05:39:33.3565180Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Windows file test	Post Check out	2026-11-18T05:39:33.9860200Z Removing credentials config 'D:\a\_temp\git-credentials-dd2ea252-8023-4aee-a4e8-98de37afee75.config'
+Windows file test	Complete job	﻿2026-11-18T05:39:34.0066381Z Cleaning up orphan processes
+Windows file test	Complete job	2026-11-18T05:39:34.0197890Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

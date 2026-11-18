@@ -1,0 +1,87 @@
+Windows unit tests	Unit tests	﻿2026-11-18T05:14:06.4565446Z ##[group]Run zig-out/tests/library-tests.exe
+Windows unit tests	Unit tests	2026-11-18T05:14:06.4565934Z [36;1mzig-out/tests/library-tests.exe[0m
+Windows unit tests	Unit tests	2026-11-18T05:14:06.4566352Z [36;1mzig-out/tests/cli-tests.exe[0m
+Windows unit tests	Unit tests	2026-11-18T05:14:06.4645015Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Windows unit tests	Unit tests	2026-11-18T05:14:06.4645466Z ##[endgroup]
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6708468Z 1/74 root.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6709108Z 2/74 event.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6709573Z 3/74 filter.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6710055Z 4/74 fsevents.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6710551Z 5/74 hints.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6711008Z 6/74 inotify.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6711339Z 7/74 limit.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6711647Z 8/74 options.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6711996Z 9/74 read_directory_changes.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6712413Z 10/74 windows_listing.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6712785Z 11/74 scan.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6713131Z 12/74 paths.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6713517Z 13/74 watcher.test_0...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6743443Z 14/74 watcher.test.test.polling reports a changed root on the poll interval...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6753317Z 15/74 watcher.test.test.polling reports deletions and the root coming and going...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6763883Z 16/74 watcher.test.test.native watching reports roots and keeps watches in step...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6769948Z 17/74 watcher.test.test.tree backends use one watch per root...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6779356Z 18/74 watcher.test.test.running out of watches polls the root...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6785992Z 19/74 watcher.test.test.refused watches are reported...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6793532Z 20/74 watcher.test.test.unreadable directories are reported while watching...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6805872Z 21/74 watcher.test.test.backend failures fall back to polling...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6811033Z 22/74 watcher.test.test.zero quota polls and bad roots are refused...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.6817800Z 23/74 watcher.test.test.zero timeouts and wake return at once...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:06.8987357Z 24/74 watcher.test.test.wake stops a thread waiting in next...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:08.9036580Z 25/74 watcher.test.test.native watcher sees a real change...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9678192Z 26/74 watcher.test.test.native watcher sees a real file change...FAIL (TestExpectedEqual)
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9779586Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:670:5: 0x7ff72413fef3 in expect_change (library-tests_zcu.obj)
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9781495Z     return error.TestExpectedEqual;
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9782416Z     ^
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9820194Z D:\a\file-watcher\file-watcher\src\watcher.test.zig:616:5: 0x7ff7241405ac in test.native watcher sees a real file change (library-tests_zcu.obj)
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9821413Z     try expect_change(&watcher, file);
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9822506Z     ^
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9845477Z 27/74 watcher.test.test.watcher survives allocation failure...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9853457Z 28/74 watcher.test.test.changes are throttled per root...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9862557Z 29/74 watcher.test.test.polling watches a file root...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9867161Z 30/74 watcher.test.test.native watching watches a file root on its own...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9872942Z 31/74 watcher.test.test.a file root that cannot be watched natively is polled...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9877034Z 32/74 watcher.test.test.tree backends poll a file root...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9878182Z 33/74 paths.test.test.trim_root keeps meaningful separators...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9878833Z 34/74 paths.test.test.is_within respects separators...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9891569Z 35/74 scan.test.test.scan finds every counted change in its window...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9899669Z 36/74 scan.test.test.scan leaves out excluded entries...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9903765Z 37/74 scan.test.test.scan tells a missing root and the root's own changes...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9910435Z 38/74 scan.test.test.scan treats an unreadable root as missing...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9929847Z 39/74 scan.test.test.scan reports what it cannot read...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9954196Z 40/74 scan.test.test.scan uses a lister and falls back when it fails...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9980641Z 41/74 scan.test.test.scan survives allocation failure...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9987035Z 42/74 scan.test.test.scan_file finds a file's changes in its window...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9988086Z 43/74 windows_listing.test.test.decode_records turns records into stamped entries...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:18.9988950Z 44/74 windows_listing.test.test.decode_records reads unaligned records...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0003963Z 45/74 windows_listing.test.test.list matches statFile on Windows...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0005689Z 46/74 read_directory_changes.test.test.decode_changes turns records into entry hints...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0006862Z 47/74 read_directory_changes.test.test.decode_changes reads misaligned records...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0007714Z 48/74 options.test.test.defaults are valid and exclude node_modules...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0008610Z 49/74 options.test.test.is_valid rejects out of range settings...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0009299Z 50/74 limit.test.test.parse_limit reads decimal text...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0009913Z 51/74 limit.test.test.watch_budget takes the quota share...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0010669Z 52/74 limit.test.test.read_inotify_limit falls back to the default...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0011948Z 53/74 limit.test.test.native_watch_limit reads the platform limit...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0013068Z 54/74 inotify.test.test.decode_events turns raw events into hints...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0014072Z 55/74 inotify.test.test.Inotify watches a real directory...SKIP
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0015096Z 56/74 inotify.test.test.init_error and watch_error map kernel errors...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0016126Z 57/74 inotify.test.test.Inotify survives allocation failure...SKIP
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0017243Z 58/74 inotify.test.test.Inotify init reports a full descriptor table...SKIP
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0018547Z 59/74 inotify.test.test.Inotify wake ends a wait...SKIP
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0019386Z 60/74 inotify.test.test.Inotify init reports a missing wake descriptor...SKIP
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0020089Z 61/74 hints.test.test.add merges scopes for one path...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0020672Z 62/74 hints.test.test.add_child joins parent and name...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0021239Z 63/74 hints.test.test.add survives allocation failure...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0021929Z 64/74 fsevents.test.test.map_path rewrites canonical paths to watched paths...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0022700Z 65/74 fsevents.test.test.add_event chooses the hint for each flag...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0049802Z 66/74 fsevents.test.test.queue_event and decode_pending carry events between threads...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0050955Z 67/74 fsevents.test.test.queue_event marks the queue overflowed when memory runs out...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0051965Z 68/74 fsevents.test.test.FsEvents reports changes on macOS...SKIP
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0052858Z 69/74 filter.test.test.is_excluded_directory matches exact names...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0053604Z 70/74 filter.test.test.is_excluded_file matches the last extension...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0054367Z 71/74 filter.test.test.is_excluded_path checks every name below the root...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0055198Z 72/74 event.test.test.append_changed and append_problem copy the path...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0055853Z 73/74 event.test.test.clear starts a new batch...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0056426Z 74/74 event.test.test.append survives allocation failure...OK
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0056978Z 67 passed; 6 skipped; 1 failed.
+Windows unit tests	Unit tests	2026-11-18T05:14:19.0124325Z ##[error]Process completed with exit code 1.
