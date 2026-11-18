@@ -6,7 +6,7 @@ Facts an AI agent needs to work in this repository.
 
 - A file watcher written in Zig 0.16.0: a library (`src/root.zig`, module `file_watcher`) and a CLI tool (`src/main.zig`, binary `file-watcher`) built on it.
 - Native backends: inotify (Linux), FSEvents (macOS, loaded at run time), `ReadDirectoryChangesW` (Windows, which also lists directories with one query for polling). Other platforms poll.
-- The watcher reports which watched directory (root) changed, never which file. Native backends report paths, which map to a root; polling keeps only the time of each root's last check and looks for newer modification times (`src/scan.zig`). Nothing is kept per file. Reports of each root are throttled (`throttle_ms`, default 1000).
+- The watcher reports which watched path changed, as it was given. A watched path is a directory tree or a single file; for a directory the changed file stays unnamed. In the code a watched path is a `Root`. A watched file gets a native watch of its own on inotify and is polled on the tree backends (`scan_file` in `src/scan.zig`). Native backends report paths, which map to a watched path; polling keeps only the time of each watched path's last check and looks for newer modification times (`src/scan.zig`). Nothing is kept per file. Reports of each watched path are throttled (`throttle_ms`, default 1000).
 - [How it works](how-it-works.md) describes each file's job.
 
 ## Commands
@@ -20,6 +20,8 @@ Facts an AI agent needs to work in this repository.
 | Performance tests (Linux) | `zig build -Doptimize=ReleaseFast && scripts/performance-test.sh zig-out/bin/file-watcher 100000` |
 | Compile check for a target | `zig build check -Dtarget=aarch64-macos` |
 | Cross compile | `zig build -Dtarget=x86_64-windows` |
+| Cross compile for every supported platform | `scripts/cross-compile.sh` |
+| Only the tests whose files changed | `scripts/test-everything.sh` |
 | Install test binaries for another runner | `zig build install-tests -Dtarget=<target>` |
 | Windows unit tests under Wine (Linux) | `zig build test -Dtarget=x86_64-windows -fwine` |
 
@@ -45,7 +47,7 @@ Check that these targets compile after any change to a backend or the watcher: `
 
 ## Pitfalls
 
-- A `Watcher` keeps a pointer into itself. Create it in place (`init(self: *Watcher, ...)`) and keep it at that address.
+- On macOS, FSEvents sends events to a `Watcher`'s place in memory, so a `Watcher` is never copied to another variable after `init`. Create it in place (`init(self: *Watcher, ...)`) and keep it at that address.
 - Zig 0.16 resolves every `@import` path eagerly, including in `test` blocks, so a test file must exist before the code that imports it compiles.
 - kcov reads LLVM debug information only, so `scripts/coverage.sh` builds the tests with `-Dllvm=true`.
 - The Windows and FSEvents system calls are compiled only for their platforms. Their decoding functions are pure and tested on every platform, and each has a test against a real directory that runs only on its own platform.

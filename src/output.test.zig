@@ -99,6 +99,7 @@ test "describe_error covers the watcher's errors" {
         error.PermissionDenied,
         error.FileNotFound,
         error.NotDir,
+        error.NotFileOrDirectory,
         error.LimitReached,
         error.SystemResources,
         error.ProcessFdQuotaExceeded,

@@ -1,6 +1,7 @@
 //
 // The native backend for Linux. inotify reports changes to the entries of each
-// watched directory, by name, so one watch per directory covers every file in it.
+// watched directory, by name, so one watch per directory covers every file in it. A watched
+// file root gets a watch of its own.
 //
 
 const std = @import("std");
@@ -21,6 +22,14 @@ const IN = linux.IN;
 const watch_mask: u32 = IN.CREATE | IN.DELETE | IN.MODIFY | IN.ATTRIB | IN.CLOSE_WRITE |
     IN.MOVED_FROM | IN.MOVED_TO | IN.DELETE_SELF | IN.MOVE_SELF | IN.ONLYDIR |
     IN.DONT_FOLLOW | IN.EXCL_UNLINK;
+
+//
+// The changes inotify reports for a watched file: it is written, its metadata changes, or it is
+// deleted or moved. Symbolic links are followed, because the watcher follows them when a file is
+// added, so a link to a file watches the file it points to.
+//
+const file_watch_mask: u32 = IN.MODIFY | IN.ATTRIB | IN.CLOSE_WRITE | IN.DELETE_SELF |
+    IN.MOVE_SELF;
 
 //
 // The size of the buffer events are read into. 64 KiB holds hundreds of events, so a burst of
@@ -121,17 +130,18 @@ pub const Inotify = struct {
     }
 
     //
-    // Starts watching the directory at `path`. Returns false when the kernel reused an existing
-    // watch, which happens when a watched directory was moved to `path`; the watch then moves
-    // to the new path and no extra watch is used.
+    // Starts watching the directory at `path`, or the file at `path` when `is_directory` is
+    // false. Returns false when the kernel reused an existing watch, which happens when a
+    // watched directory was moved to `path`; the watch then moves to the new path and no extra
+    // watch is used.
     //
     pub fn watch(self: *Inotify, path: []const u8, is_directory: bool) !bool {
-        assert(is_directory);
         assert(path.len > 0);
         try self.paths.ensureUnusedCapacity(self.gpa, 1);
         try self.descriptors.ensureUnusedCapacity(self.gpa, 1);
         const path_z = try std.posix.toPosixPath(path);
-        const rc = linux.inotify_add_watch(self.fd, &path_z, watch_mask);
+        const mask = if (is_directory) watch_mask else file_watch_mask;
+        const rc = linux.inotify_add_watch(self.fd, &path_z, mask);
         const result = linux.errno(rc);
         if (result != .SUCCESS) {
             return watch_error(result);

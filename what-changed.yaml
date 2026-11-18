@@ -27,6 +27,12 @@ targets:
       - src
       - scripts/smoke-test.sh
 
+  # Builds the CLI tool and the unit test binaries for every supported platform.
+  - name: cross-compile
+    paths:
+      - src
+      - scripts/cross-compile.sh
+
   # kcov runs on Linux, and coverage counts the Linux backend.
   - name: coverage
     paths:

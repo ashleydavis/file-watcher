@@ -1,12 +1,14 @@
 # User guide: CLI tool
 
-`file-watcher` watches directory trees and prints the name of each watched directory when anything in it changes: a file or directory created, modified, deleted or renamed. It does not say which file changed. It runs on Linux, Windows and macOS.
+`file-watcher` watches directory trees and single files. It prints the name of each watched directory when anything in it changes: a file or directory created, modified, deleted or renamed. For a directory it prints the directory, and leaves the changed file unnamed. A watched file is printed by its own path when it changes. It runs on Linux, Windows and macOS.
 
 ## Usage
 
 ```bash
-file-watcher [options] <directory>...
+file-watcher [options] <path>...
 ```
+
+Each path is a directory or a file.
 
 Watch the current project:
 
@@ -20,7 +22,13 @@ Watch two trees, print JSON and stop after a minute:
 file-watcher --format json --duration 60000 src tests
 ```
 
-The tool runs until Ctrl+C, a termination request (SIGTERM) or the end of the duration. A change is printed as soon as it is found. Reports of the same directory are throttled to one a second by default: a burst of changes prints one line at once and, if the burst goes on, one more line when the second is up. Ctrl+C stops the tool at once: it prints the changes already found, frees its watches and exits with code 130.
+Watch a config file and the source tree:
+
+```bash
+file-watcher config.yaml src
+```
+
+The tool runs until Ctrl+C, a termination request (SIGTERM) or the end of the duration. A change is printed as soon as it is found. Reports of the same path are throttled to one a second by default: a burst of changes prints one line at once and, if the burst goes on, one more line when the second is up. Ctrl+C stops the tool at once: it prints the changes already found, frees its watches and exits with code 130.
 
 ## Options
 
@@ -33,14 +41,22 @@ The tool runs until Ctrl+C, a termination request (SIGTERM) or the end of the du
 | `-q`, `--quota <percent>` | The share of the platform's native watch limit to use, from 0 to 100. Default 50. With 0, every watched directory is polled. |
 | `-m`, `--max-watches <count>` | The most native watches to use, whatever the quota allows. A watched directory that needs more is polled as well. |
 | `-i`, `--poll-interval <ms>` | How often polled directories are checked, in milliseconds. Default 1000. |
-| `-t`, `--throttle <ms>` | The shortest time between two reports of the same directory, in milliseconds. Changes inside it are reported once when it ends. 0 reports every change at once. Default 1000. |
+| `-t`, `--throttle <ms>` | The shortest time between two reports of the same path, in milliseconds. Changes inside it are reported once when it ends. 0 reports every change at once. Default 1000. |
 | `--poll` | Poll every directory instead of using native watches. Use it on network file systems, where native events are unreliable. Polling compares modification times with this machine's clock, so the server's clock must agree with it to within 100 ms. |
 | `-d`, `--duration <ms>` | Exit after this many milliseconds. |
 | `-s`, `--stats` | Print the watch counters to standard error once the directories are added. |
 | `-h`, `--help` | Print the usage. |
 | `-V`, `--version` | Print the version. |
 
-`--` ends the options, so a directory whose name starts with `-` can follow it.
+`--` ends the options, so a path whose name starts with `-` can follow it.
+
+## Watch a file
+
+A file named on the command line is printed by its own path when it is written, its metadata changes, it is replaced by a rename (as editors do when they save), it is deleted or it is made again. Only the file itself is reported, whatever other files in its directory do. A file named on the command line is watched whatever its extension, so `-e log` still watches `app.log` when it is named.
+
+A file inside a directory on the command line, or named twice, stops the tool with exit code 1, as overlapping directories do.
+
+On Linux each watched file takes one native watch of its own. Once the file is deleted, it is polled, so it is found when it is made again. On Windows and macOS a watched file is polled, because a native watch there covers a whole tree and watching the file's directory would cover far more than the file.
 
 ## Exclude directories and file types
 
@@ -66,11 +82,11 @@ Directory names match exactly. The defaults are dependency, cache, build output 
 
 ## Output formats
 
-Each line names a watched directory that changed, exactly as it was typed on the command line, without trailing separators. A change in a directory left out, such as `node_modules`, prints nothing.
+Each line names a watched directory or file that changed, exactly as it was typed on the command line, without trailing separators. A change in a directory left out, such as `node_modules`, prints nothing.
 
 ### text
 
-One line per change: `changed` and the directory, separated by a space. The directory is last, so it can contain spaces.
+One line per change: `changed` and the path, separated by a space. The path is last, so it can contain spaces.
 
 ```text
 changed src
@@ -92,7 +108,7 @@ One YAML sequence item per change, so the whole output is one YAML document.
 - changed: "src"
 ```
 
-In JSON and YAML, directories are double-quoted strings. Control characters are escaped. Invalid UTF-8 bytes, which Linux allows in file names, are written as U+FFFD.
+In JSON and YAML, paths are double-quoted strings. Control characters are escaped. Invalid UTF-8 bytes, which Linux allows in file names, are written as U+FFFD.
 
 ## Warnings and counters
 
@@ -116,7 +132,7 @@ stats: roots=1 polled_roots=0 native_watches=1011 watch_budget=65006 native_limi
 | Code | Meaning |
 | --- | --- |
 | 0 | The duration ended, or help or the version was printed. |
-| 1 | A directory could not be watched: it is missing, is a file or overlaps another directory on the command line. |
+| 1 | A path could not be watched: it is missing, is neither a file nor a directory, or overlaps another path on the command line. |
 | 2 | The command line is wrong. The message says how to fix it. |
 | 130 | Stopped by Ctrl+C or a termination request. |
 
@@ -124,7 +140,7 @@ stats: roots=1 polled_roots=0 native_watches=1011 watch_budget=65006 native_limi
 
 Each platform limits native watches:
 
-- Linux: the per-user inotify limit in `/proc/sys/fs/inotify/max_user_watches`. Each directory takes one watch.
+- Linux: the per-user inotify limit in `/proc/sys/fs/inotify/max_user_watches`. Each directory takes one watch, and so does each watched file.
 - macOS: 1024 directory trees. Each directory on the command line takes one FSEvents stream for its whole tree.
 - Windows: 63 directory trees: one wait covers 64 handles, and one of them is kept for stopping the wait. Each directory on the command line takes one watch for its whole tree.
 

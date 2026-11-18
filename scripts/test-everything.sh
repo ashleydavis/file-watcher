@@ -26,6 +26,9 @@ run_target() {
             zig build
             scripts/smoke-test.sh "$binary"
             ;;
+        cross-compile)
+            scripts/cross-compile.sh
+            ;;
         coverage)
             scripts/coverage.sh run
             ;;

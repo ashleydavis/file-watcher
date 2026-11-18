@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Runs the built CLI tool against real directories and checks every feature: help, version,
-# usage errors, the three output formats, that every kind of change reports its watched
-# directory, exclusions, polling, the quota, counters, several roots and the duration.
+# Runs the built CLI tool against real directories and files and checks every feature: help,
+# version, usage errors, the three output formats, that every kind of change reports its watched
+# directory, watched files, exclusions, polling, the quota, counters, several roots and the
+# duration.
 #
 
 set -euo pipefail
@@ -281,16 +282,17 @@ run_tool --format xml "$work" > /dev/null 2> "$work/format.txt"
 format_code=$?
 run_tool "$work/missing" > /dev/null 2> "$work/missing.txt"
 missing_code=$?
-run_tool "$work" "$work/help.txt" > /dev/null 2> "$work/file.txt"
-file_code=$?
+run_tool "$work" "$work/help.txt" > /dev/null 2> "$work/inside.txt"
+inside_code=$?
 set -e
-check "no directory exits with code 2" test "$usage_code" -eq 2
-check "no directory explains itself" grep -q "No directory to watch" "$work/usage.txt"
+check "no path exits with code 2" test "$usage_code" -eq 2
+check "no path explains itself" grep -q "Nothing to watch" "$work/usage.txt"
 check "bad format exits with code 2" test "$format_code" -eq 2
 check "bad format explains itself" grep -q "Unknown format xml" "$work/format.txt"
 check "missing directory exits with code 1" test "$missing_code" -eq 1
 check "missing directory explains itself" grep -q "it does not exist" "$work/missing.txt"
-check "a file as root exits with code 1" test "$file_code" -eq 1
+check "a file inside a watched directory exits with code 1" test "$inside_code" -eq 1
+check "a file inside a watched directory explains itself" grep -q "it overlaps another watched path" "$work/inside.txt"
 
 # Every kind of change is reported as its watched directory changing, with native watching. Each
 # change is made on its own and waited for, and the output is left to go quiet before the next
@@ -318,6 +320,41 @@ check "text: node_modules left out by default" no_changes "$out" "$tree" eval 'e
 stop_watcher
 check "text: every line names the watched directory" lacks_text "$out" "$tree/"
 check "text: no warnings" has_no_warnings "$case_dir/err.txt"
+
+# A file named on the command line is reported by its own path when it is written, replaced by a
+# rename as editors save, written again after that, deleted and made again, and not when another
+# file in its directory changes. Linux watches the file natively; tree backends poll it.
+case_dir="$(new_case file)"
+tree="$case_dir/tree"
+file="$tree/watched.txt"
+out="$case_dir/out.txt"
+echo "old" > "$file"
+echo "old" > "$tree/other.txt"
+start_watcher "$case_dir" -t 0 -d "$event_duration_ms" "$file"
+if [ "$is_tree_backend" -eq 1 ]; then
+    check "file: counters show the file polled" grep -q "roots=1 polled_roots=1 native_watches=0 " "$case_dir/err.txt"
+else
+    check "file: counters show one native watch" grep -q "roots=1 polled_roots=0 native_watches=1 " "$case_dir/err.txt"
+fi
+check "file: written file" changes "$out" "$file" eval 'echo changed >> "$file"'
+check "file: file replaced by a rename" changes "$out" "$file" eval 'echo saved > "$tree/saved.tmp"; mv "$tree/saved.tmp" "$file"'
+check "file: written after the rename" changes "$out" "$file" eval 'echo again >> "$file"'
+check "file: other file in its directory left out" no_changes "$out" "$file" eval 'echo changed >> "$tree/other.txt"'
+check "file: deleted file" changes "$out" "$file" eval 'rm "$file"'
+check "file: file made again" changes "$out" "$file" eval 'echo back > "$file"'
+stop_watcher
+check "file: other file never reported" lacks_text "$out" "other.txt"
+check "file: no warnings" has_no_warnings "$case_dir/err.txt"
+
+# A file polled on every platform.
+case_dir="$(new_case file-poll)"
+tree="$case_dir/tree"
+file="$tree/watched.txt"
+echo "old" > "$file"
+start_watcher "$case_dir" --poll -i 100 -t 0 -d "$event_duration_ms" "$file"
+check "file poll: written file found by polling" changes "$case_dir/out.txt" "$file" eval 'echo changed >> "$file"'
+check "file poll: other file in its directory left out" no_changes "$case_dir/out.txt" "$file" eval 'echo x > "$tree/other.txt"'
+stop_watcher
 
 # The throttle: a second change soon after the first is held back and reported once the
 # throttle time has passed, not at once. The throttle is long, so a slow machine cannot make
@@ -447,7 +484,7 @@ run_tool -d 100 "$case_dir" "$case_dir/tree" > /dev/null 2> "$case_dir/overlap.t
 overlap_code=$?
 set -e
 check "roots: overlapping roots refused" test "$overlap_code" -eq 1
-check "roots: overlap explained" grep -q "overlaps another watched directory" "$case_dir/overlap.txt"
+check "roots: overlap explained" grep -q "overlaps another watched path" "$case_dir/overlap.txt"
 
 # Ctrl+C stops the tool at once with exit code 130. Git Bash cannot send Ctrl+C to a Windows
 # program, so the case is skipped there.

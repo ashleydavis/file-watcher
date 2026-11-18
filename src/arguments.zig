@@ -34,7 +34,7 @@ pub const Format = enum {
 //
 pub const Config = struct {
     //
-    // The directories to watch.
+    // The files and directories to watch.
     //
     paths: []const []const u8,
 
@@ -88,9 +88,9 @@ pub const Command = union(enum) {
 // The usage text printed by `--help`.
 //
 pub const usage =
-    \\Usage: file-watcher [options] <directory>...
+    \\Usage: file-watcher [options] <path>...
     \\
-    \\Watches directory trees and prints which of them changed.
+    \\Watches files and directory trees and prints which of them changed.
     \\
     \\Options:
     \\  -f, --format <format>        Output format: text, json or yaml. Default: text.
@@ -106,7 +106,7 @@ pub const usage =
     \\  -i, --poll-interval <ms>     How often polled directories are rescanned.
     \\                               Default: 1000.
     \\  -t, --throttle <ms>          The shortest time between two reports of the same
-    \\                               directory. 0 reports at once. Default: 1000.
+    \\                               path. 0 reports at once. Default: 1000.
     \\      --poll                   Poll every directory instead of using native watches.
     \\  -d, --duration <ms>          Exit after this many milliseconds.
     \\  -s, --stats                  Print watch counters to standard error at start.
@@ -237,7 +237,7 @@ pub fn parse(arena: Allocator, argv: []const []const u8) Allocator.Error!Command
     }
 
     if (paths.items.len == 0) {
-        return failure(arena, "No directory to watch. Name at least one directory.", .{});
+        return failure(arena, "Nothing to watch. Name at least one file or directory.", .{});
     }
     if (is_default_excludes) {
         try excluded_directories.appendSlice(arena, &file_watcher.default_excluded_directories);

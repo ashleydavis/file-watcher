@@ -1,6 +1,6 @@
 # User guide: code library
 
-The `file_watcher` module watches directory trees from Zig code. It works on Linux, Windows and macOS, and the CLI tool is built on it. Other platforms are polled.
+The `file_watcher` module watches directory trees and single files from Zig code. It works on Linux, Windows and macOS, and the CLI tool is built on it. Other platforms are polled.
 
 ## Add the library to a project
 
@@ -40,7 +40,7 @@ const exe = b.addExecutable(.{
 
 The library needs Zig 0.16.0. On macOS the module links the C library and loads CoreServices for FSEvents when a watcher starts, so building needs no Apple SDK.
 
-## Watch a directory
+## Set up a watcher
 
 ```zig
 const std = @import("std");
@@ -49,7 +49,9 @@ const file_watcher = @import("file_watcher");
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
 
-    // The watcher is large and keeps a pointer into itself, so it lives on the heap.
+    // On Linux the watcher holds a 64 KiB buffer for reading events. On macOS the operating
+    // system sends events to the watcher's place in memory, so the watcher is never copied to
+    // another variable after `init`. Creating it on the heap keeps it in one place.
     const watcher = try gpa.create(file_watcher.Watcher);
     defer gpa.destroy(watcher);
 
@@ -61,21 +63,43 @@ pub fn main(init: std.process.Init) !void {
     });
     defer watcher.deinit();
 
-    try watcher.add("src");
+    // Add directories and files, then respond to changes, as in the sections below.
+}
+```
 
-    while (true) {
-        // Blocks this thread until a change arrives or a second passes. While it waits, the
-        // thread sleeps in the operating system and uses no CPU.
-        const batch = try watcher.next(1000);
-        for (batch.problems) |problem| {
-            std.log.warn("{s}: {t} ({t})", .{ problem.path, problem.reason, problem.action });
-        }
-        for (batch.changed) |path| {
-            std.log.info("{s} changed", .{path});
-        }
+## Watch a directory
+
+```zig
+try watcher.add("src");
+```
+
+The batch reports `src` when any file or directory under it is created, modified, deleted or renamed.
+
+## Watch a file
+
+```zig
+try watcher.add("config.json");
+```
+
+The batch reports `config.json` when the file is written, replaced, deleted or made again. One watcher can watch directories and files together.
+
+## Respond to changes
+
+```zig
+while (true) {
+    // Blocks this thread until a change arrives or a second passes. While it waits, the thread
+    // sleeps in the operating system and uses no CPU.
+    const batch = try watcher.next(1000);
+    for (batch.problems) |problem| {
+        std.log.warn("{s}: {t} ({t})", .{ problem.path, problem.reason, problem.action });
+    }
+    for (batch.changed) |path| {
+        std.log.info("{s} changed", .{path});
     }
 }
 ```
+
+Each path in `batch.changed` is a path you passed to `add`. Problems are paths that could not be read or watched natively.
 
 ## Exclude directories and file types
 
@@ -108,14 +132,16 @@ The lists are borrowed, so they must outlive the watcher. A `const` declared in 
 
 The watcher for the platform being built for.
 
-- `init(self: *Watcher, gpa: Allocator, io: std.Io, options: *const Options) !void`: creates a watcher in place. The watcher keeps a pointer into itself, so it stays at the address given to `init`. Problems found here, such as the native method being unavailable, come back in the first batch.
+- `init(self: *Watcher, gpa: Allocator, io: std.Io, options: *const Options) !void`: creates a watcher in place. On macOS the operating system sends events to the watcher's place in memory, so never copy the watcher to another variable or return it from a function after `init`. Problems found here, such as the native method being unavailable, come back in the first batch.
 - `deinit(self: *Watcher) void`: stops every watch and frees every record.
-- `add(self: *Watcher, path: []const u8) !void`: starts watching the tree at `path`. Changes before this call are not reported. Fails with `error.FileNotFound` when the path is missing, `error.NotDir` when it is a file and `error.OverlappingRoot` when it is inside, or contains, a path added before. Trailing separators are removed.
+- `add(self: *Watcher, path: []const u8) !void`: starts watching the tree or the file at `path`. Changes before this call are not reported. Fails with `error.FileNotFound` when the path is missing, `error.NotFileOrDirectory` when it is something else, such as a device, and `error.OverlappingRoot` when it is inside, or contains, a path added before. Trailing separators are removed.
 - `next(self: *Watcher, timeout_ms: u32) !Batch`: blocks the calling thread until a change arrives or `timeout_ms` passes, then returns the batch: at least one changed directory or problem, or an empty batch when the time runs out. With native watching it waits in the operating system (`poll`, `kevent` or `WaitForMultipleObjects`), so a waiting thread uses no CPU and wakes as soon as a change arrives. A timeout of 0 never blocks: it returns the changes already queued. The batch stays valid until the next call to `next` or `add`.
 - `wake(self: *Watcher) void`: makes a `next` that is waiting on another thread return at once with the changes found so far, or, when no `next` is waiting, makes the next call to `next` return at once. Safe to call from any thread and from a signal handler. Use it to stop a watcher thread without waiting for its timeout, for example when an app quits.
 - `stats(self: *const Watcher) Stats`: counters that show how the watcher spends its quota.
 
-The watcher keeps nothing per file. It does not say which file changed, only which watched directory did, and it reports the same directory at most once per `throttle_ms`.
+The watcher keeps nothing per file inside a watched tree. For a tree it reports the watched directory, and leaves the changed file unnamed. It reports the same path at most once per `throttle_ms`.
+
+A watched file is reported by its own path when it is written, its metadata changes, it is replaced by a rename, it is deleted or it is made again. It is watched whatever its name and extension. On Linux it takes one native watch, and once it is deleted it is polled, so it is found when it is made again. On Windows and macOS it is polled, because a native watch there covers a whole tree.
 
 The timeout only limits how long `next` waits when nothing changes. A change is reported as soon as it arrives, whatever the timeout, so a long timeout costs nothing in speed. Choose it by how often your loop needs to do something other than wait: an idle loop wakes once per timeout and gets an empty batch. To stop a waiting thread, call `wake` from another thread instead of relying on the timeout. Use 0 from a timer or event loop that must never block. The largest timeout, `std.math.maxInt(u32)`, is about 49.7 days. In polling mode `next` also wakes for each poll interval, whatever the timeout.
 
@@ -139,7 +165,7 @@ The slices in `Options` are borrowed, so keep them alive while the watcher runs.
 
 ### `Batch`
 
-- `changed: []const []const u8`: the watched directories that changed, each once, exactly as they were passed to `add` without trailing separators. Any file or directory under a watched directory being created, modified, deleted or renamed counts, unless it is excluded.
+- `changed: []const []const u8`: the watched directories and files that changed, each once, exactly as they were passed to `add` without trailing separators. Any file or directory under a watched directory being created, modified, deleted or renamed counts, unless it is excluded.
 - `problems: []const Problem`: paths that could not be read or watched natively.
 
 ### `Problem`
@@ -155,8 +181,8 @@ The slices in `Options` are borrowed, so keep them alive while the watcher runs.
 - `native_limit`: the platform's native watch limit.
 - `watch_budget`: the share of the limit this watcher may use.
 - `native_watches`: native watches in use.
-- `roots`: watched directories.
-- `polled_roots`: watched directories that are polled, because native watching is off or could not cover all of them.
+- `roots`: watched directories and files.
+- `polled_roots`: watched directories and files that are polled, because native watching is off or could not cover all of them.
 - `is_native_active`: whether the native backend is running.
 
 ## Blocking, threads and GUI apps

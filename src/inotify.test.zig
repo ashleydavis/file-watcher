@@ -124,10 +124,10 @@ fn temp_path(buffer: []u8, tmp: *testing.TmpDir, name: []const u8) ![]const u8 {
 }
 
 //
-// Goal: a real inotify watch reports a new file, moves a watch to a renamed directory and
-// drops watches on request.
+// Goal: a real inotify watch reports a new file, moves a watch to a renamed directory, watches a
+// file on its own and drops watches on request.
 // Method: watch a temporary directory, create a file, wait and check the hint; then exercise
-// watch errors and unwatch.
+// watch errors, a file watch and unwatch.
 //
 test "Inotify watches a real directory" {
     if (builtin.os.tag != .linux) {
@@ -175,6 +175,17 @@ test "Inotify watches a real directory" {
 
     try testing.expectError(error.FileNotFound, inotify.watch(sub, true));
     try testing.expectError(error.NotDir, inotify.watch(file, true));
+
+    // A file watched as a file reports its own writes under its own path.
+    try testing.expect(try inotify.watch(file, false));
+    try tmp.dir.writeFile(testing.io, .{
+        .sub_path = "a.txt",
+        .data = "y",
+    });
+    hints.clear();
+    try inotify.wait(1000, &hints);
+    try testing.expect(hints.paths.get(file).?.entry);
+    try testing.expect(inotify.unwatch(file));
 
     try tmp.dir.createDir(testing.io, "moved/deeper", .default_dir);
     var deeper_buffer: [std.fs.max_path_bytes]u8 = undefined;

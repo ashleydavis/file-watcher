@@ -1,5 +1,6 @@
 //
-// The CLI tool: watches the directories named on the command line and prints each change.
+// The CLI tool: watches the files and directories named on the command line and prints each
+// change.
 //
 
 const std = @import("std");
@@ -77,7 +78,7 @@ pub fn run(
 }
 
 //
-// Watches the configured directories until the duration ends, printing every change.
+// Watches the configured files and directories until the duration ends, printing every change.
 //
 fn watch(
     gpa: Allocator,
@@ -99,7 +100,7 @@ fn watch(
             }
             try stderr.print(
                 "error: Cannot watch {s}: {s}. " ++
-                    "Name an existing directory that does not overlap another one.\n",
+                    "Name an existing file or directory that does not overlap another one.\n",
                 .{ path, output.describe_error(err) },
             );
             try stderr.flush();

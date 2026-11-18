@@ -1,6 +1,6 @@
 # smoke-test.sh
 
-Runs the built CLI tool against real directories and checks each feature: help, version, usage errors, the text, JSON and YAML formats, that every kind of change (files and directories created, modified, deleted and renamed, at any depth and in new directories) reports its watched directory, the throttle, default and custom exclusions, polling, the quota and its overflow to polling, the counters, Ctrl+C, several roots and the duration.
+Runs the built CLI tool against real directories and files and checks each feature: help, version, usage errors, the text, JSON and YAML formats, that every kind of change (files and directories created, modified, deleted and renamed, at any depth and in new directories) reports its watched directory, a watched file reported by its own path (natively and by polling), the throttle, default and custom exclusions, polling, the quota and its overflow to polling, the counters, Ctrl+C, several watched paths and the duration.
 
 ## Usage
 

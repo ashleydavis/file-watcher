@@ -98,7 +98,7 @@ fn expect_failure(argv: []const []const u8, text: []const u8) !void {
 // Method: parse each bad command line and check its message.
 //
 test "parse explains bad command lines" {
-    try expect_failure(&.{}, "No directory");
+    try expect_failure(&.{}, "Nothing to watch");
     try expect_failure(&.{"--bogus"}, "Unknown option --bogus");
     try expect_failure(&.{ "--bogus", "dir" }, "Unknown option --bogus");
     try expect_failure(&.{ "dir", "--format" }, "needs a value");

@@ -22,6 +22,7 @@ This checklist records every requirement of the project. Each item is ticked onc
 - [x] Excludes configurable directories.
 - [x] By default excludes `node_modules` and other well known hefty directories.
 - [x] Reports only which watched directory changed, not which file, and keeps nothing per file (changed on 2026-11-01 at the owner's request). Checked by unit tests and by the smoke tests for every kind of change.
+- [x] Watches single files as well as directory trees: a file named to watch is reported by its own path when it is written, replaced by a rename, deleted or made again, and changes to other files in its directory are not reported (added on 2026-11-18 at the owner's request). Checked by unit tests and by smoke tests, natively and by polling.
 - [x] Throttles reports of each watched directory, with the throttle configurable (`throttle_ms`, `--throttle`) and one second by default. Checked by unit tests on the mock clock and by a smoke test.
 
 ## CLI tool

@@ -117,7 +117,7 @@ test "run prints help, version and usage errors" {
     var usage = try run(&mock, &.{});
     defer usage.deinit();
     try testing.expectEqual(@as(u8, 2), usage.code);
-    try testing.expect(std.mem.startsWith(u8, usage.stderr.written(), "error: No directory"));
+    try testing.expect(std.mem.startsWith(u8, usage.stderr.written(), "error: Nothing to watch"));
 }
 
 //
@@ -141,6 +141,36 @@ test "run prints changes until the duration ends" {
     try testing.expectEqualStrings("{\"changed\":\"/root\"}\n", result.stdout.written());
     try testing.expect(std.mem.startsWith(u8, result.stderr.written(), "stats: roots=1"));
     try testing.expect(mock.clock_ns >= 2500 * std.time.ns_per_ms);
+}
+
+//
+// Writes `/root/a.txt` the first time the tool waits, as if a user saved it.
+//
+fn write_file_on_sleep(mock: *MockIo) void {
+    if (mock.nodes.get("/root/a.txt").?.size == 1) {
+        mock.write_file("/root/a.txt", 2);
+    }
+}
+
+//
+// Goal: the tool watches a file named on the command line and prints the file's path when it
+// changes, and stays quiet about other files in its directory.
+// Method: watch a mock file by polling beside another file, write the watched file while the
+// tool waits and check the output.
+//
+test "run prints changes to a watched file" {
+    var mock: MockIo = undefined;
+    mock.init(testing.allocator);
+    defer mock.deinit();
+    try mock.add_directory("/root");
+    try mock.add_file("/root/a.txt", 1);
+    try mock.add_file("/root/b.txt", 1);
+    mock.sleep_callback = write_file_on_sleep;
+
+    var result = try run(&mock, &.{ "--poll", "-i", "100", "-d", "2500", "/root/a.txt" });
+    defer result.deinit();
+    try testing.expectEqual(@as(u8, 0), result.code);
+    try testing.expectEqualStrings("changed /root/a.txt\n", result.stdout.written());
 }
 
 //
@@ -208,7 +238,7 @@ test "run refuses a missing directory" {
     try testing.expectEqual(@as(u8, 1), result.code);
     try testing.expectEqualStrings(
         "error: Cannot watch /missing: it does not exist. " ++
-            "Name an existing directory that does not overlap another one.\n",
+            "Name an existing file or directory that does not overlap another one.\n",
         result.stderr.written(),
     );
 }

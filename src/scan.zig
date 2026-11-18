@@ -1,8 +1,8 @@
 //
-// Tells whether anything in a directory tree changed since the last check, by its modification
-// times alone. Nothing is kept between checks except the time of the last one: an entry that was
-// created, written or renamed has a newer time, and so does the directory an entry was created
-// in, deleted from or renamed in.
+// Tells whether anything in a directory tree, or a single watched file, changed since the last
+// check, by its times alone. Nothing is kept between checks except the time of the last one: an
+// entry that was created, written or renamed has a newer time, and so does the directory an
+// entry was created in, deleted from or renamed in.
 //
 
 const std = @import("std");
@@ -338,6 +338,38 @@ pub fn scan(
         }
     }
     return if (walk.is_changed) .changed else .unchanged;
+}
+
+//
+// Checks the watched file at `path` for a modification or status change time after `since_ns`
+// and no later than `until_ns`, both in nanoseconds since 1970, so polling finds changes to a
+// file root. The status change time counts too because a file renamed over the path keeps its
+// own modification time. Symbolic links are followed, as `add` follows them. When `problems` is
+// given, a path that cannot be read is reported there, so the first check of a root tells the
+// caller and later checks stay quiet.
+//
+pub fn scan_file(
+    io: Io,
+    path: []const u8,
+    since_ns: i96,
+    until_ns: i96,
+    problems: ?*EventList,
+) !Result {
+    assert(path.len > 0);
+    const stat = Dir.cwd().statFile(io, path, .{
+        .follow_symlinks = true,
+    }) catch |err| switch (err) {
+        error.Canceled => return error.Canceled,
+        error.FileNotFound, error.NotDir => return .missing,
+        else => {
+            if (problems) |list| {
+                try list.append_problem(path, err, .skipped);
+            }
+            return .missing;
+        },
+    };
+    const changed_ns = @max(stat.mtime.nanoseconds, stat.ctime.nanoseconds);
+    return if (is_in_window(changed_ns, since_ns, until_ns)) .changed else .unchanged;
 }
 
 //

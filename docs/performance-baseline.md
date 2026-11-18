@@ -30,7 +30,7 @@ Overall, adding up the places above (fewest points is best):
 ## How it was measured
 
 - The ReleaseFast CLI tool, on GitHub's hosted runners: Ubuntu 24.04, Windows Server 2025 and macOS 15.
-- A tree of 20,000 files, watched as two roots: the generated files and the load test directory.
+- A tree of 20,000 files, watched as two directories: the generated files and the load test directory.
 - The script repeats its runs for up to 4 minutes and finishes within 5. Each figure is the average of that mode's runs, except the worst latency, which is the slowest sample of any run.
 - Every burst, and every change after it, was reported in every run on every platform.
 
@@ -44,10 +44,10 @@ Overall, adding up the places above (fewest points is best):
 The three modes:
 
 - **Native:** every directory watched natively, up to the platform's quota.
-- **Mixed:** `--max-watches 1`. One native watch is allowed, so the load test root is polled.
-- **Polling:** every root polled, every second.
+- **Mixed:** `--max-watches 1`. One native watch is allowed, so the load test directory is polled.
+- **Polling:** every watched directory polled, every second.
 
-Each load test makes 10,000 changes, waits until the reports stop, then times the report of one more change. Reports are throttled to one per root per second, so a burst gives a few reports, not 10,000. "Reports stopped" is how long after the last change the last report came. "Next change" is how long one more change then took to be reported, which shows the watcher kept up.
+Each load test makes 10,000 changes, waits until the reports stop, then times the report of one more change. Reports are throttled to one per watched directory per second, so a burst gives a few reports, not 10,000. "Reports stopped" is how long after the last change the last report came. "Next change" is how long one more change then took to be reported, which shows the watcher kept up.
 
 ## Native
 
@@ -103,7 +103,7 @@ Each load test makes 10,000 changes, waits until the reports stop, then times th
 - Native watching costs no CPU while idle on any platform, and a change is reported within a millisecond on Linux, 4 ms on Windows and 20 ms on macOS, where FSEvents batches its events.
 - After a burst, reports stop within about a second, which is the throttle, and the next change is reported at once natively and within one poll interval when polled. A "reports stopped" of 0 ms means the last report came before the last change was made.
 - Polling latency is about one poll interval, a second, on every platform.
-- Polling keeps only the time of the last check per root and checks each entry as it is read, so its memory is close to native watching's. On macOS polling fell from 20 MiB in the previous baseline to 1.8 MiB, and on Linux from 2.9 MiB to 1.0 MiB.
+- Polling keeps only the time of the last check per watched directory and checks each entry as it is read, so its memory is close to native watching's. On macOS polling fell from 20 MiB in the previous baseline to 1.8 MiB, and on Linux from 2.9 MiB to 1.0 MiB.
 - Memory is the peak on Linux and Windows. On macOS it is the memory in use after the load tests, because macOS keeps no peak for another process.
 - Most of the memory on Windows and macOS is the operating system's, not the watcher's. What the watcher itself keeps is under 1 MiB, as Linux shows:
   - **Windows:** about 3.8 MiB in every mode, polling included, so watching does not add to it. It is the system libraries every Windows process loads, which Windows counts in each process's memory although they are shared between processes.

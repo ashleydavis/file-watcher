@@ -417,3 +417,47 @@ fn run_scan(gpa: std.mem.Allocator) !void {
 test "scan survives allocation failure" {
     try testing.checkAllAllocationFailures(testing.allocator, run_scan, .{});
 }
+
+//
+// Goal: a watched file counts as changed only in the window holding its newest time, a missing
+// file is missing, and a file whose metadata cannot be read is missing and reported once, when
+// the caller asks, with cancellation passed on.
+// Method: write the file at a known time and check the windows around it, then remove it, then
+// inject metadata faults.
+//
+test "scan_file finds a file's changes in its window" {
+    var fixture: Fixture = undefined;
+    try fixture.init();
+    defer fixture.deinit();
+    const io = fixture.mock.io();
+    const file = native_path("/root/a.txt");
+
+    fixture.at(20);
+    fixture.mock.write_file(file, 5);
+    try testing.expectEqual(Result.changed, try scan_module.scan_file(io, file, 10, 20, null));
+    try testing.expectEqual(Result.unchanged, try scan_module.scan_file(io, file, 20, 30, null));
+    try testing.expectEqual(Result.unchanged, try scan_module.scan_file(io, file, 0, 19, null));
+
+    // An excluded extension still counts, because the file was named as a root.
+    const log = native_path("/root/trace.log");
+    try fixture.mock.add_file(log, 1);
+    try testing.expectEqual(Result.changed, try scan_module.scan_file(io, log, 10, 20, null));
+
+    fixture.mock.remove(file);
+    try testing.expectEqual(Result.missing, try scan_module.scan_file(io, file, 0, 30, null));
+
+    var list = EventList.init(testing.allocator);
+    defer list.deinit();
+    try fixture.mock.set_faults(log, .{
+        .stat = true,
+    });
+    try testing.expectEqual(Result.missing, try scan_module.scan_file(io, log, 0, 30, &list));
+    try testing.expectEqual(@as(usize, 1), list.problems.items.len);
+    try testing.expectEqual(Result.missing, try scan_module.scan_file(io, log, 0, 30, null));
+    try testing.expectEqual(@as(usize, 1), list.problems.items.len);
+    try fixture.mock.set_faults(log, .{
+        .stat = true,
+        .is_canceled = true,
+    });
+    try testing.expectError(error.Canceled, scan_module.scan_file(io, log, 0, 30, null));
+}

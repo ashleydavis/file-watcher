@@ -6,6 +6,7 @@ A fast file watcher written in Zig: a library for Zig projects and a CLI tool bu
 - Knows the platform's limit on native watches, uses a configurable percentage of it and polls every directory beyond that, or every directory when native watching fails.
 - Leaves out `node_modules`, `.git` and other well known heavy directories by default. Excluded directories and file extensions are configurable.
 - Reports which watched directory changed whenever a file or directory under it is created, modified, deleted or renamed. It keeps nothing per file, so memory stays around 1 MiB even for 100,000 files.
+- Also watches single files: a watched file is reported by its own path when it is written, replaced, deleted or made again.
 - Throttles reports of each directory to one a second by default, with the throttle configurable.
 - The CLI tool prints changes as text, JSON Lines or YAML.
 
@@ -78,6 +79,12 @@ zig build -Dtarget=x86_64-macos -Doptimize=ReleaseFast
 
 `zig build check -Dtarget=<target>` compiles the library and CLI tool for a target without linking.
 
+Build the CLI tool and the unit test binaries for every platform above, each into `zig-out/cross/<target>`:
+
+```bash
+scripts/cross-compile.sh
+```
+
 ## Run the unit tests
 
 ```bash
@@ -108,7 +115,7 @@ scripts/smoke-test.sh zig-out/bin/file-watcher
 
 ## Run only the tests that changed
 
-[what-changed](https://github.com/ashleydavis/what-changed) runs the unit tests, the smoke tests and coverage only when the paths they watch in `what-changed.yaml` changed since they last passed:
+[what-changed](https://github.com/ashleydavis/what-changed) runs the unit tests, the smoke tests, the cross compile for every platform and coverage only when the paths they watch in `what-changed.yaml` changed since they last passed:
 
 ```bash
 scripts/test-everything.sh

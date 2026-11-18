@@ -51,9 +51,9 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         gpa: Allocator,
 
         //
-        // The paths watched, owned by the map.
+        // The paths watched, owned by the map, each with whether it was watched as a directory.
         //
-        watched: std.StringArrayHashMapUnmanaged(void),
+        watched: std.StringArrayHashMapUnmanaged(bool),
 
         //
         // Hints reported on the next wait, borrowed from the test.
@@ -120,7 +120,6 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
         // Records a watch, or fails for the failing path. Returns false for a path watched already.
         //
         pub fn watch(self: *Self, path: []const u8, is_directory: bool) !bool {
-            _ = is_directory;
             if (self.failing_path) |failing| {
                 if (std.mem.eql(u8, failing, path)) {
                     return self.watch_error;
@@ -134,6 +133,7 @@ pub fn FakeBackend(comptime HintSet: type, comptime Scope: type, comptime config
                 self.watched.swapRemoveAt(self.watched.count() - 1);
                 return err;
             };
+            result.value_ptr.* = is_directory;
             return true;
         }
 

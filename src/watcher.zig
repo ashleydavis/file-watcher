@@ -1,9 +1,9 @@
 //
-// Watches directory trees and reports which of them changed. It uses the platform's native watch
-// method within a quota of the platform limit, and polls a tree the native method cannot fully
-// cover by looking for modification times newer than its last check. Nothing is kept per file:
-// native events say directly that a tree changed, and polling keeps the time of the last check
-// per tree.
+// Watches directory trees and single files and reports which of them changed. It uses the
+// platform's native watch method within a quota of the platform limit, and polls a root the
+// native method cannot fully cover by looking for modification times newer than its last check.
+// Nothing is kept per file inside a tree: native events say directly that a tree changed, and
+// polling keeps the time of the last check per root.
 //
 
 const std = @import("std");
@@ -49,7 +49,8 @@ pub const Watcher = GenericWatcher(NativeBackend);
 //
 pub const Batch = struct {
     //
-    // The watched directories that changed, each once, exactly as they were passed to `add`.
+    // The watched directories and files that changed, each once, exactly as they were passed to
+    // `add`.
     //
     changed: []const []const u8,
 
@@ -79,12 +80,13 @@ pub const Stats = struct {
     native_watches: u32,
 
     //
-    // Watched directories.
+    // Watched directories and files.
     //
     roots: u32,
 
     //
-    // Watched directories that are polled, because native watching cannot cover them fully.
+    // Watched directories and files that are polled, because native watching cannot cover them
+    // fully.
     //
     polled_roots: u32,
 
@@ -104,13 +106,21 @@ pub const Stats = struct {
 const mtime_lag_ns: i96 = 100 * std.time.ns_per_ms;
 
 //
-// One watched directory.
+// One watched directory or file.
 //
 const Root = struct {
     //
-    // The directory as it was passed to `add`, without trailing separators. Owned by the watcher.
+    // The directory or file as it was passed to `add`, without trailing separators. Owned by the
+    // watcher.
     //
     path: []const u8,
+
+    //
+    // Whether the root is a single file rather than a directory tree. A file root gets one native
+    // watch of its own on backends that watch each directory, and is polled on backends that
+    // watch whole trees, where watching its directory would cover far more than the file.
+    //
+    is_file: bool,
 
     //
     // Whether the tree is polled, because native watching is off or could not cover all of it.
@@ -315,9 +325,10 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Starts watching the directory tree at `path`. Fails with `error.FileNotFound` when the
-        // path is missing, `error.NotDir` when it is not a directory and `error.OverlappingRoot`
-        // when it is inside, or contains, a directory added before.
+        // Starts watching the directory tree or the file at `path`. Fails with
+        // `error.FileNotFound` when the path is missing, `error.NotFileOrDirectory` when it is
+        // something else, such as a device, and `error.OverlappingRoot` when it is inside, or
+        // contains, a path added before.
         //
         pub fn add(self: *Self, path: []const u8) !void {
             assert(path.len > 0);
@@ -326,9 +337,11 @@ pub fn GenericWatcher(comptime Backend: type) type {
             const stat = try Dir.cwd().statFile(self.io, trimmed, .{
                 .follow_symlinks = true,
             });
-            if (stat.kind != .directory) {
-                return error.NotDir;
-            }
+            const is_file = switch (stat.kind) {
+                .directory => false,
+                .file => true,
+                else => return error.NotFileOrDirectory,
+            };
             for (self.roots.items) |root| {
                 if (paths.is_within(trimmed, root.path) or paths.is_within(root.path, trimmed)) {
                     return error.OverlappingRoot;
@@ -338,6 +351,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
             const owned = try self.gpa.dupe(u8, trimmed);
             self.roots.appendAssumeCapacity(.{
                 .path = owned,
+                .is_file = is_file,
                 .is_polled = false,
                 .checked_ns = 0,
                 .is_present = false,
@@ -349,8 +363,12 @@ pub fn GenericWatcher(comptime Backend: type) type {
                 try self.poll_root(index);
                 return;
             }
+            if (is_file) {
+                try self.watch_file(index);
+                return;
+            }
             if (Backend.is_recursive) {
-                _ = try self.watch_one(index, owned);
+                _ = try self.watch_one(index, owned, true);
                 return;
             }
             try self.sync_watches(index, owned, true);
@@ -514,7 +532,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
             while (pending.pop()) |path| {
                 assert(walked < std.math.maxInt(u32));
                 walked += 1;
-                switch (try self.watch_one(index, path)) {
+                switch (try self.watch_one(index, path, true)) {
                     .quota => return,
                     .failed => continue,
                     .existing => if (path.ptr != start.ptr and !is_full) continue,
@@ -555,17 +573,43 @@ pub fn GenericWatcher(comptime Backend: type) type {
         }
 
         //
-        // Watches `path` natively when the quota allows. When it is used up, or the platform
-        // refuses for lack of resources, root `index` is polled instead.
+        // Watches file root `index` natively on backends that watch each directory, with a watch
+        // on the file itself, and polls it on backends that watch whole trees. A file the backend
+        // cannot watch, for example because it was deleted, is polled, so polling finds it when
+        // it comes back.
         //
-        fn watch_one(self: *Self, index: usize, path: []const u8) !WatchResult {
+        fn watch_file(self: *Self, index: usize) !void {
+            const root = self.roots.items[index];
+            assert(root.is_file);
+            assert(self.is_native_active);
+            if (Backend.is_recursive) {
+                try self.poll_root(index);
+                return;
+            }
+            switch (try self.watch_one(index, root.path, false)) {
+                .new, .existing, .quota => {},
+                .failed => try self.poll_root(index),
+            }
+        }
+
+        //
+        // Watches `path` natively when the quota allows, as a directory when `is_directory` and
+        // as a file otherwise. When the quota is used up, or the platform refuses for lack of
+        // resources, root `index` is polled instead.
+        //
+        fn watch_one(
+            self: *Self,
+            index: usize,
+            path: []const u8,
+            is_directory: bool,
+        ) !WatchResult {
             assert(self.is_native_active);
             assert(path.len > 0);
             if (self.backend.watch_count() >= self.watch_budget) {
                 try self.quota_reached(index, path);
                 return .quota;
             }
-            const is_new = self.backend.watch(path, true) catch |err| switch (err) {
+            const is_new = self.backend.watch(path, is_directory) catch |err| switch (err) {
                 error.OutOfMemory => return error.OutOfMemory,
                 error.LimitReached => {
                     self.watch_budget = self.backend.watch_count();
@@ -608,16 +652,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
             // cannot be read. The next check looks for times after now, so entries written
             // before polling began do not count.
             const start_ns = Io.Timestamp.now(self.io, .real).nanoseconds;
-            const result = try scan_module.scan(
-                self.gpa,
-                self.io,
-                root.path,
-                &self.options,
-                lister,
-                start_ns,
-                start_ns,
-                &self.list,
-            );
+            const result = try self.scan_root(root, start_ns, start_ns, &self.list);
             root.checked_ns = start_ns;
             root.is_present = result != .missing;
             root.is_polled = true;
@@ -640,16 +675,7 @@ pub fn GenericWatcher(comptime Backend: type) type {
                     continue;
                 }
                 const until_ns = self.check_time_ns();
-                const result = try scan_module.scan(
-                    self.gpa,
-                    self.io,
-                    root.path,
-                    &self.options,
-                    lister,
-                    root.checked_ns,
-                    until_ns,
-                    null,
-                );
+                const result = try self.scan_root(root, root.checked_ns, until_ns, null);
                 root.checked_ns = until_ns;
                 const is_present = result != .missing;
                 const is_changed = result == .changed or is_present != root.is_present;
@@ -658,6 +684,34 @@ pub fn GenericWatcher(comptime Backend: type) type {
                     try self.mark_changed(root);
                 }
             }
+        }
+
+        //
+        // Checks `root` for times after `since_ns` and no later than `until_ns`: the file alone
+        // for a file root, and the whole tree for a directory root. Unreadable paths go to
+        // `problems` when it is given.
+        //
+        fn scan_root(
+            self: *Self,
+            root: *const Root,
+            since_ns: i96,
+            until_ns: i96,
+            problems: ?*EventList,
+        ) !scan_module.Result {
+            assert(root.path.len > 0);
+            if (root.is_file) {
+                return scan_module.scan_file(self.io, root.path, since_ns, until_ns, problems);
+            }
+            return scan_module.scan(
+                self.gpa,
+                self.io,
+                root.path,
+                &self.options,
+                lister,
+                since_ns,
+                until_ns,
+                problems,
+            );
         }
 
         //
@@ -715,6 +769,11 @@ pub fn GenericWatcher(comptime Backend: type) type {
             for (self.hints.paths.keys(), self.hints.paths.values()) |path, checks| {
                 const index = self.root_of(path) orelse continue;
                 const root = self.roots.items[index];
+                if (root.is_file) {
+                    try self.mark_changed(&self.roots.items[index]);
+                    try self.rewatch_file(index);
+                    continue;
+                }
                 if (filter.is_excluded_path(&self.options, root.path, path)) {
                     continue;
                 }
@@ -734,6 +793,26 @@ pub fn GenericWatcher(comptime Backend: type) type {
                     try self.sync_watches(index, path, false);
                 }
             }
+        }
+
+        //
+        // Moves the watch of file root `index` to whatever file is at its path now. A watch
+        // follows the file it was made on, so after the file is renamed away, deleted or
+        // replaced, as editors do when they save, the old watch no longer covers the path. A
+        // missing file is polled, so polling finds it when it comes back.
+        //
+        fn rewatch_file(self: *Self, index: usize) !void {
+            assert(self.roots.items[index].is_file);
+            if (comptime Backend.is_recursive) {
+                // File roots on backends that watch whole trees are polled and have no watch.
+                assert(self.roots.items[index].is_polled);
+                return;
+            }
+            if (!self.is_native_active or self.roots.items[index].is_polled) {
+                return;
+            }
+            try self.backend.unwatch_tree(self.roots.items[index].path);
+            try self.watch_file(index);
         }
 
         //
